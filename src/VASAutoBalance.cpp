@@ -27,7 +27,6 @@
 */
 
 
-//#include "ScriptPCH.h"
 #include "Configuration/Config.h"
 #include "Unit.h"
 #include "Chat.h"
@@ -40,7 +39,6 @@
 #include "ScriptMgr.h"
 #include <vector>
 
-#define BOOL_TO_STRING(b) ((b) ? "true" : "false")
 
 struct AutoBalanceCreatureInfo
 {
@@ -115,26 +113,14 @@ class VAS_AutoBalance_WorldScript : public WorldScript
 	
 	void SetInitialWorldSettings()
 	{
-	// Load from the VAS.AutoBalance.XX.Name entries in the Configuration File
-	forcedCreatureIds.clear();
-	LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID40", ""), 40);
-	LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID25", ""), 25);
-	LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID10", ""), 10);
-	LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID5", ""), 5);
-	LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID2", ""), 2);
-	PlayerCountDifficultyOffset = 0;
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "----------------------------------------------------");
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "  Powered by {VAS} AutoBalance");
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "----------------------------------------------------");
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "  xPlayer = %4.1f ", sWorld->getFloatConfig(VAS_Config_xPlayer));
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "  AutoInstance = %u ", sWorld->getIntConfig(VAS_AutoInstance));
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "  PlayerChangeNotify = %u ", sWorld->getIntConfig(VAS_PlayerChangeNotify));
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "  Min.D.Mod = %4.2f ", sWorld->getFloatConfig(VAS_Min_D_Mod));
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "  Min.HP.Mod = %4.2f ", sWorld->getFloatConfig(VAS_Min_HP_Mod));
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "  VasDebug   =  %u ", GetValidDebugLevel());
-	//sLog->outInfo(LOG_FILTER_WORLDSERVER, "----------------------------------------------------\n");
+		forcedCreatureIds.clear();
+		LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID40", ""), 40);
+		LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID25", ""), 25);
+		LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID10", ""), 10);
+		LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID5", ""), 5);
+		LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID2", ""), 2);
+		PlayerCountDifficultyOffset = 0;
 	}
-	
 };
 
 class VAS_AutoBalance_PlayerScript : public PlayerScript
@@ -147,7 +133,6 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
 		
 		void OnLogin(Player *Player)
 		{
-			//TC_LOG_INFO("vas.player.loading", "### VAS_AutoBalance_PlayerScript - OnLogin Player=%s", Player->GetName());
 			ChatHandler(Player->GetSession()).PSendSysMessage("This server is running a VAS_AutoBalance Module.");
 		}
 };
@@ -165,11 +150,7 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 		if ((AttackerUnit->GetMap()->IsDungeon() && playerVictim->GetMap()->IsDungeon()) || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1)
 		if (AttackerUnit->GetTypeId() != TYPEID_PLAYER)
 		{
-			//if (GetValidDebugLevel() >= 3)
-			//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - VAS_Unit_DealDamage Attacker=%s Victim=%s Start Damage=%u",AttackerUnit->GetName(),playerVictim->GetName(),damage);
 			damage = VAS_Modifer_DealDamage(AttackerUnit, damage);
-			//if (GetValidDebugLevel() >= 3)
-			//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - VAS_Unit_DealDamage Attacker=%s Victim=%s End Damage=%u",AttackerUnit->GetName(),playerVictim->GetName(),damage);
 		}
 		return damage;
 	}
@@ -178,15 +159,9 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 	{
 		if ((caster->GetMap()->IsDungeon() && target->GetMap()->IsDungeon()) || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1)
 		if (caster->GetTypeId() != TYPEID_PLAYER)
-		{
-			//if (GetValidDebugLevel() >= 3)
-			//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - VAS_Unit_HandlePeriodicDamage Attacker=%s Victim=%s Start Damage=%u",caster->GetName(),target->GetName(),damage);
-			
+		{	
 			if (!((caster->IsHunterPet() || caster->IsPet() || caster->IsSummon()) && caster->IsControlledByPlayer()))
 			damage = (float)damage * (float)CreatureInfo[caster->GetGUID()].DamageMultiplier;
-			
-			//if (GetValidDebugLevel() >= 3)
-			//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - VAS_Unit_HandlePeriodicDamage Attacker=%s Victim=%s End Damage=%u",caster->GetName(),target->GetName(),damage);
 		}
 		return damage;
 	}
@@ -196,17 +171,10 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 		if (sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 || (damageInfo->attacker->GetMap()->IsDungeon() && damageInfo->target->GetMap()->IsDungeon()) || (damageInfo->attacker->GetMap()->IsBattleground() && damageInfo->target->GetMap()->IsBattleground()))
 		{
 			if (damageInfo->attacker->GetTypeId() != TYPEID_PLAYER)
-			{
-				//if (GetValidDebugLevel() >= 3)
-				//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - CalculateSpellDamageTaken Attacker=%s Victim=%s Start Damage=%u",damageInfo->attacker->GetName(),damageInfo->target->GetName(),damageInfo->damage);
-				
+			{		
 				if ((damageInfo->attacker->IsHunterPet() || damageInfo->attacker->IsPet() || damageInfo->attacker->IsSummon()) && damageInfo->attacker->IsControlledByPlayer())
 					return;
-					
-				damageInfo->damage = (float)damageInfo->damage * (float)CreatureInfo[damageInfo->attacker->GetGUID()].DamageMultiplier;
-				
-				//if (GetValidDebugLevel() >= 3)
-				//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - CalculateSpellDamageTaken Attacker=%s Victim=%s End Damage=%u",damageInfo->attacker->GetName(),damageInfo->target->GetName(),damageInfo->damage);
+				damageInfo->damage = (float)damageInfo->damage * (float)CreatureInfo[damageInfo->attacker->GetGUID()].DamageMultiplier;	
 			}
 		}
 		return;
@@ -218,13 +186,7 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 		if ((sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 || (damageInfo->attacker->GetMap()->IsDungeon() && damageInfo->target->GetMap()->IsDungeon()) || (damageInfo->attacker->GetMap()->IsBattleground() && damageInfo->target->GetMap()->IsBattleground())) && (damageInfo->attacker->GetTypeId() != TYPEID_PLAYER))
 		if (!((damageInfo->attacker->IsHunterPet() || damageInfo->attacker->IsPet() || damageInfo->attacker->IsSummon()) && damageInfo->attacker->IsControlledByPlayer())) // Make sure that the attacker Is not a Pet of some sort
 		{
-			//if (GetValidDebugLevel() >= 3)
-			//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - CalculateMeleeDamage Attacker=%s Victim=%s Start Damage=%u",damageInfo->attacker->GetName(),damageInfo->target->GetName(),damageInfo->damage);
-			
-			damageInfo->damage = (float)damageInfo->damage * (float)CreatureInfo[damageInfo->attacker->GetGUID()].DamageMultiplier;
-			
-			//if (GetValidDebugLevel() >= 3)
-			//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_UnitScript - CalculateMeleeDamage Attacker=%s Victim=%s End Damage=%u",damageInfo->attacker->GetName(),damageInfo->target->GetName(),damageInfo->damage);
+			damageInfo->damage = (float)damageInfo->damage * (float)CreatureInfo[damageInfo->attacker->GetGUID()].DamageMultiplier;	
 		}
 		return;
 	}
@@ -252,22 +214,6 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 		
 		void OnPlayerEnterAll(Map* map, Player* player)
 		{
-			if (GetValidDebugLevel() >= 2)
-			{
-				//sLog->outInfo(LOG_FILTER_TSCR, "----------------------------------------------------");
-				//sLog->outInfo(LOG_FILTER_TSCR, "## VAS_AutoBalance_AllMapScript - OnPlayerEnterAll");
-				//sLog->outInfo(LOG_FILTER_TSCR, "## For InsatanceID %u",map->GetInstanceId());
-				//sLog->outInfo(LOG_FILTER_TSCR, "## IsDungeon= %u",map->GetEntry()->IsDungeon());
-				//sLog->outInfo(LOG_FILTER_TSCR, "## For Map %u",player->GetMapId());
-				//sLog->outInfo(LOG_FILTER_TSCR, "## PlayersInMap %u",map->GetPlayersCountExceptGMs());
-				//sLog->outInfo(LOG_FILTER_TSCR, "## pDifficulty %u",uint32(player->GetDifficulty(player->GetMap()->IsHeroic())));
-				//sLog->outInfo(LOG_FILTER_TSCR, "## pGetDungeonDifficulty %u",uint32(player->GetDungeonDifficulty()));
-				//sLog->outInfo(LOG_FILTER_TSCR, "## pGetRaidDifficulty %u",uint32(player->GetRaidDifficulty()));
-				//sLog->outInfo(LOG_FILTER_TSCR, "## maxPlayers %u",((InstanceMap*)sMapMgr->FindMap(player->GetMapId(), player->GetInstanceId()))->GetMaxPlayers());
-				//sLog->outInfo(LOG_FILTER_TSCR, "## IsHeroic=%s IsRaid=%s IsRegularDifficulty=%s IsRaidOrHeroicDungeon=%s IsNonRaidDungeon=%s",BOOL_TO_STRING(player->GetMap()->IsHeroic()),BOOL_TO_STRING(player->GetMap()->IsRaid()),BOOL_TO_STRING(player->GetMap()->IsRegularDifficulty()),BOOL_TO_STRING(player->GetMap()->IsRaidOrHeroicDungeon()),BOOL_TO_STRING(player->GetMap()->IsNonRaidDungeon()));
-				//sLog->outInfo(LOG_FILTER_TSCR, "----------------------------------------------------\n");
-			}
-			
 			if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
 			{
 				if ((map->GetEntry()->IsDungeon()) && !player->IsGameMaster())
@@ -291,24 +237,10 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 		void OnPlayerLeaveAll(Map* map, Player* player)
 		{
 		
-			//if (GetValidDebugLevel() >= 3)
-			//sLog->outInfo(LOG_FILTER_TSCR, "#### VAS_AutoBalance_AllMapScript - OnPlayerLeaveAll map=%s player=%s", map->GetMapName(),player->GetName());
-			
 			int instancePlayerCount = map->GetPlayersCountExceptGMs() - 1;
 			
 			if (instancePlayerCount >= 1)
 			{
-				if (GetValidDebugLevel() >= 2)
-				{
-					//sLog->outInfo(LOG_FILTER_TSCR, "----------------------------------------------------");
-					//sLog->outInfo(LOG_FILTER_TSCR, "## VAS_AutoBalance_AllMapScript - OnPlayerLeaveAll");
-					//sLog->outInfo(LOG_FILTER_TSCR, "## For InsatanceID %u",map->GetInstanceId());
-					//sLog->outInfo(LOG_FILTER_TSCR, "## IsDungeon= %u",map->GetEntry()->IsDungeon());
-					//sLog->outInfo(LOG_FILTER_TSCR, "## For Map %u",player->GetMapId());
-					//sLog->outInfo(LOG_FILTER_TSCR, "## PlayersInMap %u",instancePlayerCount);
-					//sLog->outInfo(LOG_FILTER_TSCR, "----------------------------------------------------\n");
-				}
-				
 				if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
 				{
 					if ((map->GetEntry()->IsDungeon()) && !player->IsGameMaster())
@@ -329,29 +261,6 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 				}
 			}
 		}
-};
-
-class VAS_AutoBalance_WorldMapScript : public WorldMapScript
-{
-	public:
-	VAS_AutoBalance_WorldMapScript()
-		: WorldMapScript("VAS_AutoBalance_WorldMapScript", 0)
-	{
-	}
-	
-	void OnPlayerEnter(Map* map, Player* player)
-	{
-	
-		//if (GetValidDebugLevel() >= 3)
-		//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_WorldMapScript - OnPlayerEnter Map=%s player=%s",map->GetMapName(),player->GetName());
-	}
-	
-	void OnPlayerLeave(Map* map, Player* player)
-	{
-	
-		//if (GetValidDebugLevel() >= 3)
-		//sLog->outInfo(LOG_FILTER_TSCR, "### VAS_AutoBalance_WorldMapScript - OnPlayerLeave Map=%s player=%s",map->GetMapName(),player->GetName());
-	}
 };
 
 
@@ -492,15 +401,6 @@ public:
 			damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
 		}
 
-		if ((GetValidDebugLevel() >= 3))
-		{
-			//sLog->outInfo(LOG_FILTER_TSCR, "## VAS-AutoBalance MobID=%u MapID=%u creatureName=%s  GUID=%llu  instancePlayerCount=%u", creatureTemplate->Entry, creature->GetMapId(), creatureTemplate->Name.c_str(), creature->GetGUID(), instancePlayerCount);
-			//sLog->outInfo(LOG_FILTER_TSCR, "## VAS-AutoBalance MapDifficulty=%u Health=%u / %u healthMultiplier=%4.5f", creature->GetMap()->GetDifficulty(), scaledHealth, baseHealth, healthMultiplier);
-			//sLog->outInfo(LOG_FILTER_TSCR, "## VAS-AutoBalance maxNumberOfPlayers=%u IsRaid=%s", maxNumberOfPlayers, BOOL_TO_STRING(creature->GetMap()->IsRaid()));
-			//sLog->outInfo(LOG_FILTER_TSCR, "## VAS-AutoBalance Mana %u / %u", baseMana, scaledMana);
-			//sLog->outInfo(LOG_FILTER_TSCR, "## VAS-AutoBalance damageMultiplier=%4.2f", damageMultiplier);
-		}
-
 		creature->SetCreateHealth(scaledHealth);
 		creature->SetMaxHealth(scaledHealth);
 		creature->ResetPlayerDamageReq();
@@ -567,6 +467,5 @@ void AddVASAutoBalanceScripts()
 	new VAS_AutoBalance_UnitScript;
 	new VAS_AutoBalance_AllCreatureScript;
 	new VAS_AutoBalance_AllMapScript;
-	new VAS_AutoBalance_WorldMapScript;
 	new VAS_AutoBalance_CommandScript;
 }
