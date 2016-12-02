@@ -99,8 +99,9 @@ class VAS_AutoBalance_WorldScript : public WorldScript
 		if (!reload) {
 			std::string conf_path = _CONF_DIR;
 			std::string cfg_file = conf_path+"/VASAutoBalance.conf";
+			if (WIN32)//hopefully a fix for conf not loading on win32/64 setups
+				cfg_file = "VASAutoBalance.conf";
 			std::string cfg_def_file = cfg_file + ".dist";
-
 			sConfigMgr->LoadMore(cfg_def_file.c_str());
 
 			sConfigMgr->LoadMore(cfg_file.c_str());
