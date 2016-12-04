@@ -142,7 +142,7 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 {
 	public:
 	VAS_AutoBalance_UnitScript()
-		: UnitScript("VAS_AutoBalance_CreatureScript")
+		: UnitScript("VAS_AutoBalance_UnitScript")
 	{
 	}
 	
