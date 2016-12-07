@@ -1,5 +1,3 @@
-Currently this only works with the <b>moreScriptHooks</b> Branch:
-https://github.com/3ndos/azerothcore-wotlk/tree/moreScriptHooks
 <b>Make sure to support the main project:
 https://github.com/azerothcore/azerothcore-wotlk/</b>
 # VASAutoBalanceModule
