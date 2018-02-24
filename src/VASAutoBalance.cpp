@@ -1,4 +1,5 @@
 /*
+* Copyright (C) 2018 AzerothCore <http://www.azerothcore.org>
 * Copyright (C) 2012 CVMagic <http://www.trinitycore.org/f/topic/6551-vas-autobalance/>
 * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
 * Copyright (C) 2006-2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
@@ -21,9 +22,10 @@
 /*
 * Script Name: AutoBalance
 * Original Authors: KalCorp and Vaughner
-* Maintainer(s): CVMagic
+* Maintainer(s): AzerothCore
 * Original Script Name: VAS.AutoBalance
-* Description: This script is intended to scale based on number of players, instance mobs & world bosses' health, mana, and damage.
+* Description: This script is intended to scale based on number of players, 
+* instance mobs & world bosses' level, health, mana, and damage.
 */
 
 
@@ -39,16 +41,20 @@
 #include "ScriptMgr.h"
 #include <vector>
 
-
-struct AutoBalanceCreatureInfo
+class AutoBalanceCreatureInfo : public DataMap::Base
 {
-	uint32 instancePlayerCount;
-	float DamageMultiplier;
+public:
+    AutoBalanceCreatureInfo() {}
+    AutoBalanceCreatureInfo(uint32 count, float dmg) : instancePlayerCount(count),DamageMultiplier(dmg) {}
+	uint32 instancePlayerCount = 0;
+	float DamageMultiplier = 1;
 };
 
-static std::map<uint32, AutoBalanceCreatureInfo> CreatureInfo; // A hook should be added to remove the mapped entry when the creature is dead or this should be added into the creature object
+static bool enabled = true;
 static std::map<int, int> forcedCreatureIds;                   // The map values correspond with the VAS.AutoBalance.XX.Name entries in the configuration file.
 static int8 PlayerCountDifficultyOffset; //cheaphack for difficulty server-wide. Another value TODO in player class for the party leader's value to determine dungeon difficulty.
+
+
 int GetValidDebugLevel()
 {
 	int debugLevel = sConfigMgr->GetIntDefault("VASAutoBalance.DebugLevel", 2);
@@ -85,6 +91,8 @@ int GetForcedCreatureId(int creatureId)
 	return forcedCreatureIds[creatureId];
 }
 
+
+
 class VAS_AutoBalance_WorldScript : public WorldScript
 {
 	public:
@@ -107,9 +115,11 @@ class VAS_AutoBalance_WorldScript : public WorldScript
 
 			sConfigMgr->LoadMore(cfg_file.c_str());
 		}
+
+		enabled = sConfigMgr->GetIntDefault("VASAutoBalance.enable", 1) == 1;
 		/* end from skeleton module */
 	}
-	void OnStartup()
+	void OnStartup() override
 	{
 	}
 	
@@ -135,7 +145,8 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
 		
 		void OnLogin(Player *Player)
 		{
-			ChatHandler(Player->GetSession()).PSendSysMessage("This server is running a VAS_AutoBalance Module.");
+			if (enabled)
+				ChatHandler(Player->GetSession()).PSendSysMessage("This server is running a VAS_AutoBalance Module.");
 		}
 };
 
@@ -147,61 +158,45 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 	{
 	}
 	
-	uint32 DealDamage(Unit* AttackerUnit, Unit *playerVictim, uint32 damage, DamageEffectType damagetype)
+	uint32 DealDamage(Unit* AttackerUnit, Unit *playerVictim, uint32 damage, DamageEffectType /*damagetype*/) override
 	{
-		if ((AttackerUnit->GetMap()->IsDungeon() && playerVictim->GetMap()->IsDungeon()) || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1)
-		if (AttackerUnit->GetTypeId() != TYPEID_PLAYER)
-		{
-			damage = VAS_Modifer_DealDamage(AttackerUnit, damage);
-		}
-		return damage;
+		return VAS_Modifer_DealDamage(playerVictim, AttackerUnit, damage);
 	}
 	
-	uint32 HandlePeriodicDamageAurasTick(Unit *target, Unit *caster, int32 damage)
+	void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage) override
 	{
-		if ((caster->GetMap()->IsDungeon() && target->GetMap()->IsDungeon()) || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1)
-		if (caster->GetTypeId() != TYPEID_PLAYER)
-		{	
-			if (!((caster->IsHunterPet() || caster->IsPet() || caster->IsSummon()) && caster->IsControlledByPlayer()))
-			damage = (float)damage * (float)CreatureInfo[caster->GetGUID()].DamageMultiplier;
-		}
-		return damage;
+		damage = VAS_Modifer_DealDamage(target, attacker, damage);
 	}
 	
-	void CalculateSpellDamageTaken(SpellNonMeleeDamage *damageInfo, int32 damage, SpellInfo const *spellInfo, WeaponAttackType attackType, bool crit)
+	void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage) override
 	{
-		if (sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 || (damageInfo->attacker->GetMap()->IsDungeon() && damageInfo->target->GetMap()->IsDungeon()) || (damageInfo->attacker->GetMap()->IsBattleground() && damageInfo->target->GetMap()->IsBattleground()))
-		{
-			if (damageInfo->attacker->GetTypeId() != TYPEID_PLAYER)
-			{		
-				if ((damageInfo->attacker->IsHunterPet() || damageInfo->attacker->IsPet() || damageInfo->attacker->IsSummon()) && damageInfo->attacker->IsControlledByPlayer())
-					return;
-				damageInfo->damage = (float)damageInfo->damage * (float)CreatureInfo[damageInfo->attacker->GetGUID()].DamageMultiplier;	
-			}
-		}
-		return;
+		damage = VAS_Modifer_DealDamage(target, attacker, damage);
 	}
 	
-	void CalculateMeleeDamage(Unit *playerVictim, uint32 damage, CalcDamageInfo *damageInfo, WeaponAttackType attackType)
+	void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) override
 	{
-		// Make sure the Attacker and the Victim are in the same location, in addition that the attacker is not player.
-		if ((sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 || (damageInfo->attacker->GetMap()->IsDungeon() && damageInfo->target->GetMap()->IsDungeon()) || (damageInfo->attacker->GetMap()->IsBattleground() && damageInfo->target->GetMap()->IsBattleground())) && (damageInfo->attacker->GetTypeId() != TYPEID_PLAYER))
-		if (!((damageInfo->attacker->IsHunterPet() || damageInfo->attacker->IsPet() || damageInfo->attacker->IsSummon()) && damageInfo->attacker->IsControlledByPlayer())) // Make sure that the attacker Is not a Pet of some sort
-		{
-			damageInfo->damage = (float)damageInfo->damage * (float)CreatureInfo[damageInfo->attacker->GetGUID()].DamageMultiplier;	
-		}
-		return;
+		damage = VAS_Modifer_DealDamage(target, attacker, damage);
 	}
+
+	void ModifyHealRecieved(Unit* target, Unit* attacker, uint32& damage) override { 
+		damage = VAS_Modifer_DealDamage(target, attacker, damage);
+	}
+
 	
-	uint32 VAS_Modifer_DealDamage(Unit* AttackerUnit, uint32 damage)
+	uint32 VAS_Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
 	{
-		if ((AttackerUnit->IsHunterPet() || AttackerUnit->IsPet() || AttackerUnit->IsSummon()) && AttackerUnit->IsControlledByPlayer())
+		if (!enabled || !((sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 
+				|| (target->GetMap()->IsDungeon() && attacker->GetMap()->IsDungeon()) || (attacker->GetMap()->IsBattleground()
+					 && target->GetMap()->IsBattleground())) && (attacker->GetTypeId() != TYPEID_PLAYER)))
+					 return damage;
+
+
+		if ((attacker->IsHunterPet() || attacker->IsPet() || attacker->IsSummon()) && attacker->IsControlledByPlayer())
 			return damage;
-		
-		float damageMultiplier = CreatureInfo[AttackerUnit->GetGUID()].DamageMultiplier;
-		
+
+		float damageMultiplier = attacker->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->DamageMultiplier;
+
 		return damage * damageMultiplier;
-			
 	}
 };
 
@@ -216,6 +211,9 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 		
 		void OnPlayerEnterAll(Map* map, Player* player)
 		{
+			if (!enabled)
+				return;
+
 			if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
 			{
 				if ((map->GetEntry()->IsDungeon()) && !player->IsGameMaster())
@@ -238,6 +236,8 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 		
 		void OnPlayerLeaveAll(Map* map, Player* player)
 		{
+			if (!enabled)
+				return;
 		
 			int instancePlayerCount = map->GetPlayersCountExceptGMs() - 1;
 			
@@ -275,43 +275,86 @@ public:
 	}
 
 
-	void Creature_SelectLevel(const CreatureTemplate *creatureTemplate, Creature* creature)
+	void Creature_SelectLevel(const CreatureTemplate* /*creatureTemplate*/, Creature* creature) override
 	{
+		if (!enabled)
+			return;
 
-		if (creature->GetMap()->IsDungeon() || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1)
-		{
-			ModifyCreatureAttributes(creature);
-			CreatureInfo[creature->GetGUID()].instancePlayerCount = creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
-		}
+		ModifyCreatureAttributes(creature);
 	}
 
-	void OnAllCreatureUpdate(Creature* creature, uint32 diff)
+	void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
 	{
-		if (!(CreatureInfo[creature->GetGUID()].instancePlayerCount == (creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset)))
-		{
-			if (creature->GetMap()->IsDungeon() || creature->GetMap()->IsBattleground() || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1)
-				ModifyCreatureAttributes(creature);
-			CreatureInfo[creature->GetGUID()].instancePlayerCount = creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
-		}
+		if (!enabled)
+			return;
+
+		ModifyCreatureAttributes(creature);
 	}
 
 	void ModifyCreatureAttributes(Creature* creature)
 	{
-		if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()) || (creature->GetMap()->IsDungeon() && sConfigMgr->GetIntDefault("VASAutoBalance.Instances", 1) < 1) || creature->GetMap()->GetPlayersCountExceptGMs() <= 0)
+		uint32 &instancePlayerCount=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->instancePlayerCount;
+		uint32 _curCount=creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
+
+		// already modified
+		if (instancePlayerCount == _curCount)
+			return;
+
+		instancePlayerCount = _curCount;
+
+		if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsBattleground() || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1))
+			return;
+
+		if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()) || 
+			 (creature->GetMap()->IsDungeon() && sConfigMgr->GetIntDefault("VASAutoBalance.Instances", 1) < 1) || creature->GetMap()->GetPlayersCountExceptGMs() <= 0)
 		{
+			return;
+		}
+
+		uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
+
+		uint8 level=0;
+
+		bool levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.partyLevel", 0) == 1;
+		// scale level only in dungeon/raids
+		if (levelScaling && creature->GetMap()->IsDungeon()) {
+			Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
+			if (!playerList.isEmpty())
+			{
+				for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+				{
+					if (Player* playerHandle = playerIteration->GetSource())
+					{
+						if (playerHandle->getLevel() > level)
+							level=playerHandle->getLevel();
+					}
+				}
+			}
+		}
+
+		if (level)
+			creature->SetLevel(level);
+
+		if (instancePlayerCount>=maxNumberOfPlayers) {
+			creature->SelectLevel(level == 0); // change level only when we've no levelScaling
 			return;
 		}
 
 		CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 		CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creature->getLevel(), creatureTemplate->unit_class);
 
-		float damageMultiplier = 1.0f;
+		float originalLevel = creatureTemplate->maxlevel;
+		float defaultMultiplier = 1.0f;
 		float healthMultiplier = 1.0f;
+		float damageMultiplier = 1.0f;
+
+		uint8 levelDiff=level>originalLevel ? (level-originalLevel) : 0;
+
+		//float levelMul = levelDiff > 10 ? levelDiff/10 : 1;
+		float levelStatsRate = levelDiff ? (level/9) : 1;
 
 		uint32 baseHealth = creatureStats->GenerateHealth(creatureTemplate);
 		uint32 baseMana = creatureStats->GenerateMana(creatureTemplate);
-		uint32 instancePlayerCount = creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
-		uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
 		uint32 scaledHealth = 0;
 		uint32 scaledMana = 0;
 
@@ -338,57 +381,62 @@ public:
 		//       The +1 and /2 values raise the TanH function to a positive range and make
 		//       sure the modifier never goes above the value or 1.0 or below 0.
 		//
-		//       Lastly this formula has one side effect on full groups Bosses and mobs will
-		//       never have full health, this can be tested against by making sure the number
-		//       of players match the maxNumberOfPlayers variable.
 
 		switch (maxNumberOfPlayers)
 		{
 		case 40:
-			healthMultiplier = (float)instancePlayerCount / (float)maxNumberOfPlayers; // 40 Man Instances oddly enough scale better with the old formula
+			defaultMultiplier = (float)instancePlayerCount / (float)maxNumberOfPlayers; // 40 Man Instances oddly enough scale better with the old formula
 			break;
 		case 25:
-			healthMultiplier = (tanh((instancePlayerCount - 16.5f) / 1.5f) + 1.0f) / 2.0f;
+			defaultMultiplier = (tanh((instancePlayerCount - 16.5f) / 1.5f) + 1.0f) / 2.0f;
 			break;
 		case 10:
-			healthMultiplier = (tanh((instancePlayerCount - 4.5f) / 1.5f) + 1.0f) / 2.0f;
+			defaultMultiplier = (tanh((instancePlayerCount - 4.5f) / 1.5f) + 1.0f) / 2.0f;
 			break;
 		case 2:
-			healthMultiplier = (float)instancePlayerCount / (float)maxNumberOfPlayers;                   // Two Man Creatures are too easy if handled by the 5 man formula, this would only
-			break;                                                                         // apply in the situation where it's specified in the configuration file.
+			// Two Man Creatures are too easy if handled by the 5 man formula, this would only
+			// apply in the situation where it's specified in the configuration file.
+			defaultMultiplier = (float)instancePlayerCount / (float)maxNumberOfPlayers;
+			break;                                                                        
 		default:
-			healthMultiplier = (tanh((instancePlayerCount - 2.2f) / 1.5f) + 1.0f) / 2.0f;    // default to a 5 man group
+			defaultMultiplier = (tanh((instancePlayerCount - 2.2f) / 1.5f) + 1.0f) / 2.0f;    // default to a 5 man group
 		}
 
-		//   VAS SOLO  - Map 0,1 and 530 ( World Mobs )                                                               // This may be where VAS_AutoBalance_CheckINIMaps might have come into play. None the less this is
-		if ((creature->GetMapId() == 0 || creature->GetMapId() == 1 || creature->GetMapId() == 530) && (creature->isElite() || creature->isWorldBoss()))  // specific to World Bosses and elites in those Maps, this is going to use the entry XPlayer in place of instancePlayerCount.
+		// VAS SOLO  - Map 0,1 and 530 ( World Mobs )                                                               
+		// This may be where VAS_AutoBalance_CheckINIMaps might have come into play. None the less this is
+		float numPlayerConf=sConfigMgr->GetFloatDefault("VASAutoBalance.numPlayer", 1.0f);
+		if (numPlayerConf && (creature->GetMapId() == 0 || creature->GetMapId() == 1 || creature->GetMapId() == 530) 
+		&& (creature->isElite() || creature->isWorldBoss()))  // specific to World Bosses and elites in those Maps, this is going to use the entry XPlayer in place of instancePlayerCount.
 		{
 			if (baseHealth > 800000) {
-				healthMultiplier = (tanh((sConfigMgr->GetFloatDefault("VASAutoBalance.numPlayer", 1.0f) - 5.0f) / 1.5f) + 1.0f) / 2.0f;
+				defaultMultiplier = (tanh((numPlayerConf - 5.0f) / 1.5f) + 1.0f) / 2.0f;
 
 			}
 			else {
-				healthMultiplier = (tanh((sConfigMgr->GetFloatDefault("VASAutoBalance.numPlayer", 1.0f) - 2.2f) / 1.5f) + 1.0f) / 2.0f; // Assuming a 5 man configuration, as World Bosses have been relatively retired since BC so unless the boss has some substantial baseHealth
+				// Assuming a 5 man configuration, as World Bosses have been relatively 
+				// retired since BC so unless the boss has some substantial baseHealth
+				defaultMultiplier = (tanh((numPlayerConf - 2.2f) / 1.5f) + 1.0f) / 2.0f; 
 			}
 
 		}
 
 		// Ensure that the healthMultiplier is not lower than the configuration specified value. -- This may be Deprecated later.
+		healthMultiplier = defaultMultiplier;
 		if (healthMultiplier <= sConfigMgr->GetFloatDefault("VASAutoBalance.MinHPModifier", 0.1f))
 		{
 			healthMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinHPModifier", 0.1f);
 		}
+		scaledHealth = uint32((baseHealth * healthMultiplier * levelStatsRate) + 1.0f);
 
 		//Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
 		//GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
 
 
-		scaledHealth = uint32((baseHealth * healthMultiplier) + 1.0f);
 		// Now adjusting Mana, Mana is something that can be scaled linearly
 		if (maxNumberOfPlayers == 0) {
-			scaledMana = uint32((baseMana * healthMultiplier) + 1.0f);
+			scaledMana = uint32((baseMana * defaultMultiplier) + 1.0f);
 			// Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
-			damageMultiplier = healthMultiplier;
+			damageMultiplier = defaultMultiplier;
 		}
 		else {
 			scaledMana = ((baseMana / maxNumberOfPlayers) * instancePlayerCount);
@@ -397,11 +445,17 @@ public:
 
 		}
 
+		scaledMana *= levelStatsRate;
+
 		// Can not be less then Min_D_Mod
 		if (damageMultiplier <= sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f))
 		{
 			damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
 		}
+
+		float levelDmgRate   = levelDiff ? (levelDiff/(12-(originalLevel/12))) : 0;
+		if (levelDmgRate)
+			damageMultiplier *= std::pow(2,levelDmgRate);
 
 		creature->SetCreateHealth(scaledHealth);
 		creature->SetMaxHealth(scaledHealth);
@@ -411,7 +465,10 @@ public:
 		creature->SetPower(POWER_MANA, scaledMana);
 		creature->SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, (float)scaledHealth);
 		creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)scaledMana);
-		CreatureInfo[creature->GetGUID()].DamageMultiplier = damageMultiplier;
+		creature->CustomData.Set("VAS_AutoBalanceCreatureInfo", new AutoBalanceCreatureInfo(instancePlayerCount, damageMultiplier));
+
+		creature->UpdateAllStats();
+    	creature->SetFullHealth();
 	}
 };
 class VAS_AutoBalance_CommandScript : public CommandScript

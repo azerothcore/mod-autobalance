@@ -7,6 +7,12 @@
 #
 # VAS AUTOBALANCE OPTIONS
 #
+#     VASAutoBalance.enable
+#        Enable/Disable Autobalance system
+#        Default:     1 (1 = ON, 0 = OFF)
+
+VASAutoBalance.enable=1
+
 #     VASAutoBalance.numPlayer
 #        Set Server to level of solo mode.
 #        Set to 0 to Disable VAS-SOLO Mod.
@@ -16,6 +22,14 @@
 VASAutoBalance.numPlayer=1.0
 
 #
+#     VASAutoBalance.partyLevel
+#        Check the max level of the party and scale creature based on it
+#        
+#        Default:     0 (1 = ON, 0 = OFF)
+
+VASAutoBalance.partyLevel=0
+
+#
 #     VASAutoBalance.Instances
 #        Set instances to Auto chance XPlayer depending on players in it.
 #        Default:     1 (1 = ON, 0 = OFF)
@@ -23,7 +37,7 @@ VASAutoBalance.numPlayer=1.0
 VASAutoBalance.Instances=1
 #
 #     VASAutoBalance.DungeonsOnly
-#        Only apply scaling changes to dungeons
+#        Only apply scaling changes to dungeons and raids
 #        Default:     1 (1 = ON, 0 = OFF)
 VASAutoBalance.DungeonsOnly=1
 
