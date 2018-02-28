@@ -24,10 +24,12 @@ VASAutoBalance.numPlayer=1.0
 #
 #     VASAutoBalance.partyLevel
 #        Check the max level of the party and scale creature based on it
-#        
-#        Default:     0 (1 = ON, 0 = OFF)
+#        0 = Disabled
+#        1 = Enabled only in dungeons
+#        2 = Always enabled
+#        Default:     1
 
-VASAutoBalance.partyLevel=0
+VASAutoBalance.partyLevel=1
 
 #
 #     VASAutoBalance.Instances
