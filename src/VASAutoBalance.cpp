@@ -40,6 +40,24 @@
 #include "Map.h"
 #include "ScriptMgr.h"
 #include <vector>
+#include "VASAutoBalance.h"
+#include "ScriptMgrMacros.h"
+
+bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature) {
+    bool ret=true;
+    FOR_SCRIPTS_RET(VasModuleScript, itr, end, ret) // return true by default if not scripts
+        if (!itr->second->OnBeforeModifyAttributes(creature))
+            ret=false; // we change ret value only when scripts return false
+
+    return ret;
+}
+
+VasModuleScript::VasModuleScript(const char* name)
+    : ModuleScript(name)
+{
+    ScriptRegistry<VasModuleScript>::AddScript(this);
+}
+
 
 class AutoBalanceCreatureInfo : public DataMap::Base
 {
@@ -315,6 +333,9 @@ public:
 		{
 			return;
 		}
+
+		if (!sVasScriptMgr->OnBeforeModifyAttributes(creature))
+			return;
 
 		uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
 
