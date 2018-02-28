@@ -51,9 +51,11 @@ public:
 };
 
 static bool enabled = true;
-static std::map<int, int> forcedCreatureIds;                   // The map values correspond with the VAS.AutoBalance.XX.Name entries in the configuration file.
-static int8 PlayerCountDifficultyOffset; //cheaphack for difficulty server-wide. Another value TODO in player class for the party leader's value to determine dungeon difficulty.
-
+// The map values correspond with the VAS.AutoBalance.XX.Name entries in the configuration file.
+static std::map<int, int> forcedCreatureIds;
+// cheaphack for difficulty server-wide.
+// Another value TODO in player class for the party leader's value to determine dungeon difficulty.
+static int8 PlayerCountDifficultyOffset;
 
 int GetValidDebugLevel()
 {
@@ -90,8 +92,6 @@ int GetForcedCreatureId(int creatureId)
 	}
 	return forcedCreatureIds[creatureId];
 }
-
-
 
 class VAS_AutoBalance_WorldScript : public WorldScript
 {
@@ -185,16 +185,22 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 	
 	uint32 VAS_Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
 	{
-		if (!enabled || !((sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 
+		if (!enabled)
+			return damage;
+
+		float damageMultiplier = attacker->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->DamageMultiplier;
+
+		if (damageMultiplier == 1)
+			return damage;
+
+		if (!((sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 
 				|| (target->GetMap()->IsDungeon() && attacker->GetMap()->IsDungeon()) || (attacker->GetMap()->IsBattleground()
 					 && target->GetMap()->IsBattleground())) && (attacker->GetTypeId() != TYPEID_PLAYER)))
-					 return damage;
+			return damage;
 
 
 		if ((attacker->IsHunterPet() || attacker->IsPet() || attacker->IsSummon()) && attacker->IsControlledByPlayer())
 			return damage;
-
-		float damageMultiplier = attacker->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->DamageMultiplier;
 
 		return damage * damageMultiplier;
 	}
@@ -265,7 +271,6 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 		}
 };
 
-
 class VAS_AutoBalance_AllCreatureScript : public AllCreatureScript
 {
 public:
@@ -315,9 +320,9 @@ public:
 
 		uint8 level=0;
 
-		bool levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.partyLevel", 0) == 1;
+		int levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.partyLevel", 0);
 		// scale level only in dungeon/raids
-		if (levelScaling && creature->GetMap()->IsDungeon()) {
+		if ((levelScaling && creature->GetMap()->IsDungeon()) || levelScaling > 1) {
 			Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
 			if (!playerList.isEmpty())
 			{
