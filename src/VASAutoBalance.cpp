@@ -340,8 +340,10 @@ public:
 		uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
 
 		uint8 level=0;
+        
+        CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
-		int levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.partyLevel", 0);
+		int levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 0);
 		// scale level only in dungeon/raids
 		if ((levelScaling && creature->GetMap()->IsDungeon()) || levelScaling > 1) {
 			Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
@@ -358,15 +360,23 @@ public:
 			}
 		}
 
-		if (level)
-			creature->SetLevel(level);
+		if (level) {
+            int lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 0);
+            int higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
+            if (level - lowerOffset >= creature->getLevel() && level + higherOffset <= creature->getLevel()) {
+                level = 0; // avoid level change within the offsets
+            } else {
+                // keep bosses +3 level
+                level = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? level + 3 : level;
+                creature->SetLevel(level);
+            }
+        }
 
 		if (instancePlayerCount>=maxNumberOfPlayers) {
-			creature->SelectLevel(level == 0); // change level only when we've no levelScaling
+			creature->SelectLevel(level == 0); // select level from template only when we've no levelScaling
 			return;
 		}
 
-		CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 		CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creature->getLevel(), creatureTemplate->unit_class);
 
 		float originalLevel = creatureTemplate->maxlevel;

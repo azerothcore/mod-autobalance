@@ -22,14 +22,23 @@ VASAutoBalance.enable=1
 VASAutoBalance.numPlayer=1.0
 
 #
-#     VASAutoBalance.partyLevel
-#        Check the max level of the party and scale creature based on it
+#     VASAutoBalance.levelScaling
+#        Check the max level of players in map and scale creature based on it
 #        0 = Disabled
 #        1 = Enabled only in dungeons
 #        2 = Always enabled
 #        Default:     1
 
-VASAutoBalance.partyLevel=1
+VASAutoBalance.levelScaling=1
+
+#
+#     VASAutoBalance.levelHigherOffset
+#     VASAutoBalance.levelLowerOffset
+#        Level Offsets between creatures will not be scaled by level
+#        default: 3 (higher), 0 (lower) 
+
+VASAutoBalance.levelHigherOffset = 3
+VASAutoBalance.levelLowerOffset  = 0
 
 #
 #     VASAutoBalance.Instances
@@ -73,6 +82,16 @@ VASAutoBalance.MinHPModifier=0.10
 #        Default:     0.10
 
 VASAutoBalance.MinDamageModifier=0.10
+
+#
+#     VASAutoBalance.expansion
+#        Check the max level of players in map and scale creature based on it
+#        0 = Disabled
+#        1 = Enabled only in dungeons
+#        2 = Always enabled
+#        Default:     1
+
+VASAutoBalance.levelScaling=1
 
 #
 #     VASAutoBalance.ForcedIDXX
