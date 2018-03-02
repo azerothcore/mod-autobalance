@@ -10,7 +10,7 @@ class VasScriptMgr
     friend class ACE_Singleton<VasScriptMgr, ACE_Null_Mutex>;
     public: /* Initialization */
 
-        bool OnBeforeModifyAttributes(Creature* creature);
+        bool OnBeforeModifyAttributes(Creature* creature, uint32 & instancePlayerCount);
 };
 
 #define sVasScriptMgr ACE_Singleton<VasScriptMgr, ACE_Null_Mutex>::instance()
@@ -26,7 +26,7 @@ class VasModuleScript : public ModuleScript
         VasModuleScript(const char* name);
 
     public: 
-        virtual bool OnBeforeModifyAttributes(Creature* /*creature*/) { return true; }
+        virtual bool OnBeforeModifyAttributes(Creature* /*creature*/, uint32 & /*instancePlayerCount*/) { return true; }
 };
 
 template class ScriptRegistry<VasModuleScript>;

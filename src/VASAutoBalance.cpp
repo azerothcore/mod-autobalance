@@ -43,10 +43,10 @@
 #include "VASAutoBalance.h"
 #include "ScriptMgrMacros.h"
 
-bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature) {
+bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
     bool ret=true;
     FOR_SCRIPTS_RET(VasModuleScript, itr, end, ret) // return true by default if not scripts
-        if (!itr->second->OnBeforeModifyAttributes(creature))
+        if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount))
             ret=false; // we change ret value only when scripts return false
 
     return ret;
@@ -334,7 +334,7 @@ public:
 			return;
 		}
 
-		if (!sVasScriptMgr->OnBeforeModifyAttributes(creature))
+		if (!sVasScriptMgr->OnBeforeModifyAttributes(creature, instancePlayerCount))
 			return;
 
 		uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
