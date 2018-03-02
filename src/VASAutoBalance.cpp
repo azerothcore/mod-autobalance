@@ -504,7 +504,8 @@ public:
 		creature->CustomData.Set("VAS_AutoBalanceCreatureInfo", new AutoBalanceCreatureInfo(instancePlayerCount, damageMultiplier));
 
 		creature->UpdateAllStats();
-    	creature->SetFullHealth();
+        if (creature->GetHealth() > 0)
+    	    creature->SetFullHealth();
 	}
 };
 class VAS_AutoBalance_CommandScript : public CommandScript
