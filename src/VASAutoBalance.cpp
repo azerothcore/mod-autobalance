@@ -63,8 +63,9 @@ class AutoBalanceCreatureInfo : public DataMap::Base
 {
 public:
     AutoBalanceCreatureInfo() {}
-    AutoBalanceCreatureInfo(uint32 count, float dmg) : instancePlayerCount(count),DamageMultiplier(dmg) {}
+    AutoBalanceCreatureInfo(uint32 count, float dmg, uint8 selLevel) : instancePlayerCount(count),DamageMultiplier(dmg),selectedLevel(selLevel) {}
 	uint32 instancePlayerCount = 0;
+    uint8 selectedLevel = 0;
 	float DamageMultiplier = 1;
 };
 
@@ -317,10 +318,11 @@ public:
 	void ModifyCreatureAttributes(Creature* creature)
 	{
 		uint32 &instancePlayerCount=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->instancePlayerCount;
+        uint8 &selectedLevel=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->selectedLevel;
 		uint32 _curCount=creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
 
 		// already modified
-		if (instancePlayerCount == _curCount)
+		if (selectedLevel == creature->getLevel() && instancePlayerCount == _curCount)
 			return;
 
 		instancePlayerCount = _curCount;
@@ -364,10 +366,10 @@ public:
             int lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 0);
             int higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
             if (level - lowerOffset >= creature->getLevel() && level + higherOffset <= creature->getLevel()) {
-                level = 0; // avoid level change within the offsets
+                selectedLevel = 0; // avoid level change within the offsets
             } else {
                 // keep bosses +3 level
-                level = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? level + 3 : level;
+                selectedLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? level + 3 : level;
                 creature->SetLevel(level);
             }
         }
@@ -386,8 +388,7 @@ public:
 
 		uint8 levelDiff=level>originalLevel ? (level-originalLevel) : 0;
 
-		//float levelMul = levelDiff > 10 ? levelDiff/10 : 1;
-		float levelStatsRate = levelDiff ? (level/9) : 1;
+		float levelStatsRate = level ? (level/9) : 1;
 
 		uint32 baseHealth = creatureStats->GenerateHealth(creatureTemplate);
 		uint32 baseMana = creatureStats->GenerateMana(creatureTemplate);
@@ -501,7 +502,7 @@ public:
 		creature->SetPower(POWER_MANA, scaledMana);
 		creature->SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, (float)scaledHealth);
 		creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)scaledMana);
-		creature->CustomData.Set("VAS_AutoBalanceCreatureInfo", new AutoBalanceCreatureInfo(instancePlayerCount, damageMultiplier));
+		creature->CustomData.Set("VAS_AutoBalanceCreatureInfo", new AutoBalanceCreatureInfo(instancePlayerCount, damageMultiplier, selectedLevel));
 
 		creature->UpdateAllStats();
         if (creature->GetHealth() > 0)
