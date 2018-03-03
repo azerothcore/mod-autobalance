@@ -205,6 +205,9 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 	{
 		if (!enabled)
 			return damage;
+            
+        if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
+            return damage;
 
 		float damageMultiplier = attacker->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->DamageMultiplier;
 
@@ -213,7 +216,7 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 
 		if (!((sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1 
 				|| (target->GetMap()->IsDungeon() && attacker->GetMap()->IsDungeon()) || (attacker->GetMap()->IsBattleground()
-					 && target->GetMap()->IsBattleground())) && (attacker->GetTypeId() != TYPEID_PLAYER)))
+					 && target->GetMap()->IsBattleground()))))
 			return damage;
 
 
