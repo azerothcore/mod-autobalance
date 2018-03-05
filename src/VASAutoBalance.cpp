@@ -69,6 +69,15 @@ public:
     float DamageMultiplier = 1;
 };
 
+class AutoBalanceMapInfo : public DataMap::Base
+{
+public:
+    AutoBalanceMapInfo() {}
+    AutoBalanceMapInfo(uint32 count, uint8 selLevel) : playerCount(count),mapLevel(selLevel) {}
+    uint32 playerCount = 0;
+    uint8 mapLevel = 0;
+};
+
 static bool enabled = true;
 // The map values correspond with the VAS.AutoBalance.XX.Name entries in the configuration file.
 static std::map<int, int> forcedCreatureIds;
@@ -166,6 +175,18 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
         {
             if (enabled)
                 ChatHandler(Player->GetSession()).PSendSysMessage("This server is running a VAS_AutoBalance Module.");
+        }
+        
+        virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) {
+            if (!enabled || !player)
+                return;
+            
+            if (sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 0) == 0)
+                return;
+            
+            
+            if (player->getLevel() > player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo")->mapLevel)
+                player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo")->mapLevel = player->getLevel();
         }
 };
 
@@ -320,17 +341,24 @@ public:
 
     void ModifyCreatureAttributes(Creature* creature)
     {
-        uint32 &instancePlayerCount=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->instancePlayerCount;
-        uint8 &selectedLevel=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo")->selectedLevel;
+        if (!creature || !creature->GetMap())
+            return;
+        
+        int levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 0);
+        AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
+        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+
         uint32 _curCount=creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
 
-        // already modified
-        if (selectedLevel == creature->getLevel() && instancePlayerCount == _curCount)
+        // already scaled
+        if ((mapVasInfo->mapLevel && mapVasInfo->mapLevel == creature->getLevel())
+            && (!creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel == creature->getLevel())
+            && creatureVasInfo->instancePlayerCount == _curCount)
             return;
 
-        instancePlayerCount = _curCount;
+        creatureVasInfo->instancePlayerCount = mapVasInfo->playerCount = _curCount;
 
-        if (!instancePlayerCount) // no players in map, do not modify attributes
+        if (!creatureVasInfo->instancePlayerCount) // no players in map, do not modify attributes
             return;
 
         if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsBattleground() || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1))
@@ -342,7 +370,7 @@ public:
             return;
         }
 
-        if (!sVasScriptMgr->OnBeforeModifyAttributes(creature, instancePlayerCount))
+        if (!sVasScriptMgr->OnBeforeModifyAttributes(creature, creatureVasInfo->instancePlayerCount))
             return;
 
         uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
@@ -351,7 +379,6 @@ public:
         
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
-        int levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 0);
         // scale level only in dungeon/raids
         if ((levelScaling && creature->GetMap()->IsDungeon()) || levelScaling > 1) {
             Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
@@ -368,7 +395,7 @@ public:
             }
         }
         
-        uint8 originalLevel = creatureTemplate->maxlevel;
+        uint8 originalLevel = creatureVasInfo->selectedLevel ? creatureTemplate->maxlevel : creature->getLevel();
 
         int higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 0);
         int lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
@@ -376,23 +403,29 @@ public:
             level = 0; // avoid level change within the offsets
         
         if (level) {
-            if (level != selectedLevel || selectedLevel != creature->getLevel()) {
+            if (level != creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel != creature->getLevel()) {
                 // keep bosses +3 level
-                selectedLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? level + 3 : level;
-                creature->SetLevel(selectedLevel);
+                creatureVasInfo->selectedLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? level + 3 : level;
+                creature->SetLevel(creatureVasInfo->selectedLevel);
             }
-        } else if (instancePlayerCount>=maxNumberOfPlayers || selectedLevel) {
-            selectedLevel = 0;
+        } else if (creatureVasInfo->instancePlayerCount>=maxNumberOfPlayers || creatureVasInfo->selectedLevel) {
+            creatureVasInfo->selectedLevel = 0;
             creature->SelectLevel(level == 0); // select level from template only when we've no levelScaling
         }
+        
+        bool useDbStats = false;
+        if (creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
+            useDbStats = true;
+        
+        mapVasInfo->mapLevel = creatureVasInfo->selectedLevel;
 
-        if (instancePlayerCount>=maxNumberOfPlayers) {
+        if (creatureVasInfo->instancePlayerCount>=maxNumberOfPlayers) {
             // use default stats
             return;
         }
 
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureTemplate->maxlevel, creatureTemplate->unit_class);
-        CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(selectedLevel ?  selectedLevel : creature->getLevel(), creatureTemplate->unit_class);
+        //CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel ?  creatureVasInfo->selectedLevel : creature->getLevel(), creatureTemplate->unit_class);
 
         float defaultMultiplier = 1.0f;
         float healthMultiplier = 1.0f;
@@ -450,21 +483,21 @@ public:
         switch (maxNumberOfPlayers)
         {
         case 40:
-            defaultMultiplier = (float)instancePlayerCount / (float)maxNumberOfPlayers; // 40 Man Instances oddly enough scale better with the old formula
+            defaultMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers; // 40 Man Instances oddly enough scale better with the old formula
             break;
         case 25:
-            defaultMultiplier = (tanh((instancePlayerCount - 16.5f) / 1.5f) + 1.0f) / 2.0f;
+            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 16.5f) / 1.5f) + 1.0f) / 2.0f;
             break;
         case 10:
-            defaultMultiplier = (tanh((instancePlayerCount - 4.5f) / 1.5f) + 1.0f) / 2.0f;
+            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 4.5f) / 1.5f) + 1.0f) / 2.0f;
             break;
         case 2:
             // Two Man Creatures are too easy if handled by the 5 man formula, this would only
             // apply in the situation where it's specified in the configuration file.
-            defaultMultiplier = (float)instancePlayerCount / (float)maxNumberOfPlayers;
+            defaultMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
             break;                                                                        
         default:
-            defaultMultiplier = (tanh((instancePlayerCount - 2.2f) / 1.5f) + 1.0f) / 2.0f;    // default to a 5 man group
+            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 2.2f) / 1.5f) + 1.0f) / 2.0f;    // default to a 5 man group
         }
 
         // VAS SOLO  - Map 0,1 and 530 ( World Mobs )                                                               
@@ -491,21 +524,19 @@ public:
             healthMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinHPModifier", 0.1f);
         }
         
-        if (selectedLevel>originalLevel) {
-            // exponential regression formula * level multiplier
-            float origHealth=healthYIntercept*float(std::pow(healthRegression,float(originalLevel)));
-            origHealth =float(float(origHealth+baseHealth)/2);
-            float newHealth=healthYIntercept*float(std::pow(healthRegression,float(selectedLevel)));
-            uint32 statHealth = creatureStats->GenerateHealth(creatureTemplate);
-            newHealth = float(float(newHealth+statHealth)/2);
-            levelStatsRate = (newHealth/origHealth)*float(selectedLevel/5)* healthMultiplier;
+        if (!useDbStats && creatureVasInfo->selectedLevel) {
+                // exponential regression formula * level multiplier
+                float origHealth=healthYIntercept*float(std::pow(healthRegression,float(originalLevel)));
+                float diff=origHealth > baseHealth ?  origHealth - baseHealth : baseHealth - origHealth;
+                float newHealth=healthYIntercept*float(std::pow(healthRegression,float(creatureVasInfo->selectedLevel)));
+                float incrRate = float(newHealth/baseHealth);
+                levelStatsRate = (newHealth+(diff*incrRate))/baseHealth;
         }
 
         scaledHealth = uint32((baseHealth * healthMultiplier * levelStatsRate) + 1.0f);
 
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
-
 
         // Now adjusting Mana, Mana is something that can be scaled linearly
         if (maxNumberOfPlayers == 0) {
@@ -514,9 +545,9 @@ public:
             damageMultiplier = defaultMultiplier;
         }
         else {
-            scaledMana = ((baseMana / maxNumberOfPlayers) * instancePlayerCount);
+            scaledMana = ((baseMana / maxNumberOfPlayers) * creatureVasInfo->instancePlayerCount);
             // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
-            damageMultiplier = (float)instancePlayerCount / (float)maxNumberOfPlayers;
+            damageMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
         }
 
         scaledMana *= levelStatsRate;
@@ -527,26 +558,34 @@ public:
             damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
         }
         
-        if (selectedLevel>originalLevel) {
+        if (!useDbStats && creatureVasInfo->selectedLevel) {
             // exponential regression formula + level multiplier
             float origDamage=dmgYIntercept*float(std::pow(dmgRegression,float(originalLevel)));
-            float newDamage=dmgYIntercept*float(std::pow(dmgRegression,float(selectedLevel)));
-            damageMultiplier *= (newDamage/origDamage)*float(selectedLevel/5)*damageMultiplier;
+            float newDamage=dmgYIntercept*float(std::pow(dmgRegression,float(creatureVasInfo->selectedLevel)));
+            damageMultiplier *= (newDamage/origDamage) * float(creatureVasInfo->selectedLevel/originalLevel);
         }
+        
+        uint32 prevMaxHealth = creature->GetMaxHealth();
+        uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
+        uint32 prevHealth = creature->GetHealth();
+        uint32 prevPower = creature->GetPower(POWER_MANA);
 
         creature->SetCreateHealth(scaledHealth);
         creature->SetMaxHealth(scaledHealth);
         creature->ResetPlayerDamageReq();
         creature->SetCreateMana(scaledMana);
         creature->SetMaxPower(POWER_MANA, scaledMana);
-        creature->SetPower(POWER_MANA, scaledMana);
         creature->SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, (float)scaledHealth);
         creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)scaledMana);
-        creature->CustomData.Set("VAS_AutoBalanceCreatureInfo", new AutoBalanceCreatureInfo(instancePlayerCount, damageMultiplier, selectedLevel));
+        creatureVasInfo->DamageMultiplier = damageMultiplier;
 
+        uint32 scaledCurHealth=prevHealth && prevMaxHealth ? (scaledHealth*prevHealth)/prevMaxHealth : 0;
+        uint32 scaledCurPower=prevPower && prevMaxPower  ? (scaledMana*prevPower)/prevMaxPower : 0;
+
+        creature->SetHealth(scaledCurHealth);
+        creature->SetPower(POWER_MANA, scaledCurPower);
+        
         creature->UpdateAllStats();
-        if (creature->GetHealth() > 0)
-            creature->SetFullHealth();
     }
 };
 class VAS_AutoBalance_CommandScript : public CommandScript
