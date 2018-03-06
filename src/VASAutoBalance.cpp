@@ -434,19 +434,6 @@ public:
         float damageMultiplier = 1.0f;
         
         float dmgRegression, dmgYIntercept;
-        
-        switch(creatureTemplate->rank) {
-            case CREATURE_ELITE_NORMAL:
-                // NORMAL
-                dmgRegression = 1.046920f;
-                dmgYIntercept = 14.109414f;
-            break;
-            default:
-                // ELITE
-                dmgRegression = 1.047760f;
-                dmgYIntercept = 25.361667f;
-            break;
-        }
 
         uint32 baseHealth = origCreatureStats->GenerateHealth(creatureTemplate);
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
@@ -566,12 +553,19 @@ public:
         {
             damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
         }
-        
+
         if (!useDefStats && creatureVasInfo->selectedLevel) {
-            // exponential regression formula + level multiplier
-            float origDamage=dmgYIntercept*float(std::pow(dmgRegression,float(originalLevel)));
-            float newDamage=dmgYIntercept*float(std::pow(dmgRegression,float(creatureVasInfo->selectedLevel)));
-            damageMultiplier *= (newDamage/origDamage);
+            uint32 origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
+            uint32 newDmgBase = 0;
+            if (level <= 60)
+                newDmgBase=creatureStats->BaseDamage[0];
+            else if(level <= 70)
+                newDmgBase=creatureStats->BaseDamage[1];
+            else {
+                newDmgBase=creatureStats->BaseDamage[2];
+            }
+
+            damageMultiplier *= float(newDmgBase)/float(origDmgBase);
         }
         
         uint32 newBaseArmor=useDefStats ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate); 
