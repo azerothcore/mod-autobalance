@@ -571,7 +571,7 @@ public:
             // exponential regression formula + level multiplier
             float origDamage=dmgYIntercept*float(std::pow(dmgRegression,float(originalLevel)));
             float newDamage=dmgYIntercept*float(std::pow(dmgRegression,float(creatureVasInfo->selectedLevel)));
-            damageMultiplier *= (newDamage/origDamage) * float(creatureVasInfo->selectedLevel)/float(originalLevel);
+            damageMultiplier *= (newDamage/origDamage);
         }
         
         uint32 newBaseArmor=useDefStats ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate); 
