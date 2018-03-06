@@ -414,7 +414,7 @@ public:
         
         uint8 originalLevel = creatureTemplate->maxlevel;
         
-        if (checkLevelOffset(level, originalLevel)) {  // avoid level change within the offsets
+        if (!checkLevelOffset(level, originalLevel)) {  // avoid level change within the offsets
             if (level != creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel != creature->getLevel()) {
                 // keep bosses +3 level
                 creatureVasInfo->selectedLevel = level + bonusLevel;
