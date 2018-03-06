@@ -341,7 +341,7 @@ public:
 
     void ModifyCreatureAttributes(Creature* creature)
     {
-        if (!creature || !creature->GetMap())
+        if (!creature || !creature->GetMap() || !creature->IsAlive())
             return;
         
         int levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 0);
@@ -529,11 +529,11 @@ public:
             else if(level <= 70)
                 newBaseHealth=creatureStats->BaseHealth[1];
             else {
-                newBaseHealth=creatureStats->BaseHealth[2] * (creatureVasInfo->selectedLevel-70) * 0.2; // special increasing for end-game contents
+                newBaseHealth=creatureStats->BaseHealth[2] * (creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3 : 1); // special increasing for end-game contents
             }
 
             float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
-            hpStatsRate = newHealth/baseHealth;
+            hpStatsRate = newHealth/float(baseHealth);
         }
 
         scaledHealth = uint32((baseHealth * healthMultiplier * hpStatsRate) + 1.0f);
@@ -556,7 +556,7 @@ public:
         float manaStatsRate  = 1.0f;
         if (!useDefStats && creatureVasInfo->selectedLevel) {
             float newMana =  creatureStats->GenerateMana(creatureTemplate);
-            manaStatsRate = newMana/baseMana;
+            manaStatsRate = newMana/float(baseMana);
         }
 
         scaledMana *= manaStatsRate;
@@ -571,7 +571,7 @@ public:
             // exponential regression formula + level multiplier
             float origDamage=dmgYIntercept*float(std::pow(dmgRegression,float(originalLevel)));
             float newDamage=dmgYIntercept*float(std::pow(dmgRegression,float(creatureVasInfo->selectedLevel)));
-            damageMultiplier *= (newDamage/origDamage) * float(creatureVasInfo->selectedLevel/originalLevel);
+            damageMultiplier *= (newDamage/origDamage) * float(creatureVasInfo->selectedLevel)/float(originalLevel);
         }
         
         uint32 newBaseArmor=useDefStats ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate); 
@@ -592,13 +592,12 @@ public:
         creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)scaledMana);
         creatureVasInfo->DamageMultiplier = damageMultiplier;
 
-        uint32 scaledCurHealth=prevHealth && prevMaxHealth ? scaledHealth/prevMaxHealth*prevHealth : 0;
-        uint32 scaledCurPower=prevPower && prevMaxPower  ? scaledMana/prevMaxPower*prevPower : 0;
+        uint32 scaledCurHealth=prevHealth && prevMaxHealth ? float(scaledHealth)/float(prevMaxHealth)*float(prevHealth) : 0;
+        uint32 scaledCurPower=prevPower && prevMaxPower  ? float(scaledMana)/float(prevMaxPower)*float(prevPower) : 0;
 
-        if (creature->IsAlive()) {
-            creature->SetHealth(scaledCurHealth);
-            creature->SetPower(POWER_MANA, scaledCurPower);
-        }
+
+        creature->SetHealth(scaledCurHealth);
+        creature->SetPower(POWER_MANA, scaledCurPower);
 
         creature->UpdateAllStats();
     }
