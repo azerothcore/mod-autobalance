@@ -410,30 +410,30 @@ public:
                 creatureVasInfo->selectedLevel = level + bonusLevel;
                 creature->SetLevel(creatureVasInfo->selectedLevel);
             }
-        } else if (creatureVasInfo->instancePlayerCount>=maxNumberOfPlayers || creatureVasInfo->selectedLevel) {
+        } else {
             creatureVasInfo->selectedLevel = 0;
             creature->SelectLevel(level == 0); // select level from template only when we've no levelScaling
         }
         
-        bool useDefStats = false;
-        if (creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
-            useDefStats = true;
-        
         mapVasInfo->mapLevel = creatureVasInfo->selectedLevel;
-
+        
         if (creatureVasInfo->instancePlayerCount>=maxNumberOfPlayers) {
             // use default stats
             return;
         }
+        
+        bool useDefStats = false;
+        if (sConfigMgr->GetIntDefault("VASAutoBalance.levelUseDbValuesWhenExists", 1) == 1 && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
+            useDefStats = true;
 
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureTemplate->maxlevel, creatureTemplate->unit_class);
         CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel ?  creatureVasInfo->selectedLevel : creature->getLevel(), creatureTemplate->unit_class);
 
-        float defaultMultiplier = 1.0f;
-        float healthMultiplier = 1.0f;
-        float damageMultiplier = 1.0f;
-        
-        float dmgRegression, dmgYIntercept;
+        float defaultMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.global", 1.0f);
+        float healthMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.health", 1.0f);
+        float manaMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.mana", 1.0f);
+        float armorMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.armor", 1.0f);
+        float damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.damage", 1.0f);
 
         uint32 baseHealth = origCreatureStats->GenerateHealth(creatureTemplate);
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
@@ -467,21 +467,21 @@ public:
         switch (maxNumberOfPlayers)
         {
         case 40:
-            defaultMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers; // 40 Man Instances oddly enough scale better with the old formula
+            defaultMultiplier *= (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers; // 40 Man Instances oddly enough scale better with the old formula
             break;
         case 25:
-            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 16.5f) / 1.5f) + 1.0f) / 2.0f;
+            defaultMultiplier *= (tanh((creatureVasInfo->instancePlayerCount - 16.5f) / 1.5f) + 1.0f) / 2.0f;
             break;
         case 10:
-            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 4.5f) / 1.5f) + 1.0f) / 2.0f;
+            defaultMultiplier *= (tanh((creatureVasInfo->instancePlayerCount - 4.5f) / 1.5f) + 1.0f) / 2.0f;
             break;
         case 2:
             // Two Man Creatures are too easy if handled by the 5 man formula, this would only
             // apply in the situation where it's specified in the configuration file.
-            defaultMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
+            defaultMultiplier *= (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
             break;                                                                        
         default:
-            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 2.2f) / 1.5f) + 1.0f) / 2.0f;    // default to a 5 man group
+            defaultMultiplier *= (tanh((creatureVasInfo->instancePlayerCount - 2.2f) / 1.5f) + 1.0f) / 2.0f;    // default to a 5 man group
         }
 
         // VAS SOLO  - Map 0,1 and 530 ( World Mobs )                                                               
@@ -491,18 +491,18 @@ public:
         && (creature->isElite() || creature->isWorldBoss()))  // specific to World Bosses and elites in those Maps, this is going to use the entry XPlayer in place of instancePlayerCount.
         {
             if (baseHealth > 800000) {
-                defaultMultiplier = (tanh((numPlayerConf - 5.0f) / 1.5f) + 1.0f) / 2.0f;
+                defaultMultiplier *= (tanh((numPlayerConf - 5.0f) / 1.5f) + 1.0f) / 2.0f;
 
             }
             else {
                 // Assuming a 5 man configuration, as World Bosses have been relatively 
                 // retired since BC so unless the boss has some substantial baseHealth
-                defaultMultiplier = (tanh((numPlayerConf - 2.2f) / 1.5f) + 1.0f) / 2.0f; 
+                defaultMultiplier *= (tanh((numPlayerConf - 2.2f) / 1.5f) + 1.0f) / 2.0f; 
             }
         }
 
         // Ensure that the healthMultiplier is not lower than the configuration specified value. -- This may be Deprecated later.
-        healthMultiplier = defaultMultiplier;
+        healthMultiplier *= defaultMultiplier;
         if (healthMultiplier <= sConfigMgr->GetFloatDefault("VASAutoBalance.MinHPModifier", 0.1f))
         {
             healthMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinHPModifier", 0.1f);
@@ -516,7 +516,10 @@ public:
             else if(level <= 70)
                 newBaseHealth=creatureStats->BaseHealth[1];
             else {
-                newBaseHealth=creatureStats->BaseHealth[2] * (creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3 : 1); // special increasing for end-game contents
+                newBaseHealth=creatureStats->BaseHealth[2]; 
+                // special increasing for end-game contents
+                if (sConfigMgr->GetIntDefault("VASAutoBalance.LevelEndGameBoost", 1) == 1) 
+                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3 : 1;
             }
 
             float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
@@ -546,7 +549,7 @@ public:
             manaStatsRate = newMana/float(baseMana);
         }
 
-        scaledMana *= manaStatsRate;
+        scaledMana *= manaStatsRate * manaMultiplier;
         
         // Can not be less then Min_D_Mod
         if (damageMultiplier <= sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f))
@@ -568,12 +571,15 @@ public:
             damageMultiplier *= float(newDmgBase)/float(origDmgBase);
         }
         
-        uint32 newBaseArmor=useDefStats ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate); 
+        uint32 newBaseArmor=armorMultiplier * (useDefStats ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)); 
         
         uint32 prevMaxHealth = creature->GetMaxHealth();
         uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
         uint32 prevHealth = creature->GetHealth();
         uint32 prevPower = creature->GetPower(POWER_MANA);
+
+        if (!sVasScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor))
+            return;
 
         creature->SetArmor(newBaseArmor);
         creature->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, (float)newBaseArmor);

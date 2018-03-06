@@ -10,7 +10,11 @@ class VasScriptMgr
     friend class ACE_Singleton<VasScriptMgr, ACE_Null_Mutex>;
     public: /* Initialization */
 
+        // called at the start of ModifyCreatureAttributes method
+        // it can be used to add some condition to skip autobalancing system for example
         bool OnBeforeModifyAttributes(Creature* creature, uint32 & instancePlayerCount);
+        // called before change creature values, to tune some values or skip modifications
+        bool OnBeforeUpdateStats(Creature* creature, uint32 &scaledHealth, uint32 &scaledMana, float &damageMultiplier, uint32 &newBaseArmor);
 };
 
 #define sVasScriptMgr ACE_Singleton<VasScriptMgr, ACE_Null_Mutex>::instance()
@@ -27,6 +31,7 @@ class VasModuleScript : public ModuleScript
 
     public: 
         virtual bool OnBeforeModifyAttributes(Creature* /*creature*/, uint32 & /*instancePlayerCount*/) { return true; }
+        virtual bool OnBeforeUpdateStats(Creature* /*creature*/, uint32 &/*scaledHealth*/, uint32 &/*scaledMana*/, float &/*damageMultiplier*/, float &/*newBaseArmor*/) { return true; }
 };
 
 template class ScriptRegistry<VasModuleScript>;

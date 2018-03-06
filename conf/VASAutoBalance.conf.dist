@@ -41,6 +41,29 @@ VASAutoBalance.levelHigherOffset = 3
 VASAutoBalance.levelLowerOffset  = 0
 
 #
+#     VASAutoBalance.levelUseDbValuesWhenExists
+#        When enabled with levelScaling, the creature will use its default database values
+#        instead of level scaling formula when player/party level has correspondance with 
+#        creature_template minlevel/maxlevel. Should not be enabled with LevelEndGameBoost
+#        to avoid wrong scaling in some cases
+#
+#        Default:     0 (1 = ON, 0 = OFF)
+
+VASAutoBalance.levelUseDbValuesWhenExists = 0
+
+#
+#     VASAutoBalance.LevelEndGameBoost
+#        End game creatures have an exponential (not linear) regression
+#        that is not correctly handled by db values. Keep this enabled
+#        to have stats as near possible to the official ones.
+#        This conf should not be enabled with levelUseDbValuesWhenExists to avoid wrong
+#        scaling in some cases.
+#
+#        Default:     1 (1 = ON, 0 = OFF)
+
+VASAutoBalance.LevelEndGameBoost = 1
+
+#
 #     VASAutoBalance.Instances
 #        Set instances to Auto chance XPlayer depending on players in it.
 #        Default:     1 (1 = ON, 0 = OFF)
@@ -82,6 +105,20 @@ VASAutoBalance.MinHPModifier=0.10
 #        Default:     0.10
 
 VASAutoBalance.MinDamageModifier=0.10
+
+
+#
+#     VASAutoBalance.rate.*
+#        You can tune all rates increasing/decreasing difficulty in a linear way
+#        Note that global rate will increase all other rates. For example:
+#        global = 2.0 , damage = 1.5  -> it means that damage will be 3.0
+#        Default:     1.0
+
+VASAutoBalance.rate.global = 1.0
+VASAutoBalance.rate.health = 1.0
+VASAutoBalance.rate.mana   = 1.0
+VASAutoBalance.rate.armor  = 1.0
+VASAutoBalance.rate.damage = 1.0
 
 #
 #     VASAutoBalance.playerCountDifficultyOffset
