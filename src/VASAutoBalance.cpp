@@ -365,7 +365,7 @@ public:
         
         // already scaled
         if ((mapVasInfo->mapLevel && mapVasInfo->mapLevel + bonusLevel == creature->getLevel())
-            && (creatureVasInfo->selectedLevel && creatureVasInfo->selectedLevel == creature->getLevel())
+            && (creatureVasInfo->selectedLevel && creatureVasInfo->selectedLevel + bonusLevel == creature->getLevel())
             && creatureVasInfo->instancePlayerCount == _curCount)
             return;
 
@@ -406,11 +406,11 @@ public:
             }
         }
         
-        uint8 originalLevel = creatureVasInfo->selectedLevel ? creatureTemplate->maxlevel : creature->getLevel();
+        uint8 originalLevel = creatureTemplate->maxlevel;
 
         int higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 0);
         int lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
-        if (level && ((originalLevel >= level && originalLevel <= level + higherOffset ) || (originalLevel <= level && originalLevel >= level - lowerOffset)))
+        if (level && ((originalLevel >= level && originalLevel <= (level + higherOffset) ) || (originalLevel <= level && originalLevel >= (level - lowerOffset))))
             level = 0; // avoid level change within the offsets
         
         if (level) {
@@ -429,7 +429,7 @@ public:
         if (sConfigMgr->GetIntDefault("VASAutoBalance.levelUseDbValuesWhenExists", 1) == 1 && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
             useDefStats = true;
 
-        CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureTemplate->maxlevel, creatureTemplate->unit_class);
+        CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(originalLevel, creatureTemplate->unit_class);
         CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel, creatureTemplate->unit_class);
 
         float defaultMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.global", 1.0f);
