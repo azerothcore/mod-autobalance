@@ -347,6 +347,12 @@ public:
 
         ModifyCreatureAttributes(creature);
     }
+    
+    bool checkLevelOffset(uint8 selectedLevel, uint8 targetLevel) {
+        int higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 0);
+        int lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
+        return selectedLevel && ((targetLevel >= selectedLevel && targetLevel <= (selectedLevel + higherOffset) ) || (targetLevel <= selectedLevel && targetLevel >= (selectedLevel - lowerOffset)));
+    }
 
     void ModifyCreatureAttributes(Creature* creature)
     {
@@ -364,9 +370,9 @@ public:
         uint8 bonusLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? 3 : 0;
         
         // already scaled
-        if ((mapVasInfo->mapLevel && mapVasInfo->mapLevel + bonusLevel == creature->getLevel())
-            && (creatureVasInfo->selectedLevel && creatureVasInfo->selectedLevel + bonusLevel == creature->getLevel())
-            && creatureVasInfo->instancePlayerCount == _curCount)
+        if (checkLevelOffset(mapVasInfo->mapLevel + bonusLevel, creature->getLevel()) &&
+            checkLevelOffset(creatureVasInfo->selectedLevel, creature->getLevel()) &&
+            creatureVasInfo->instancePlayerCount == _curCount)
             return;
 
         creatureVasInfo->instancePlayerCount = mapVasInfo->playerCount = _curCount;
@@ -407,13 +413,8 @@ public:
         }
         
         uint8 originalLevel = creatureTemplate->maxlevel;
-
-        int higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 0);
-        int lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
-        if (level && ((originalLevel >= level && originalLevel <= (level + higherOffset) ) || (originalLevel <= level && originalLevel >= (level - lowerOffset))))
-            level = 0; // avoid level change within the offsets
         
-        if (level) {
+        if (checkLevelOffset(level, originalLevel)) {  // avoid level change within the offsets
             if (level != creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel != creature->getLevel()) {
                 // keep bosses +3 level
                 creatureVasInfo->selectedLevel = level + bonusLevel;
@@ -423,7 +424,7 @@ public:
             creatureVasInfo->selectedLevel = creature->getLevel();
         }
 
-        mapVasInfo->mapLevel = creatureVasInfo->selectedLevel;
+        mapVasInfo->mapLevel = level;
         
         bool useDefStats = false;
         if (sConfigMgr->GetIntDefault("VASAutoBalance.levelUseDbValuesWhenExists", 1) == 1 && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
@@ -512,7 +513,7 @@ public:
         }
         
         float hpStatsRate  = 1.0f;
-        if (!useDefStats && creatureVasInfo->selectedLevel) {
+        if (!useDefStats && levelScaling) {
             uint32 newBaseHealth = 0;
             if (level <= 60)
                 newBaseHealth=creatureStats->BaseHealth[0];
