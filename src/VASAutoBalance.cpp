@@ -350,9 +350,13 @@ public:
 
         uint32 _curCount=creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
 
+        CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
+        
+        uint8 bonusLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? 3 : 0;
+        
         // already scaled
-        if ((mapVasInfo->mapLevel && mapVasInfo->mapLevel == creature->getLevel())
-            && (!creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel == creature->getLevel())
+        if ((mapVasInfo->mapLevel && mapVasInfo->mapLevel + bonusLevel == creature->getLevel())
+            && (creatureVasInfo->selectedLevel && creatureVasInfo->selectedLevel == creature->getLevel())
             && creatureVasInfo->instancePlayerCount == _curCount)
             return;
 
@@ -376,8 +380,6 @@ public:
         uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
 
         uint8 level=0;
-        
-        CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
         // scale level only in dungeon/raids
         if ((levelScaling && creature->GetMap()->IsDungeon()) || levelScaling > 1) {
@@ -405,7 +407,7 @@ public:
         if (level) {
             if (level != creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel != creature->getLevel()) {
                 // keep bosses +3 level
-                creatureVasInfo->selectedLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? level + 3 : level;
+                creatureVasInfo->selectedLevel = level + bonusLevel;
                 creature->SetLevel(creatureVasInfo->selectedLevel);
             }
         } else if (creatureVasInfo->instancePlayerCount>=maxNumberOfPlayers || creatureVasInfo->selectedLevel) {
@@ -413,9 +415,9 @@ public:
             creature->SelectLevel(level == 0); // select level from template only when we've no levelScaling
         }
         
-        bool useDbStats = false;
+        bool useDefStats = false;
         if (creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
-            useDbStats = true;
+            useDefStats = true;
         
         mapVasInfo->mapLevel = creatureVasInfo->selectedLevel;
 
@@ -425,29 +427,24 @@ public:
         }
 
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureTemplate->maxlevel, creatureTemplate->unit_class);
-        //CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel ?  creatureVasInfo->selectedLevel : creature->getLevel(), creatureTemplate->unit_class);
+        CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel ?  creatureVasInfo->selectedLevel : creature->getLevel(), creatureTemplate->unit_class);
 
         float defaultMultiplier = 1.0f;
         float healthMultiplier = 1.0f;
         float damageMultiplier = 1.0f;
-        float levelStatsRate  = 1.0f;
         
-        float dmgRegression, dmgYIntercept, healthRegression, healthYIntercept;
+        float dmgRegression, dmgYIntercept;
         
         switch(creatureTemplate->rank) {
             case CREATURE_ELITE_NORMAL:
                 // NORMAL
                 dmgRegression = 1.046920f;
                 dmgYIntercept = 14.109414f;
-                healthRegression = 1.06294f;
-                healthYIntercept = 127.340804f;
             break;
             default:
                 // ELITE
                 dmgRegression = 1.047760f;
                 dmgYIntercept = 25.361667f;
-                healthRegression = 1.07603f;
-                healthYIntercept = 303.626171f;
             break;
         }
 
@@ -524,16 +521,22 @@ public:
             healthMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinHPModifier", 0.1f);
         }
         
-        if (!useDbStats && creatureVasInfo->selectedLevel) {
-                // exponential regression formula * level multiplier
-                float origHealth=healthYIntercept*float(std::pow(healthRegression,float(originalLevel)));
-                float diff=origHealth > baseHealth ?  origHealth - baseHealth : baseHealth - origHealth;
-                float newHealth=healthYIntercept*float(std::pow(healthRegression,float(creatureVasInfo->selectedLevel)));
-                float incrRate = float(newHealth/baseHealth);
-                levelStatsRate = (newHealth+(diff*incrRate))/baseHealth;
+        float hpStatsRate  = 1.0f;
+        if (!useDefStats && creatureVasInfo->selectedLevel) {
+            uint32 newBaseHealth = 0;
+            if (level <= 60)
+                newBaseHealth=creatureStats->BaseHealth[0];
+            else if(level <= 70)
+                newBaseHealth=creatureStats->BaseHealth[1];
+            else {
+                newBaseHealth=creatureStats->BaseHealth[2] * (creatureVasInfo->selectedLevel-70) * 0.2; // special increasing for end-game contents
+            }
+
+            float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
+            hpStatsRate = newHealth/baseHealth;
         }
 
-        scaledHealth = uint32((baseHealth * healthMultiplier * levelStatsRate) + 1.0f);
+        scaledHealth = uint32((baseHealth * healthMultiplier * hpStatsRate) + 1.0f);
 
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
@@ -549,8 +552,14 @@ public:
             // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
             damageMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
         }
+        
+        float manaStatsRate  = 1.0f;
+        if (!useDefStats && creatureVasInfo->selectedLevel) {
+            float newMana =  creatureStats->GenerateMana(creatureTemplate);
+            manaStatsRate = newMana/baseMana;
+        }
 
-        scaledMana *= levelStatsRate;
+        scaledMana *= manaStatsRate;
         
         // Can not be less then Min_D_Mod
         if (damageMultiplier <= sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f))
@@ -558,18 +567,22 @@ public:
             damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
         }
         
-        if (!useDbStats && creatureVasInfo->selectedLevel) {
+        if (!useDefStats && creatureVasInfo->selectedLevel) {
             // exponential regression formula + level multiplier
             float origDamage=dmgYIntercept*float(std::pow(dmgRegression,float(originalLevel)));
             float newDamage=dmgYIntercept*float(std::pow(dmgRegression,float(creatureVasInfo->selectedLevel)));
             damageMultiplier *= (newDamage/origDamage) * float(creatureVasInfo->selectedLevel/originalLevel);
         }
         
+        uint32 newBaseArmor=useDefStats ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate); 
+        
         uint32 prevMaxHealth = creature->GetMaxHealth();
         uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
         uint32 prevHealth = creature->GetHealth();
         uint32 prevPower = creature->GetPower(POWER_MANA);
 
+        creature->SetArmor(newBaseArmor);
+        creature->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, (float)newBaseArmor);
         creature->SetCreateHealth(scaledHealth);
         creature->SetMaxHealth(scaledHealth);
         creature->ResetPlayerDamageReq();
@@ -579,12 +592,14 @@ public:
         creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)scaledMana);
         creatureVasInfo->DamageMultiplier = damageMultiplier;
 
-        uint32 scaledCurHealth=prevHealth && prevMaxHealth ? (scaledHealth*prevHealth)/prevMaxHealth : 0;
-        uint32 scaledCurPower=prevPower && prevMaxPower  ? (scaledMana*prevPower)/prevMaxPower : 0;
+        uint32 scaledCurHealth=prevHealth && prevMaxHealth ? scaledHealth/prevMaxHealth*prevHealth : 0;
+        uint32 scaledCurPower=prevPower && prevMaxPower  ? scaledMana/prevMaxPower*prevPower : 0;
 
-        creature->SetHealth(scaledCurHealth);
-        creature->SetPower(POWER_MANA, scaledCurPower);
-        
+        if (creature->IsAlive()) {
+            creature->SetHealth(scaledCurHealth);
+            creature->SetPower(POWER_MANA, scaledCurPower);
+        }
+
         creature->UpdateAllStats();
     }
 };
