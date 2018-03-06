@@ -52,6 +52,15 @@ bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instanc
     return ret;
 }
 
+bool VasScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor) {
+    bool ret=true;
+    FOR_SCRIPTS_RET(VasModuleScript, itr, end, ret)
+    if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor))
+        ret=false;
+
+        return ret;
+}
+
 VasModuleScript::VasModuleScript(const char* name)
     : ModuleScript(name)
 {
@@ -411,23 +420,17 @@ public:
                 creature->SetLevel(creatureVasInfo->selectedLevel);
             }
         } else {
-            creatureVasInfo->selectedLevel = 0;
-            creature->SelectLevel(level == 0); // select level from template only when we've no levelScaling
+            creatureVasInfo->selectedLevel = creature->getLevel();
         }
-        
+
         mapVasInfo->mapLevel = creatureVasInfo->selectedLevel;
-        
-        if (creatureVasInfo->instancePlayerCount>=maxNumberOfPlayers) {
-            // use default stats
-            return;
-        }
         
         bool useDefStats = false;
         if (sConfigMgr->GetIntDefault("VASAutoBalance.levelUseDbValuesWhenExists", 1) == 1 && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
             useDefStats = true;
 
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureTemplate->maxlevel, creatureTemplate->unit_class);
-        CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel ?  creatureVasInfo->selectedLevel : creature->getLevel(), creatureTemplate->unit_class);
+        CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel, creatureTemplate->unit_class);
 
         float defaultMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.global", 1.0f);
         float healthMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.health", 1.0f);
@@ -544,7 +547,7 @@ public:
         }
         
         float manaStatsRate  = 1.0f;
-        if (!useDefStats && creatureVasInfo->selectedLevel) {
+        if (!useDefStats && levelScaling) {
             float newMana =  creatureStats->GenerateMana(creatureTemplate);
             manaStatsRate = newMana/float(baseMana);
         }
@@ -557,7 +560,7 @@ public:
             damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
         }
 
-        if (!useDefStats && creatureVasInfo->selectedLevel) {
+        if (!useDefStats && levelScaling) {
             uint32 origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
             uint32 newDmgBase = 0;
             if (level <= 60)
@@ -571,7 +574,7 @@ public:
             damageMultiplier *= float(newDmgBase)/float(origDmgBase);
         }
         
-        uint32 newBaseArmor=armorMultiplier * (useDefStats ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)); 
+        uint32 newBaseArmor=armorMultiplier * (useDefStats || !levelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)); 
         
         uint32 prevMaxHealth = creature->GetMaxHealth();
         uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);

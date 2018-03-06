@@ -31,7 +31,7 @@ class VasModuleScript : public ModuleScript
 
     public: 
         virtual bool OnBeforeModifyAttributes(Creature* /*creature*/, uint32 & /*instancePlayerCount*/) { return true; }
-        virtual bool OnBeforeUpdateStats(Creature* /*creature*/, uint32 &/*scaledHealth*/, uint32 &/*scaledMana*/, float &/*damageMultiplier*/, float &/*newBaseArmor*/) { return true; }
+        virtual bool OnBeforeUpdateStats(Creature* /*creature*/, uint32 &/*scaledHealth*/, uint32 &/*scaledMana*/, float &/*damageMultiplier*/, uint32 &/*newBaseArmor*/) { return true; }
 };
 
 template class ScriptRegistry<VasModuleScript>;
