@@ -540,12 +540,12 @@ public:
         if (maxNumberOfPlayers == 0) {
             scaledMana = uint32((baseMana * defaultMultiplier) + 1.0f);
             // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
-            damageMultiplier *= defaultMultiplier * globalRate;
+            damageMultiplier *= defaultMultiplier;
         }
         else {
             scaledMana = ((baseMana / maxNumberOfPlayers) * creatureVasInfo->instancePlayerCount);
             // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
-            damageMultiplier *= (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers * globalRate;
+            damageMultiplier *= (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
         }
         
         float manaStatsRate  = 1.0f;
@@ -575,6 +575,8 @@ public:
 
             damageMultiplier *= float(newDmgBase)/float(origDmgBase);
         }
+        
+        damageMultiplier *= globalRate * damageMultiplier;
         
         uint32 newBaseArmor=globalRate * armorMultiplier * (useDefStats || !levelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)); 
         
