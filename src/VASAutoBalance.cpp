@@ -278,19 +278,34 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
             if (!enabled)
                 return;
 
-            AutoBalanceMapInfo *mapVasInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+            AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
 
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
-            if (player->getLevel() > mapVasInfo->mapLevel)
-                mapVasInfo->mapLevel = player->getLevel();
+            if (player) {
+                if (player->getLevel() > mapVasInfo->mapLevel)
+                    mapVasInfo->mapLevel = player->getLevel();
+            } else {
+                Map::PlayerList const &playerList = map->GetPlayers();
+                if (!playerList.isEmpty())
+                {
+                    for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+                    {
+                        if (Player* playerHandle = playerIteration->GetSource())
+                        {
+                            if (!playerHandle->IsGameMaster() && playerHandle->getLevel() > mapVasInfo->mapLevel)
+                                mapVasInfo->mapLevel = playerHandle->getLevel();
+                        }
+                    }
+                }
+            }
 
             // mapVasInfo->playerCount++; (maybe we've to found a safe solution to avoid player recount each time)
             mapVasInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
             {
-                if ((map->GetEntry()->IsDungeon()) && !player->IsGameMaster())
+                if ((map->GetEntry()->IsDungeon()) && (!player || player->IsGameMaster()))
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
                     if (!playerList.isEmpty())
@@ -313,7 +328,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
             if (!enabled)
                 return;
 
-            AutoBalanceMapInfo *mapVasInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+            AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
 
             // mapVasInfo->playerCount--; (maybe we've to found a safe solution to avoid player recount each time)
             mapVasInfo->playerCount = map->GetPlayersCountExceptGMs();
@@ -327,7 +342,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 
             if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
             {
-                if ((map->GetEntry()->IsDungeon()) && !player->IsGameMaster())
+                if ((map->GetEntry()->IsDungeon()) && (!player || player->IsGameMaster()))
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
                     if (!playerList.isEmpty())
