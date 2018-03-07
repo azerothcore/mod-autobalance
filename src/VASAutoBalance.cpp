@@ -535,12 +535,12 @@ public:
                     newBaseHealth *= creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3 : 1;
             }
 
+            float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
+
             // allows health to be different with creatures that originally
             // differentiate their health by different level instead of multiplier field.
             // expecially in dungeon
-            newBaseHealth += creatureVasInfo->selectedLevel * originalLevel * (maxNumberOfPlayers ? maxNumberOfPlayers : 1);
-
-            float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
+            newHealth += creatureVasInfo->selectedLevel * originalLevel * (maxNumberOfPlayers ? maxNumberOfPlayers : 1);
             hpStatsRate = newHealth / float(baseHealth);
         }
 
