@@ -579,7 +579,7 @@ public:
             damageMultiplier *= float(newDmgBase)/float(origDmgBase);
         }
         
-        damageMultiplier *= globalRate * damageMultiplier;
+        damageMultiplier *= globalRate;
         
         uint32 newBaseArmor=globalRate * armorMultiplier * (useDefStats || !levelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)); 
         
