@@ -193,9 +193,10 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
             if (sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 0) == 0)
                 return;
             
+            AutoBalanceMapInfo *mapVasInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
             
-            if (player->getLevel() > player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo")->mapLevel)
-                player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo")->mapLevel = player->getLevel();
+            if (mapVasInfo->mapLevel < player->getLevel())
+                mapVasInfo->mapLevel = player->getLevel();
         }
 };
 
@@ -271,6 +272,16 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
         {
             if (!enabled)
                 return;
+            
+            AutoBalanceMapInfo *mapVasInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+            
+            // always check level, even if not conf enabled
+            // because we can enable at runtime and we need this information
+            if (player->getLevel() > mapVasInfo->mapLevel)
+                mapVasInfo->mapLevel = player->getLevel();
+            
+            // mapVasInfo->playerCount++; (maybe we've to found a safe solution to avoid player recount each time)
+            mapVasInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
             {
@@ -284,7 +295,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
                                 ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s entered the Instance %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), map->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s entered the Instance %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapVasInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
                             }
                         }
                     }
@@ -296,25 +307,32 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
         {
             if (!enabled)
                 return;
-        
-            int instancePlayerCount = map->GetPlayersCountExceptGMs() - 1;
             
-            if (instancePlayerCount >= 1)
+            AutoBalanceMapInfo *mapVasInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+        
+            // mapVasInfo->playerCount--; (maybe we've to found a safe solution to avoid player recount each time)
+            mapVasInfo->playerCount = map->GetPlayersCountExceptGMs();
+            
+            // always check level, even if not conf enabled
+            // because we can enable at runtime and we need this information
+            if (!mapVasInfo->playerCount) {
+                mapVasInfo->mapLevel = 0;
+                return;
+            }
+
+            if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
             {
-                if (sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) > 0)
+                if ((map->GetEntry()->IsDungeon()) && !player->IsGameMaster())
                 {
-                    if ((map->GetEntry()->IsDungeon()) && !player->IsGameMaster())
+                    Map::PlayerList const &playerList = map->GetPlayers();
+                    if (!playerList.isEmpty())
                     {
-                        Map::PlayerList const &playerList = map->GetPlayers();
-                        if (!playerList.isEmpty())
+                        for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
                         {
-                            for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+                            if (Player* playerHandle = playerIteration->GetSource())
                             {
-                                if (Player* playerHandle = playerIteration->GetSource())
-                                {
-                                    ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                    chatHandle.PSendSysMessage("|cffFF0000 [VAS-AutoBalance]|r|cffFF8000 %s left the Instance %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), instancePlayerCount, PlayerCountDifficultyOffset);
-                                }
+                                ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
+                                chatHandle.PSendSysMessage("|cffFF0000 [VAS-AutoBalance]|r|cffFF8000 %s left the Instance %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapVasInfo->playerCount, PlayerCountDifficultyOffset);
                             }
                         }
                     }
@@ -358,63 +376,50 @@ public:
     {
         if (!creature || !creature->GetMap() || !creature->IsAlive())
             return;
+
+        if (!creature->GetMap()->IsDungeon() && !creature->GetMap()->IsBattleground() && sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) == 1)
+            return;
+        
+        if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
+        {
+            return;
+        }
+
+        CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
         
         int levelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 0);
         AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
         AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
-
-        uint32 _curCount=creature->GetMap()->GetPlayersCountExceptGMs() + PlayerCountDifficultyOffset;
-
-        CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
         
+        uint32 curCount=mapVasInfo->playerCount + PlayerCountDifficultyOffset;
+
         uint8 bonusLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? 3 : 0;
-        
         // already scaled
-        if (checkLevelOffset(mapVasInfo->mapLevel + bonusLevel, creature->getLevel()) &&
-            checkLevelOffset(creatureVasInfo->selectedLevel, creature->getLevel()) &&
-            creatureVasInfo->instancePlayerCount == _curCount)
-            return;
+        if (levelScaling) {
+            if (checkLevelOffset(mapVasInfo->mapLevel + bonusLevel, creature->getLevel()) &&
+                checkLevelOffset(creatureVasInfo->selectedLevel, creature->getLevel()) &&
+                creatureVasInfo->instancePlayerCount == curCount) {
+                return;
+            }
+        } else if (creatureVasInfo->instancePlayerCount == curCount) {
+                return;
+        }
 
-        creatureVasInfo->instancePlayerCount = mapVasInfo->playerCount = _curCount;
+        creatureVasInfo->instancePlayerCount = curCount;
 
         if (!creatureVasInfo->instancePlayerCount) // no players in map, do not modify attributes
             return;
-
-        if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsBattleground() || sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) < 1))
-            return;
-
-        if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()) || 
-             (creature->GetMap()->IsDungeon() && sConfigMgr->GetIntDefault("VASAutoBalance.Instances", 1) < 1) || creature->GetMap()->GetPlayersCountExceptGMs() <= 0)
-        {
-            return;
-        }
 
         if (!sVasScriptMgr->OnBeforeModifyAttributes(creature, creatureVasInfo->instancePlayerCount))
             return;
 
         uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
-
-        uint8 level=0;
-
-        // scale level only in dungeon/raids
-        if ((levelScaling && creature->GetMap()->IsDungeon()) || levelScaling > 1) {
-            Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
-            if (!playerList.isEmpty())
-            {
-                for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
-                {
-                    if (Player* playerHandle = playerIteration->GetSource())
-                    {
-                        if (playerHandle->getLevel() > level)
-                            level=playerHandle->getLevel();
-                    }
-                }
-            }
-        }
         
         uint8 originalLevel = creatureTemplate->maxlevel;
         
-        if (!checkLevelOffset(level, originalLevel)) {  // avoid level change within the offsets
+        uint8 level = mapVasInfo->mapLevel;
+        
+        if (levelScaling && creature->GetMap()->IsDungeon() && !checkLevelOffset(level, originalLevel)) {  // avoid level change within the offsets or when not in dungeon/raid
             if (level != creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel != creature->getLevel()) {
                 // keep bosses +3 level
                 creatureVasInfo->selectedLevel = level + bonusLevel;
@@ -423,8 +428,6 @@ public:
         } else {
             creatureVasInfo->selectedLevel = creature->getLevel();
         }
-
-        mapVasInfo->mapLevel = level;
         
         bool useDefStats = false;
         if (sConfigMgr->GetIntDefault("VASAutoBalance.levelUseDbValuesWhenExists", 1) == 1 && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
