@@ -621,7 +621,7 @@ public:
         damageMul *= globalRate * damageMultiplier;
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
-        uint32 newBaseArmor= creatureVasInfo->ArmorMultiplier * (useDefStats || !levelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate));
+        uint32 newBaseArmor= creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate));
 
         uint32 prevMaxHealth = creature->GetMaxHealth();
         uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
