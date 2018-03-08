@@ -303,7 +303,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
             if (player) {
-                if (player->getLevel() > mapVasInfo->mapLevel)
+                if (!player->IsGameMaster() && player->getLevel() > mapVasInfo->mapLevel)
                     mapVasInfo->mapLevel = player->getLevel();
             } else {
                 Map::PlayerList const &playerList = map->GetPlayers();
