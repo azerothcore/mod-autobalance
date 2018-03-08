@@ -565,8 +565,8 @@ public:
 
             // allows health to be different with creatures that originally
             // differentiate their health by different level instead of multiplier field.
-            // expecially in dungeon
-            newHealth += creatureVasInfo->selectedLevel * originalLevel * (maxNumberOfPlayers ? maxNumberOfPlayers : 1);
+            // expecially in dungeon. The health bonus decrease if original level is similar to selected level
+            newHealth += (float)creatureVasInfo->selectedLevel * std::pow(2.0f,float(creatureVasInfo->selectedLevel/originalLevel)) * float(maxNumberOfPlayers ? maxNumberOfPlayers : 1) * (creatureTemplate->rank + 1);
             hpStatsRate = newHealth / float(baseHealth);
         }
 
