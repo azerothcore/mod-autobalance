@@ -409,6 +409,31 @@ public:
     bool checkLevelOffset(uint8 selectedLevel, uint8 targetLevel) {
         return selectedLevel && ((targetLevel >= selectedLevel && targetLevel <= (selectedLevel + higherOffset) ) || (targetLevel <= selectedLevel && targetLevel >= (selectedLevel - lowerOffset)));
     }
+    
+    void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
+        LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
+        if (dungeon && (map->IsDungeon() || map->IsRaid())) {
+            min  = dungeon->minlevel;
+            max  = dungeon->maxlevel;
+        }
+        
+        if (!min && !max) {
+            AccessRequirement const* ar=sObjectMgr->GetAccessRequirement(map->GetId(), map->GetDifficulty());
+            if (ar) {
+                min  = ar->levelMin;
+                max  = ar->levelMax;
+            }
+        }
+        
+        if (!min && !max)
+        {
+            AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(areaid);
+            if (areaEntry && areaEntry->area_level > 0) {
+                min = areaEntry->area_level;
+                max = areaEntry->area_level;
+            }
+        }
+    }
 
     void ModifyCreatureAttributes(Creature* creature)
     {
@@ -551,15 +576,22 @@ public:
                 newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost == 1)
-                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3 : 1;
+                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
 
             float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
 
             // allows health to be different with creatures that originally
             // differentiate their health by different level instead of multiplier field.
-            // expecially in dungeon. The health bonus decrease if original level is similar to selected level
-            newHealth += (float)creatureVasInfo->selectedLevel * std::pow(2.0f,float(creatureVasInfo->selectedLevel/originalLevel)) * float(maxNumberOfPlayers ? maxNumberOfPlayers : 1) * (creatureTemplate->rank + 1);
+            // expecially in dungeons. The health reduction decrease if original level is similar to the area max level
+            uint8 min,max;
+            getAreaLevel(creature->GetMap(), creature->GetAreaId(), min, max);
+            if (originalLevel >= min && originalLevel < max) {
+                float reduction = newHealth / float(max-min) * (float(max-originalLevel)*0.3f); // never more than 30%
+                if (reduction > 0 && reduction < newHealth)
+                    newHealth -= reduction;
+            }
+
             hpStatsRate = newHealth / float(baseHealth);
         }
 
