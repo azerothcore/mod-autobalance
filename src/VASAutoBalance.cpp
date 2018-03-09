@@ -564,6 +564,13 @@ public:
                 defaultMultiplier = (tanh((numPlayerConf - 2.2f) / 1.5f) + 1.0f) / 2.0f;
             }
         }
+        
+        creatureVasInfo->HealthMultiplier =   healthMultiplier * defaultMultiplier * globalRate;
+        
+        if (creatureVasInfo->HealthMultiplier <= MinHPModifier)
+        {
+            creatureVasInfo->HealthMultiplier = MinHPModifier;
+        }
 
         float hpStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling) {
@@ -594,13 +601,8 @@ public:
 
             hpStatsRate = newHealth / float(baseHealth);
         }
-
-        creatureVasInfo->HealthMultiplier =   healthMultiplier * defaultMultiplier * globalRate * hpStatsRate;
         
-        if (creatureVasInfo->HealthMultiplier <= MinHPModifier)
-        {
-            creatureVasInfo->HealthMultiplier = MinHPModifier;
-        }
+        creatureVasInfo->HealthMultiplier *= hpStatsRate;
         
         scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
@@ -629,6 +631,14 @@ public:
         creatureVasInfo->ManaMultiplier = manaStatsRate * manaMultiplier * globalRate;
         scaledMana *= creatureVasInfo->ManaMultiplier;
 
+        damageMul *= globalRate * damageMultiplier;
+        
+        // Can not be less then Min_D_Mod
+        if (damageMul <= MinDamageModifier)
+        {
+            damageMul = MinDamageModifier;
+        }
+        
         if (!useDefStats && LevelScaling) {
             uint32 origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
             uint32 newDmgBase = 0;
@@ -639,16 +649,8 @@ public:
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
             }
-
+            
             damageMul *= float(newDmgBase)/float(origDmgBase);
-        }
-
-        damageMul *= globalRate * damageMultiplier;
-        
-        // Can not be less then Min_D_Mod
-        if (damageMul <= MinDamageModifier)
-        {
-            damageMul = MinDamageModifier;
         }
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
