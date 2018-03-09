@@ -193,7 +193,7 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         damageMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.damage", 1.0f);
         numPlayerConf=sConfigMgr->GetFloatDefault("VASAutoBalance.numPlayer", 1.0f);
         MinHPModifier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinHPModifier", 0.1f);
-        sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
+        MinDamageModifier = sConfigMgr->GetFloatDefault("VASAutoBalance.MinDamageModifier", 0.1f);
     }
 };
 
