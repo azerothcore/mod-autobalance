@@ -540,13 +540,6 @@ public:
             }
         }
 
-        // Ensure that the healthMultiplier is not lower than the configuration specified value. -- This may be Deprecated later.
-        healthMultiplier *= defaultMultiplier * globalRate;
-        if (healthMultiplier <= MinHPModifier)
-        {
-            healthMultiplier = MinHPModifier;
-        }
-
         float hpStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling) {
             uint32 newBaseHealth = 0;
@@ -570,7 +563,13 @@ public:
             hpStatsRate = newHealth / float(baseHealth);
         }
 
-        creatureVasInfo->HealthMultiplier =  healthMultiplier * hpStatsRate;
+        creatureVasInfo->HealthMultiplier =   healthMultiplier * defaultMultiplier * globalRate * hpStatsRate;
+        
+        if (creatureVasInfo->HealthMultiplier <= MinHPModifier)
+        {
+            creatureVasInfo->HealthMultiplier = MinHPModifier;
+        }
+        
         scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
@@ -598,12 +597,6 @@ public:
         creatureVasInfo->ManaMultiplier = manaStatsRate * manaMultiplier * globalRate;
         scaledMana *= creatureVasInfo->ManaMultiplier;
 
-        // Can not be less then Min_D_Mod
-        if (damageMul <= MinDamageModifier)
-        {
-            damageMul = MinDamageModifier;
-        }
-
         if (!useDefStats && LevelScaling) {
             uint32 origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
             uint32 newDmgBase = 0;
@@ -619,6 +612,12 @@ public:
         }
 
         damageMul *= globalRate * damageMultiplier;
+        
+        // Can not be less then Min_D_Mod
+        if (damageMul <= MinDamageModifier)
+        {
+            damageMul = MinDamageModifier;
+        }
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
         uint32 newBaseArmor= creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate));
