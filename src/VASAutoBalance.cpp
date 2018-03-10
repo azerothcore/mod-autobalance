@@ -414,15 +414,7 @@ public:
         LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
         if (dungeon && (map->IsDungeon() || map->IsRaid())) {
             min  = dungeon->minlevel;
-            max  = dungeon->maxlevel;
-        }
-        
-        if (!min && !max) {
-            AccessRequirement const* ar=sObjectMgr->GetAccessRequirement(map->GetId(), map->GetDifficulty());
-            if (ar) {
-                min  = ar->levelMin;
-                max  = ar->levelMax;
-            }
+            max  = dungeon->reclevel ? dungeon->reclevel : dungeon->maxlevel;
         }
         
         if (!min && !max)
@@ -447,11 +439,15 @@ public:
         {
             return;
         }
+        
+        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+        if (!mapVasInfo->mapLevel)
+            return;
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
         AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
-        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+
 
         uint32 curCount=mapVasInfo->playerCount + PlayerCountDifficultyOffset;
 
@@ -583,7 +579,7 @@ public:
                 newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost == 1)
-                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
+                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
 
             float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
