@@ -632,14 +632,14 @@ public:
         
         creatureVasInfo->HealthMultiplier *= hpStatsRate;
 
-        if (creature->getLevel() > 75 && creature->getLevel() > originalLevel && creature->IsDungeonBoss())
+        if (originalLevel > 75 && creature->IsDungeonBoss())
             scaledHealth = uint32((float)baseHealth / (maxNumberOfPlayers - creatureVasInfo->instancePlayerCount));
         else
         scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
-
+        
         float damageMul = 1.0f;
         // Now adjusting Mana, Mana is something that can be scaled linearly
         if (maxNumberOfPlayers == 0) {
@@ -681,7 +681,7 @@ public:
                 newDmgBase=creatureStats->BaseDamage[2];
             }
             
-            if (creature->getLevel() > 75 && creature->getLevel() > originalLevel && creature->IsDungeonBoss())
+            if (originalLevel > 75  && creature->IsDungeonBoss())
             { 
                 damageMul = float(origDmgBase) / (maxNumberOfPlayers - creatureVasInfo->instancePlayerCount);
             }else
