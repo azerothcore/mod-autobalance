@@ -106,7 +106,7 @@ static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
-static bool LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb;
+static bool ConfEnabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier;
 
 int GetValidDebugLevel()
@@ -184,7 +184,7 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID5", ""), 5);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID2", ""), 2);
 
-        //enabled = sConfigMgr->GetIntDefault("VASAutoBalance.enable", 1) == 1;
+        ConfEnabled = sConfigMgr->GetIntDefault("VASAutoBalance.enable", 1) == 1;
         LevelEndGameBoost = sConfigMgr->GetIntDefault("VASAutoBalance.LevelEndGameBoost", 1) == 1;
         DungeonsOnly = sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) == 1;
         PlayerChangeNotify = sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) == 1;
@@ -218,7 +218,7 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
         {
             bool enabled = Player->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
 
-            if (enabled)
+            if (ConfEnabled)
                 ChatHandler(Player->GetSession()).PSendSysMessage("This server is running a VAS_AutoBalance Module.");
         }
 
@@ -226,8 +226,10 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
 
             bool enabled = player->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
 
-            if (!enabled || !player)
+            if (!enabled || !player || !ConfEnabled)
                 return;
+
+
 
             if (LevelScaling == 0)
                 return;
@@ -276,7 +278,7 @@ class VAS_AutoBalance_UnitScript : public UnitScript
     {
         bool enabled = attacker->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
 
-        if (!enabled)
+        if (!enabled || !ConfEnabled)
             return damage;
 
         if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
@@ -313,7 +315,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
         {
             bool  enabled = player->CustomData.GetDefault<AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
 
-            if (!enabled)
+            if (!enabled || !ConfEnabled)
                 return;
 
             AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
@@ -365,7 +367,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
         {
            bool enabled = player->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
 
-            if (!enabled)
+            if (!enabled || !ConfEnabled)
                 return;
 
             AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
@@ -414,7 +416,7 @@ public:
     {
         bool  enabled = creature->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
 
-        if (!enabled)
+        if (!enabled || !ConfEnabled)
             return;
 
         ModifyCreatureAttributes(creature);
@@ -424,7 +426,7 @@ public:
     {
         bool enabled = creature->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
 
-        if (!enabled)
+        if (!enabled || !ConfEnabled)
             return;
 
         ModifyCreatureAttributes(creature);
