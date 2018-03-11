@@ -1,4 +1,4 @@
-/*
+﻿/*
 * Copyright (C) 2018 AzerothCore <http://www.azerothcore.org>
 * Copyright (C) 2012 CVMagic <http://www.trinitycore.org/f/topic/6551-vas-autobalance/>
 * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
@@ -43,6 +43,7 @@
 #include <vector>
 #include "VASAutoBalance.h"
 #include "ScriptMgrMacros.h"
+#include "Group.h"
 
 bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
     bool ret=true;
@@ -83,6 +84,14 @@ public:
     float ArmorMultiplier = 1;
 };
 
+class AutoBalancePlayerInfo : public DataMap::Base
+{
+public:
+    AutoBalancePlayerInfo(){  }
+    AutoBalancePlayerInfo(bool enabled) : enabled(enabled) {}
+    bool enabled = true;
+};
+
 class AutoBalanceMapInfo : public DataMap::Base
 {
 public:
@@ -97,7 +106,7 @@ static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb;
+static bool LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier;
 
 int GetValidDebugLevel()
@@ -175,7 +184,7 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID5", ""), 5);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID2", ""), 2);
 
-        enabled = sConfigMgr->GetIntDefault("VASAutoBalance.enable", 1) == 1;
+        //enabled = sConfigMgr->GetIntDefault("VASAutoBalance.enable", 1) == 1;
         LevelEndGameBoost = sConfigMgr->GetIntDefault("VASAutoBalance.LevelEndGameBoost", 1) == 1;
         DungeonsOnly = sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) == 1;
         PlayerChangeNotify = sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) == 1;
@@ -207,11 +216,16 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
 
         void OnLogin(Player *Player)
         {
+            bool enabled = Player->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+
             if (enabled)
                 ChatHandler(Player->GetSession()).PSendSysMessage("This server is running a VAS_AutoBalance Module.");
         }
 
         virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) {
+
+            bool enabled = player->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+
             if (!enabled || !player)
                 return;
 
@@ -260,8 +274,6 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 
     uint32 VAS_Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
     {
-        if (!enabled)
-            return damage;
 
         if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
             return damage;
@@ -295,6 +307,8 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 
         void OnPlayerEnterAll(Map* map, Player* player)
         {
+            bool  enabled = player->CustomData.GetDefault<AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+
             if (!enabled)
                 return;
 
@@ -345,6 +359,8 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 
         void OnPlayerLeaveAll(Map* map, Player* player)
         {
+           bool enabled = player->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+
             if (!enabled)
                 return;
 
@@ -392,6 +408,8 @@ public:
 
     void Creature_SelectLevel(const CreatureTemplate* /*creatureTemplate*/, Creature* creature) override
     {
+        bool  enabled = creature->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+
         if (!enabled)
             return;
 
@@ -400,6 +418,8 @@ public:
 
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
     {
+        bool enabled = creature->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+
         if (!enabled)
             return;
 
@@ -414,7 +434,15 @@ public:
         LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
         if (dungeon && (map->IsDungeon() || map->IsRaid())) {
             min  = dungeon->minlevel;
-            max  = dungeon->reclevel ? dungeon->reclevel : dungeon->maxlevel;
+            max  = dungeon->maxlevel;
+        }
+        
+        if (!min && !max) {
+            AccessRequirement const* ar=sObjectMgr->GetAccessRequirement(map->GetId(), map->GetDifficulty());
+            if (ar) {
+                min  = ar->levelMin;
+                max  = ar->levelMax;
+            }
         }
         
         if (!min && !max)
@@ -439,15 +467,11 @@ public:
         {
             return;
         }
-        
-        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
-        if (!mapVasInfo->mapLevel)
-            return;
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
         AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
-
+        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
 
         uint32 curCount=mapVasInfo->playerCount + PlayerCountDifficultyOffset;
 
@@ -579,7 +603,7 @@ public:
                 newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost == 1)
-                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
+                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
 
             float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
@@ -600,6 +624,11 @@ public:
         
         creatureVasInfo->HealthMultiplier *= hpStatsRate;
         
+        if (creature->getLevel() > 75 && creature->IsDungeonBoss())
+        {
+            scaledHealth = uint32((float)baseHealth / ((float)maxNumberOfPlayers - (float)creatureVasInfo->instancePlayerCount));
+        }
+        else
         scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
@@ -695,11 +724,12 @@ public:
             { "checkmap",         SEC_GAMEMASTER,                        true, &HandleVasCheckMapCommand,                  "" },
             { "mapstat",          SEC_GAMEMASTER,                        true, &HandleVasMapStatsCommand,                  "" },
             { "creaturestat",     SEC_GAMEMASTER,                        true, &HandleVasCreatureStatsCommand,             "" },
+            { "scaling",           SEC_PLAYER,                            true, &HanleVasEnableCommand,                     "" },    
         };
 
         static std::vector<ChatCommand> commandTable =
         {
-            { "vas",     SEC_GAMEMASTER,                            false, NULL,                      "", vasCommandTable },
+            { "vas",     SEC_PLAYER,                            false, NULL,                      "", vasCommandTable },
         };
         return commandTable;
     }
@@ -808,6 +838,31 @@ public:
 
         return true;
 
+    }
+
+    static bool HanleVasEnableCommand(ChatHandler* handler, const char* args)
+    {
+        if (!*args)
+            return false;
+
+        Player* player = handler->GetSession()->GetPlayer();
+
+        if (!player || player->IsInCombat())
+            return false;
+
+        uint32 isEnbled = (uint32)atol(args);
+
+        if (isEnbled >= 2)
+            return false;
+
+        player->CustomData.GetDefault<AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled = isEnbled;
+
+        if (isEnbled == 0)
+            handler->PSendSysMessage("You have disabled Instance scaling");
+        else if (isEnbled == 1)
+            handler->PSendSysMessage("You have enabled Instance Scaling");
+
+        return true;
     }
 };
 void AddVASAutoBalanceScripts()
