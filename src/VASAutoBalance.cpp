@@ -274,6 +274,10 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 
     uint32 VAS_Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
     {
+        bool enabled = attacker->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+
+        if (!enabled)
+            return damage;
 
         if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
             return damage;
@@ -437,11 +441,12 @@ public:
             max  = dungeon->maxlevel;
         }
         
-        if (!min && !max) {
-            AccessRequirement const* ar=sObjectMgr->GetAccessRequirement(map->GetId(), map->GetDifficulty());
-            if (ar) {
-                min  = ar->levelMin;
-                max  = ar->levelMax;
+        if (!min && !max)
+        {
+            AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(areaid);
+            if (areaEntry && areaEntry->area_level > 0) {
+                min = areaEntry->area_level;
+                max = areaEntry->area_level;
             }
         }
         
@@ -467,11 +472,14 @@ public:
         {
             return;
         }
+        
+        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+        if (!mapVasInfo->mapLevel)
+            return;
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
-        AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
-        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+        AutoBalanceCreatureInfo *creatureVasInfo = creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
 
         uint32 curCount=mapVasInfo->playerCount + PlayerCountDifficultyOffset;
 
@@ -603,7 +611,7 @@ public:
                 newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost == 1)
-                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
+                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
 
             float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
@@ -623,11 +631,9 @@ public:
         }
         
         creatureVasInfo->HealthMultiplier *= hpStatsRate;
-        
-        if (creature->getLevel() > 75 && creature->IsDungeonBoss())
-        {
-            scaledHealth = uint32((float)baseHealth / ((float)maxNumberOfPlayers - (float)creatureVasInfo->instancePlayerCount));
-        }
+
+        if (creature->getLevel() > 75 && creature->getLevel() > originalLevel && creature->IsDungeonBoss())
+            scaledHealth = uint32((float)baseHealth / (maxNumberOfPlayers - creatureVasInfo->instancePlayerCount));
         else
         scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
@@ -675,7 +681,11 @@ public:
                 newDmgBase=creatureStats->BaseDamage[2];
             }
             
-            damageMul *= float(newDmgBase)/float(origDmgBase);
+            if (creature->getLevel() > 75 && creature->getLevel() > originalLevel && creature->IsDungeonBoss())
+            { 
+                damageMul = float(origDmgBase) / (maxNumberOfPlayers - creatureVasInfo->instancePlayerCount);
+            }else
+                damageMul *= float(newDmgBase)/float(origDmgBase);
         }
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
@@ -724,7 +734,7 @@ public:
             { "checkmap",         SEC_GAMEMASTER,                        true, &HandleVasCheckMapCommand,                  "" },
             { "mapstat",          SEC_GAMEMASTER,                        true, &HandleVasMapStatsCommand,                  "" },
             { "creaturestat",     SEC_GAMEMASTER,                        true, &HandleVasCreatureStatsCommand,             "" },
-            { "scaling",           SEC_PLAYER,                            true, &HanleVasEnableCommand,                     "" },    
+            { "scale",           SEC_PLAYER,                            true, &HanleVasEnableCommand,                     "" },    
         };
 
         static std::vector<ChatCommand> commandTable =
