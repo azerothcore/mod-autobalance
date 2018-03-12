@@ -635,7 +635,7 @@ public:
         creatureVasInfo->HealthMultiplier *= hpStatsRate;
 
         if (originalLevel > 75 && creature->IsDungeonBoss())
-            scaledHealth = uint32(baseHealth / (maxNumberOfPlayers - creatureVasInfo->instancePlayerCount));
+            scaledHealth = uint32((float)baseHealth / (maxNumberOfPlayers - creatureVasInfo->instancePlayerCount));
         else
         scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
