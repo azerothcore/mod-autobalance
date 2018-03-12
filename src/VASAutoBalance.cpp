@@ -276,10 +276,10 @@ class VAS_AutoBalance_UnitScript : public UnitScript
 
     uint32 VAS_Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
     {
-        bool enabled = attacker->CustomData.GetDefault <AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled;
+         bool enabled = target->CustomData.GetDefault<AutoBalancePlayerInfo>("AutoBalancePlayerInfo")->enabled ;
 
-        if (!enabled || !ConfEnabled)
-            return damage;
+         if (!ConfEnabled || !enabled)
+             return damage;
 
         if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
             return damage;
@@ -635,7 +635,7 @@ public:
         creatureVasInfo->HealthMultiplier *= hpStatsRate;
 
         if (originalLevel > 75 && creature->IsDungeonBoss())
-            scaledHealth = uint32((baseHealth / maxNumberOfPlayers) - creatureVasInfo->instancePlayerCount);
+            scaledHealth = uint32(baseHealth / (maxNumberOfPlayers - creatureVasInfo->instancePlayerCount));
         else
         scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
