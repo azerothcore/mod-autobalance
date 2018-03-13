@@ -463,14 +463,16 @@ public:
 
         uint8 bonusLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? 3 : 0;
         // already scaled
-        if (LevelScaling) {
-            if (checkLevelOffset(mapVasInfo->mapLevel + bonusLevel, creature->getLevel()) &&
-                checkLevelOffset(creatureVasInfo->selectedLevel, creature->getLevel()) &&
-                creatureVasInfo->instancePlayerCount == curCount) {
-                return;
+        if (creatureVasInfo->selectedLevel > 0) {
+            if (LevelScaling) {
+                if (checkLevelOffset(mapVasInfo->mapLevel + bonusLevel, creature->getLevel()) &&
+                    checkLevelOffset(creatureVasInfo->selectedLevel, creature->getLevel()) &&
+                    creatureVasInfo->instancePlayerCount == curCount) {
+                    return;
+                }
+            } else if (creatureVasInfo->instancePlayerCount == curCount) {
+                    return;
             }
-        } else if (creatureVasInfo->instancePlayerCount == curCount) {
-                return;
         }
 
         creatureVasInfo->instancePlayerCount = curCount;
