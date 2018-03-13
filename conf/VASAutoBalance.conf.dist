@@ -139,6 +139,14 @@ VASAutoBalance.rate.damage = 1.0
 VASAutoBalance.playerCountDifficultyOffset=0
 
 #
+#    VASAutoBalance.PlayerCommand
+#		Allow players to use a command to enable / disable this feature.
+#		Default:    1 = Enabled
+#					0 = Disable
+
+VASAutoBalance.PlayerCommand = 1
+
+#
 #     VASAutoBalance.ForcedIDXX
 #        Sets MobIDs for the group they belong to.
 #        All 5 Man Mobs should go in VAS.AutoBalance.5.Name
