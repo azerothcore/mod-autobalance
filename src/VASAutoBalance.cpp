@@ -528,9 +528,12 @@ public:
         //       The +1 and /2 values raise the TanH function to a positive range and make
         //       sure the modifier never goes above the value or 1.0 or below 0.
         //
-        float inflectionValue  = maxNumberOfPlayers * InflectionPoint;
-        float diff = (maxNumberOfPlayers/5)*1.5f;
-        float defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
+        float defaultMultiplier = 1.0f;
+        if (creatureVasInfo->instancePlayerCount < maxNumberOfPlayers) {
+            float inflectionValue  = maxNumberOfPlayers * InflectionPoint;
+            float diff = (maxNumberOfPlayers/5)*1.5f;
+            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
+        }
 
         if (!sVasScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
