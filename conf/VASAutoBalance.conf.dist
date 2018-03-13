@@ -13,6 +13,17 @@
 
 VASAutoBalance.enable=1
 
+#     VASAutoBalance.InflectionPoint
+#        Adjust value of Hyperbolic Tangent function where
+#        the curve of scaling must change. An higher value means higher difficulty.
+#
+#        Example: with 0.5, a creature of raid (40) will have half of its life with 20 players in
+#                 with 0.3, the same creature will have half of its life with 12 players in
+#
+#        Default:     1
+
+VASAutoBalance.InflectionPoint=0.5
+
 #     VASAutoBalance.numPlayer
 #        Set Server to level of solo mode.
 #        Set to 0 to Disable VAS-SOLO Mod.
@@ -95,16 +106,16 @@ VASAutoBalance.PlayerChangeNotify=1
 #
 #     VASAutoBalance.MinHPModifier
 #        Minimum Modifier setting for Health Modification
-#        Default:     0.10
+#        Default:     0.01
 
-VASAutoBalance.MinHPModifier=0.10
+VASAutoBalance.MinHPModifier=0.01
 
 #
 #     VASAutoBalance.MinDamageModifier
 #        Minimum Modifier setting for Damage Modification
-#        Default:     0.10
+#        Default:     0.01
 
-VASAutoBalance.MinDamageModifier=0.10
+VASAutoBalance.MinDamageModifier=0.01
 
 
 #

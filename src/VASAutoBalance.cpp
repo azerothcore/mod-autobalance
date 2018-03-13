@@ -53,6 +53,15 @@ bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instanc
     return ret;
 }
 
+bool VasScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMultiplier) {
+    bool ret=true;
+    FOR_SCRIPTS_RET(VasModuleScript, itr, end, ret) // return true by default if not scripts
+    if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier))
+        ret=false; // we change ret value only when scripts return false
+        
+        return ret;
+}
+
 bool VasScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor) {
     bool ret=true;
     FOR_SCRIPTS_RET(VasModuleScript, itr, end, ret)
@@ -98,7 +107,7 @@ static std::map<int, int> forcedCreatureIds;
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier;
+static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier, InflectionPoint;
 
 int GetValidDebugLevel()
 {
@@ -180,12 +189,13 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         DungeonsOnly = sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) == 1;
         PlayerChangeNotify = sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) == 1;
         LevelUseDb = sConfigMgr->GetIntDefault("VASAutoBalance.levelUseDbValuesWhenExists", 1) == 1;
-        
+
         LevelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetIntDefault("VASAutoBalance.playerCountDifficultyOffset", 0);
         higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 3);
         lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
 
+        InflectionPoint = sConfigMgr->GetFloatDefault("VASAutoBalance.InflectionPoint", 0.5f);
         globalRate = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.global", 1.0f);
         healthMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.health", 1.0f);
         manaMultiplier = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.mana", 1.0f);
@@ -498,8 +508,6 @@ public:
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(originalLevel, creatureTemplate->unit_class);
         CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureVasInfo->selectedLevel, creatureTemplate->unit_class);
 
-        float defaultMultiplier = 1.0f;
-
         uint32 baseHealth = origCreatureStats->GenerateHealth(creatureTemplate);
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
         uint32 scaledHealth = 0;
@@ -511,16 +519,10 @@ public:
             maxNumberOfPlayers = GetForcedCreatureId(creatureTemplate->Entry); // Force maxNumberOfPlayers to be changed to match the Configuration entry.
         }
 
-        // (tanh((X-2.2)/1.5) +1 )/2    // 5 Man formula X = Number of Players
-        // (tanh((X-5)/2) +1 )/2        // 10 Man Formula X = Number of Players
-        // (tanh((X-16.5)/6.5) +1 )/2   // 25 Man Formula X = Number of players
+        // Note: InflectionPoint handle the number of players required to get 50% health.
+        //       you'd adjust this to raise or lower the hp modifier for per additional player in a non-whole group.
         //
-        // Note: The 2.2, 5, and 16.5 are the number of players required to get 50% health.
-        //       It's not required this be a whole number, you'd adjust this to raise or lower
-        //       the hp modifier for per additional player in a non-whole group. These
-        //       values will eventually be part of the configuration file once I finalize the mod.
-        //
-        //       The 1.5, 2, and 6.5 modify the rate of percentage increase between
+        //       diff modify the rate of percentage increase between
         //       number of players. Generally the closer to the value of 1 you have this
         //       the less gradual the rate will be. For example in a 5 man it would take 3
         //       total players to face a mob at full health.
@@ -528,42 +530,12 @@ public:
         //       The +1 and /2 values raise the TanH function to a positive range and make
         //       sure the modifier never goes above the value or 1.0 or below 0.
         //
+        float inflectionValue  = maxNumberOfPlayers * InflectionPoint;
+        float diff = (maxNumberOfPlayers/5)*1.5f;
+        float defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
 
-        switch (maxNumberOfPlayers)
-        {
-        case 40:
-            defaultMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers; // 40 Man Instances oddly enough scale better with the old formula
-            break;
-        case 25:
-            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 16.5f) / 1.5f) + 1.0f) / 2.0f;
-            break;
-        case 10:
-            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 4.5f) / 1.5f) + 1.0f) / 2.0f;
-            break;
-        case 2:
-            // Two Man Creatures are too easy if handled by the 5 man formula, this would only
-            // apply in the situation where it's specified in the configuration file.
-            defaultMultiplier = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
-            break;
-        default:
-            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - 2.2f) / 1.5f) + 1.0f) / 2.0f;    // default to a 5 man group
-        }
-
-        // VAS SOLO  - Map 0,1 and 530 ( World Mobs )
-        // This may be where VAS_AutoBalance_CheckINIMaps might have come into play. None the less this is
-        if (numPlayerConf && (creature->GetMapId() == 0 || creature->GetMapId() == 1 || creature->GetMapId() == 530)
-        && (creature->isElite() || creature->isWorldBoss()))  // specific to World Bosses and elites in those Maps, this is going to use the entry XPlayer in place of instancePlayerCount.
-        {
-            if (baseHealth > 800000) {
-                defaultMultiplier = (tanh((numPlayerConf - 5.0f) / 1.5f) + 1.0f) / 2.0f;
-
-            }
-            else {
-                // Assuming a 5 man configuration, as World Bosses have been relatively
-                // retired since BC so unless the boss has some substantial baseHealth
-                defaultMultiplier = (tanh((numPlayerConf - 2.2f) / 1.5f) + 1.0f) / 2.0f;
-            }
-        }
+        if (!sVasScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
+            return;
         
         creatureVasInfo->HealthMultiplier =   healthMultiplier * defaultMultiplier * globalRate;
         
@@ -694,11 +666,11 @@ public:
     {
         static std::vector<ChatCommand> vasCommandTable =
         {
-            { "setoffset",        SEC_GAMEMASTER,                        true, &HandleVasSetOffsetCommand,                 "" },
-            { "getoffset",        SEC_GAMEMASTER,                        true, &HandleVasGetOffsetCommand,                 "" },
-            { "checkmap",         SEC_GAMEMASTER,                        true, &HandleVasCheckMapCommand,                  "" },
-            { "mapstat",          SEC_GAMEMASTER,                        true, &HandleVasMapStatsCommand,                  "" },
-            { "creaturestat",     SEC_GAMEMASTER,                        true, &HandleVasCreatureStatsCommand,             "" },
+            { "setoffset",        SEC_GAMEMASTER,                        true, &HandleVasSetOffsetCommand,                 "Sets the global Player Difficulty Offset for instances. Example: (You + offset(1) = 2 player difficulty)." },
+            { "getoffset",        SEC_GAMEMASTER,                        true, &HandleVasGetOffsetCommand,                 "Shows current global player offset value" },
+            { "checkmap",         SEC_GAMEMASTER,                        true, &HandleVasCheckMapCommand,                  "Run a check for current map/instance, it can help in case you're testing vas with GM." },
+            { "mapstat",          SEC_GAMEMASTER,                        true, &HandleVasMapStatsCommand,                  "Shows current vas information for this map-" },
+            { "creaturestat",     SEC_GAMEMASTER,                        true, &HandleVasCreatureStatsCommand,             "Shows current vas information for selected creature." },
         };
 
         static std::vector<ChatCommand> commandTable =
