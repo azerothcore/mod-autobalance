@@ -648,7 +648,8 @@ public:
 
 
         creature->SetHealth(scaledCurHealth);
-        creature->SetPower(POWER_MANA, scaledCurPower);
+        if (creature->getPowerType() == POWER_MANA)
+            creature->SetPower(POWER_MANA, scaledCurPower);
 
         creature->UpdateAllStats();
     }
