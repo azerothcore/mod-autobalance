@@ -629,13 +629,15 @@ public:
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
         uint32 newBaseArmor= creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate));
 
+        if (!sVasScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMul, newBaseArmor))
+            return;
+        
         uint32 prevMaxHealth = creature->GetMaxHealth();
         uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
         uint32 prevHealth = creature->GetHealth();
         uint32 prevPower = creature->GetPower(POWER_MANA);
-
-        if (!sVasScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMul, newBaseArmor))
-            return;
+        
+        Powers pType= creature->getPowerType();
 
         creature->SetArmor(newBaseArmor);
         creature->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, (float)newBaseArmor);
@@ -653,8 +655,10 @@ public:
 
 
         creature->SetHealth(scaledCurHealth);
-        if (creature->getPowerType() == POWER_MANA)
+        if (pType == POWER_MANA)
             creature->SetPower(POWER_MANA, scaledCurPower);
+        else
+            creature->setPowerType(pType); // fix creatures with different power types
 
         creature->UpdateAllStats();
     }
