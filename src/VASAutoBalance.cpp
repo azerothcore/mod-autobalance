@@ -471,17 +471,17 @@ public:
         {
             return;
         }
-
-        AutoBalanceMapInfo *mapVasInfo = creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+        
+        AutoBalanceMapInfo *mapVasInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
         if (!mapVasInfo->mapLevel)
             return;
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
-        AutoBalanceCreatureInfo *creatureVasInfo = creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
+        AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
 
 
-        uint32 curCount = mapVasInfo->playerCount + PlayerCountDifficultyOffset;
+        uint32 curCount=mapVasInfo->playerCount + PlayerCountDifficultyOffset;
 
         uint8 bonusLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? 3 : 0;
         // already scaled
@@ -492,9 +492,8 @@ public:
                     creatureVasInfo->instancePlayerCount == curCount) {
                     return;
                 }
-            }
-            else if (creatureVasInfo->instancePlayerCount == curCount) {
-                return;
+            } else if (creatureVasInfo->instancePlayerCount == curCount) {
+                    return;
             }
         }
 
@@ -518,8 +517,7 @@ public:
                 creatureVasInfo->selectedLevel = level + bonusLevel;
                 creature->SetLevel(creatureVasInfo->selectedLevel);
             }
-        }
-        else {
+        } else {
             creatureVasInfo->selectedLevel = creature->getLevel();
         }
 
@@ -554,54 +552,54 @@ public:
         //
         float defaultMultiplier = 1.0f;
         if (creatureVasInfo->instancePlayerCount < maxNumberOfPlayers) {
-            float inflectionValue = maxNumberOfPlayers * InflectionPoint;
-            float diff = (maxNumberOfPlayers / 5)*1.5f;
+            float inflectionValue  = maxNumberOfPlayers * InflectionPoint;
+            float diff = (maxNumberOfPlayers/5)*1.5f;
             defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
         }
 
         if (!sVasScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
-
-        creatureVasInfo->HealthMultiplier = healthMultiplier * defaultMultiplier * globalRate;
-
+        
+        creatureVasInfo->HealthMultiplier =   healthMultiplier * defaultMultiplier * globalRate;
+        
         if (creatureVasInfo->HealthMultiplier <= MinHPModifier)
         {
             creatureVasInfo->HealthMultiplier = MinHPModifier;
         }
 
-        float hpStatsRate = 1.0f;
+        float hpStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling) {
             uint32 newBaseHealth = 0;
             if (level <= 60)
-                newBaseHealth = creatureStats->BaseHealth[0];
-            else if (level <= 70)
-                newBaseHealth = creatureStats->BaseHealth[1];
+                newBaseHealth=creatureStats->BaseHealth[0];
+            else if(level <= 70)
+                newBaseHealth=creatureStats->BaseHealth[1];
             else {
-                newBaseHealth = creatureStats->BaseHealth[2];
+                newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost == 1)
-                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? (creatureVasInfo->selectedLevel - 70) * 0.3f : 1;
+                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
 
-            float newHealth = uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
+            float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
 
             // allows health to be different with creatures that originally
             // differentiate their health by different level instead of multiplier field.
             // expecially in dungeons. The health reduction decrease if original level is similar to the area max level
-            uint8 min, max;
+            uint8 min,max;
             getAreaLevel(creature->GetMap(), creature->GetAreaId(), min, max);
             if (originalLevel >= min && originalLevel < max) {
-                float reduction = newHealth / float(max - min) * (float(max - originalLevel)*0.3f); // never more than 30%
+                float reduction = newHealth / float(max-min) * (float(max-originalLevel)*0.3f); // never more than 30%
                 if (reduction > 0 && reduction < newHealth)
                     newHealth -= reduction;
             }
 
             hpStatsRate = newHealth / float(baseHealth);
         }
-
+        
         creatureVasInfo->HealthMultiplier *= hpStatsRate;
-
-        scaledHealth = uint32(((float)baseHealth * (float)creatureVasInfo->HealthMultiplier) + 1.0f);
+        
+        scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
@@ -619,82 +617,66 @@ public:
             damageMul = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
         }
 
-        float manaStatsRate = 1.0f;
+        float manaStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling) {
-            float newMana = creatureStats->GenerateMana(creatureTemplate);
-            manaStatsRate = newMana / float(baseMana);
+            float newMana =  creatureStats->GenerateMana(creatureTemplate);
+            manaStatsRate = newMana/float(baseMana);
         }
 
         creatureVasInfo->ManaMultiplier = manaStatsRate * manaMultiplier * globalRate;
         scaledMana *= creatureVasInfo->ManaMultiplier;
 
         damageMul *= globalRate * damageMultiplier;
-
+        
         // Can not be less then Min_D_Mod
         if (damageMul <= MinDamageModifier)
         {
             damageMul = MinDamageModifier;
         }
-
+        
         if (!useDefStats && LevelScaling) {
             uint32 origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
             uint32 newDmgBase = 0;
             if (level <= 60)
-                newDmgBase = creatureStats->BaseDamage[0];
-            else if (level <= 70)
-                newDmgBase = creatureStats->BaseDamage[1];
+                newDmgBase=creatureStats->BaseDamage[0];
+            else if(level <= 70)
+                newDmgBase=creatureStats->BaseDamage[1];
             else {
-                newDmgBase = creatureStats->BaseDamage[2];
+                newDmgBase=creatureStats->BaseDamage[2];
             }
-
-            damageMul *= float(newDmgBase) / float(origDmgBase);
+            
+            damageMul *= float(newDmgBase)/float(origDmgBase);
         }
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
-        uint32 newBaseArmor = creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate));
+        uint32 newBaseArmor= creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate));
 
         uint32 prevMaxHealth = creature->GetMaxHealth();
-        uint32 prevMaxPower = creature->GetMaxPower(creature->getPowerType());
+        uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
         uint32 prevHealth = creature->GetHealth();
-        uint32 prevPower = creature->getPowerType();
+        uint32 prevPower = creature->GetPower(POWER_MANA);
 
         if (!sVasScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMul, newBaseArmor))
             return;
 
         creature->SetArmor(newBaseArmor);
         creature->SetModifierValue(UNIT_MOD_ARMOR, BASE_VALUE, (float)newBaseArmor);
-        creature->SetCreateHealth((float)scaledHealth);
-        creature->SetMaxHealth((float)scaledHealth);
+        creature->SetCreateHealth(scaledHealth);
+        creature->SetMaxHealth(scaledHealth);
         creature->ResetPlayerDamageReq();
         creature->SetCreateMana(scaledMana);
         creature->SetMaxPower(POWER_MANA, scaledMana);
-        creature->SetMaxPower(POWER_ENERGY, 100.0f);
-        creature->SetMaxPower(POWER_RAGE, 100.0f);
-        creature->SetModifierValue(UNIT_MOD_ENERGY, BASE_VALUE, 100.0f);
-        creature->SetModifierValue(UNIT_MOD_RAGE, BASE_VALUE, 100.0f);
         creature->SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, (float)scaledHealth);
         creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)scaledMana);
         creatureVasInfo->DamageMultiplier = damageMul;
 
-        uint32 scaledCurHealth = prevHealth && prevMaxHealth ? float(scaledHealth) / float(prevMaxHealth)*float(prevHealth) : 0;
-        uint32 scaledCurPower = prevPower && prevMaxPower ? float(scaledMana) / float(prevMaxPower)*float(prevPower) : 0;
+        uint32 scaledCurHealth=prevHealth && prevMaxHealth ? float(scaledHealth)/float(prevMaxHealth)*float(prevHealth) : 0;
+        uint32 scaledCurPower=prevPower && prevMaxPower  ? float(scaledMana)/float(prevMaxPower)*float(prevPower) : 0;
 
 
         creature->SetHealth(scaledCurHealth);
-
-        switch (creature->getPowerType())
-        {
-        case POWER_MANA:
+        if (creature->getPowerType() == POWER_MANA)
             creature->SetPower(POWER_MANA, scaledCurPower);
-            break;
-        case POWER_ENERGY:
-            creature->SetPower(POWER_ENERGY, 100.0f);
-            break;
-        case POWER_RAGE:
-            creature->SetPower(POWER_RAGE, 0.0f); //creatures with rage will start at 0 rage.
-        default:
-            break;
-        }
 
         creature->UpdateAllStats();
     }
