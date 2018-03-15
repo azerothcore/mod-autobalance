@@ -492,8 +492,6 @@ public:
         if (!sVasScriptMgr->OnBeforeModifyAttributes(creature, creatureVasInfo->instancePlayerCount))
             return;
 
-        uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
-
         uint8 originalLevel = creatureTemplate->maxlevel;
 
         uint8 level = mapVasInfo->mapLevel;
@@ -521,7 +519,8 @@ public:
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
         uint32 scaledHealth = 0;
         uint32 scaledMana = 0;
-
+        
+        uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
         //   VAS SOLO  - By MobID
         if (GetForcedCreatureId(creatureTemplate->Entry) > 0)
         {
@@ -541,9 +540,9 @@ public:
         //
         float defaultMultiplier = 1.0f;
         if (creatureVasInfo->instancePlayerCount < maxNumberOfPlayers) {
-            float inflectionValue  = maxNumberOfPlayers * InflectionPoint;
-            float diff = (maxNumberOfPlayers/5)*1.5f;
-            defaultMultiplier = (tanh((creatureVasInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
+            float inflectionValue  = (float)maxNumberOfPlayers * InflectionPoint;
+            float diff = ((float)maxNumberOfPlayers/5)*1.5f;
+            defaultMultiplier = (tanh(((float)creatureVasInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
         }
 
         if (!sVasScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
@@ -558,7 +557,7 @@ public:
 
         float hpStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling) {
-            uint32 newBaseHealth = 0;
+            float newBaseHealth = 0;
             if (level <= 60)
                 newBaseHealth=creatureStats->BaseHealth[0];
             else if(level <= 70)
@@ -567,10 +566,10 @@ public:
                 newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost == 1)
-                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? (creatureVasInfo->selectedLevel-70) * 0.3f : 1;
+                    newBaseHealth *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
 
-            float newHealth =  uint32(ceil(newBaseHealth * creatureTemplate->ModHealth));
+            float newHealth =  newBaseHealth * creatureTemplate->ModHealth;
 
             // allows health to be different with creatures that originally
             // differentiate their health by different level instead of multiplier field.
@@ -588,7 +587,7 @@ public:
         
         creatureVasInfo->HealthMultiplier *= hpStatsRate;
         
-        scaledHealth = uint32((baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
+        scaledHealth = round(((float) baseHealth * creatureVasInfo->HealthMultiplier) + 1.0f);
 
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
@@ -596,12 +595,12 @@ public:
         float damageMul = 1.0f;
         // Now adjusting Mana, Mana is something that can be scaled linearly
         if (maxNumberOfPlayers == 0) {
-            scaledMana = uint32((baseMana * defaultMultiplier) + 1.0f);
+            scaledMana = round(((float) baseMana * defaultMultiplier) + 1.0f);
             // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
             damageMul = defaultMultiplier;
         }
         else {
-            scaledMana = ((baseMana / maxNumberOfPlayers) * creatureVasInfo->instancePlayerCount);
+            scaledMana = round(((float)baseMana / (float)maxNumberOfPlayers) * creatureVasInfo->instancePlayerCount);
             // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
             damageMul = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
         }
@@ -613,7 +612,7 @@ public:
         }
 
         creatureVasInfo->ManaMultiplier = manaStatsRate * manaMultiplier * globalRate;
-        scaledMana *= creatureVasInfo->ManaMultiplier;
+        scaledMana *= round(creatureVasInfo->ManaMultiplier);
 
         damageMul *= globalRate * damageMultiplier;
         
@@ -638,7 +637,7 @@ public:
         }
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
-        uint32 newBaseArmor= creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate));
+        uint32 newBaseArmor= round(creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)));
 
         if (!sVasScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMul, newBaseArmor))
             return;
