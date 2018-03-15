@@ -86,6 +86,8 @@ public:
     instancePlayerCount(count),selectedLevel(selLevel), DamageMultiplier(dmg),HealthMultiplier(hpRate),ManaMultiplier(manaRate),ArmorMultiplier(armorRate) {}
     uint32 instancePlayerCount = 0;
     uint8 selectedLevel = 0;
+    // this is used to detect creatures that update their entry
+    uint32 entry = 0;
     float DamageMultiplier = 1;
     float HealthMultiplier = 1;
     float ManaMultiplier = 1;
@@ -457,7 +459,14 @@ public:
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
         AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
-
+        
+        // this is a "workaround" to fix bug of not recalculated
+        // attributes when UpdateEntry has been used.
+        // TODO: It's better and faster to implement a core hook 
+        // in that position and force a recalculation then
+        if (creatureVasInfo->entry != 0 && creatureVasInfo->entry != creature->GetEntry()) {
+            creatureVasInfo->selectedLevel = 0; // force a recalculation
+        }
 
         uint32 curCount=mapVasInfo->playerCount + PlayerCountDifficultyOffset;
 
@@ -498,6 +507,8 @@ public:
         } else {
             creatureVasInfo->selectedLevel = creature->getLevel();
         }
+        
+        creatureVasInfo->entry = creature->GetEntry();
 
         bool useDefStats = false;
         if (LevelUseDb == 1 && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
