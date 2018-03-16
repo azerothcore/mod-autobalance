@@ -185,6 +185,7 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID10", ""), 10);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID5", ""), 5);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.ForcedID2", ""), 2);
+        LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("VASAutoBalance.DisabledID", ""), 0);
 
         enabled = sConfigMgr->GetIntDefault("VASAutoBalance.enable", 1) == 1;
         LevelEndGameBoost = sConfigMgr->GetIntDefault("VASAutoBalance.LevelEndGameBoost", 1) == 1;
