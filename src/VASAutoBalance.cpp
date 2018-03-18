@@ -593,29 +593,16 @@ public:
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
 
-        float damageMul = 1.0f;
-        // Now adjusting Mana, Mana is something that can be scaled linearly
-        if (maxNumberOfPlayers == 0) {
-            scaledMana = round(((float) baseMana * defaultMultiplier) + 1.0f);
-            // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
-            damageMul = defaultMultiplier;
-        }
-        else {
-            scaledMana = round(((float)baseMana / (float)maxNumberOfPlayers) * creatureVasInfo->instancePlayerCount);
-            // Now Adjusting Damage, this too is linear for now .... this will have to change I suspect.
-            damageMul = (float)creatureVasInfo->instancePlayerCount / (float)maxNumberOfPlayers;
-        }
-
         float manaStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling) {
             float newMana =  creatureStats->GenerateMana(creatureTemplate);
             manaStatsRate = newMana/float(baseMana);
         }
 
-        creatureVasInfo->ManaMultiplier = manaStatsRate * manaMultiplier * globalRate;
-        scaledMana *= round(creatureVasInfo->ManaMultiplier);
+        creatureVasInfo->ManaMultiplier =  manaStatsRate * manaMultiplier * defaultMultiplier * globalRate;
+        scaledMana = round(baseMana * creatureVasInfo->ManaMultiplier);
 
-        damageMul *= globalRate * damageMultiplier;
+        float damageMul = defaultMultiplier * globalRate * damageMultiplier;
         
         // Can not be less then Min_D_Mod
         if (damageMul <= MinDamageModifier)
@@ -624,17 +611,20 @@ public:
         }
         
         if (!useDefStats && LevelScaling) {
-            uint32 origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
-            uint32 newDmgBase = 0;
+            float origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
+            float newDmgBase = 0;
             if (level <= 60)
                 newDmgBase=creatureStats->BaseDamage[0];
             else if(level <= 70)
                 newDmgBase=creatureStats->BaseDamage[1];
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
+                // special increasing for end-game contents
+                if (LevelEndGameBoost == 1)
+                    newDmgBase *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
             
-            damageMul *= float(newDmgBase)/float(origDmgBase);
+            damageMul *= newDmgBase/origDmgBase;
         }
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;

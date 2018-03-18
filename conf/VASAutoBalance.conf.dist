@@ -45,7 +45,9 @@ VASAutoBalance.levelScaling=1
 #
 #     VASAutoBalance.levelHigherOffset
 #     VASAutoBalance.levelLowerOffset
-#        Level Offsets between creatures will not be scaled by level
+#        Level Offsets between creatures will not be scaled by level.
+#        You can even use it to disable scaling from lower to higher levelScaling
+#        setting levelLowerOffset to 80 (max wotlk level) for example.
 #        default: 3 (higher), 0 (lower) 
 
 VASAutoBalance.levelHigherOffset = 3
@@ -55,8 +57,7 @@ VASAutoBalance.levelLowerOffset  = 0
 #     VASAutoBalance.levelUseDbValuesWhenExists
 #        When enabled with levelScaling, the creature will use its default database values
 #        instead of level scaling formula when player/party level has correspondance with 
-#        creature_template minlevel/maxlevel. Should not be enabled with LevelEndGameBoost
-#        to avoid wrong scaling in some cases
+#        creature_template minlevel/maxlevel.
 #
 #        Default:     0 (1 = ON, 0 = OFF)
 
@@ -67,8 +68,6 @@ VASAutoBalance.levelUseDbValuesWhenExists = 0
 #        End game creatures have an exponential (not linear) regression
 #        that is not correctly handled by db values. Keep this enabled
 #        to have stats as near possible to the official ones.
-#        This conf should not be enabled with levelUseDbValuesWhenExists to avoid wrong
-#        scaling in some cases.
 #
 #        Default:     1 (1 = ON, 0 = OFF)
 
