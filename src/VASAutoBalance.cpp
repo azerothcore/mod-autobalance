@@ -418,7 +418,7 @@ public:
         if (!enabled)
             return;
 
-        ModifyCreatureAttributes(creature);
+        ModifyCreatureAttributes(creature, true);
     }
 
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
@@ -450,9 +450,9 @@ public:
         }
     }
 
-    void ModifyCreatureAttributes(Creature* creature)
+    void ModifyCreatureAttributes(Creature* creature, bool resetSelLevel = false)
     {
-        if (!creature || !creature->GetMap() || !creature->IsAlive())
+        if (!creature || !creature->GetMap())
             return;
 
         if (!creature->GetMap()->IsDungeon() && !creature->GetMap()->IsBattleground() && DungeonsOnly == 1)
@@ -471,13 +471,17 @@ public:
 
         AutoBalanceCreatureInfo *creatureVasInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("VAS_AutoBalanceCreatureInfo");
         
-        // this is a "workaround" to fix bug of not recalculated
+        // force resetting selected level.
+        // this is also a "workaround" to fix bug of not recalculated
         // attributes when UpdateEntry has been used.
         // TODO: It's better and faster to implement a core hook 
         // in that position and force a recalculation then
-        if (creatureVasInfo->entry != 0 && creatureVasInfo->entry != creature->GetEntry()) {
+        if ((creatureVasInfo->entry != 0 && creatureVasInfo->entry != creature->GetEntry()) || resetSelLevel) {
             creatureVasInfo->selectedLevel = 0; // force a recalculation
         }
+
+        if (!creature->IsAlive())
+            return;
 
         uint32 curCount=mapVasInfo->playerCount + PlayerCountDifficultyOffset;
 
