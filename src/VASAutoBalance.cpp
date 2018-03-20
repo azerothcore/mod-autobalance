@@ -653,14 +653,15 @@ public:
         creature->ResetPlayerDamageReq();
         creature->SetCreateMana(scaledMana);
         creature->SetMaxPower(POWER_MANA, scaledMana);
+        creature->SetModifierValue(UNIT_MOD_ENERGY, BASE_VALUE, (float)100.0f);
+        creature->SetModifierValue(UNIT_MOD_RAGE, BASE_VALUE, (float)100.0f);
         creature->SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, (float)scaledHealth);
         creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)scaledMana);
         creatureVasInfo->DamageMultiplier = damageMul;
 
         uint32 scaledCurHealth=prevHealth && prevMaxHealth ? float(scaledHealth)/float(prevMaxHealth)*float(prevHealth) : 0;
         uint32 scaledCurPower=prevPower && prevMaxPower  ? float(scaledMana)/float(prevMaxPower)*float(prevPower) : 0;
-
-
+        
         creature->SetHealth(scaledCurHealth);
         if (pType == POWER_MANA)
             creature->SetPower(POWER_MANA, scaledCurPower);
