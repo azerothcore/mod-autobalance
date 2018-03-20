@@ -108,7 +108,8 @@ static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb;
+static uint32 rewardRaid, rewardDungeon;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier, InflectionPoint;
 
 int GetValidDebugLevel()
@@ -192,11 +193,14 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         DungeonsOnly = sConfigMgr->GetIntDefault("VASAutoBalance.DungeonsOnly", 1) == 1;
         PlayerChangeNotify = sConfigMgr->GetIntDefault("VASAutoBalance.PlayerChangeNotify", 1) == 1;
         LevelUseDb = sConfigMgr->GetIntDefault("VASAutoBalance.levelUseDbValuesWhenExists", 1) == 1;
+        rewardEnabled = sConfigMgr->GetIntDefault("VASAutoBalance.reward.enable", 1) == 1;
 
         LevelScaling = sConfigMgr->GetIntDefault("VASAutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetIntDefault("VASAutoBalance.playerCountDifficultyOffset", 0);
         higherOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelHigherOffset", 3);
         lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
+        rewardRaid = sConfigMgr->GetIntDefault("VASAutoBalance.reward.raidToken", 49426);
+        rewardDungeon = sConfigMgr->GetIntDefault("VASAutoBalance.reward.dungeonToken", 47241);
 
         InflectionPoint = sConfigMgr->GetFloatDefault("VASAutoBalance.InflectionPoint", 0.5f);
         globalRate = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.global", 1.0f);
@@ -800,6 +804,50 @@ public:
 
     }
 };
+
+class VAS_AutoBalance_GlobalScript : public GlobalScript {
+public:
+    VAS_AutoBalance_GlobalScript() : GlobalScript("VAS_AutoBalance_GlobalScript") { }
+    
+    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* /*source*/, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/) override {
+        //if (!dungeonCompleted)
+        //    return;
+
+        if (!rewardEnabled)
+            return;
+        
+        AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+
+        // skip if it's not a pre-wotlk dungeon/raid and if it's not scaled
+        if (!LevelScaling || lowerOffset >= 10 || mapVasInfo->mapLevel > 70 || !mapVasInfo->mapLevel
+            // skip when not in dungeon or not kill credit
+            || type != ENCOUNTER_CREDIT_KILL_CREATURE || !map->IsDungeon())
+            return;
+
+        std::vector<Player*> list = map->GetPlayerListExceptGMs();
+        if (list.size() == 0)
+            return;
+
+        uint32 reward = map->IsRaid() ? rewardRaid : rewardDungeon;
+        if (!reward)
+            return;
+
+        //instanceStart=0, endTime;
+        uint8 difficulty = map->GetDifficulty();
+
+        for (std::size_t i = 0; i < list.size(); i++)
+        {
+            Player* player = list[i];
+            if (!player)
+                return;
+            
+            player->AddItem(reward, 1 + difficulty); // difficulty boost
+        }
+    }
+};
+
+
+
 void AddVASAutoBalanceScripts()
 {
     new VAS_AutoBalance_WorldScript;
@@ -808,4 +856,5 @@ void AddVASAutoBalanceScripts()
     new VAS_AutoBalance_AllCreatureScript;
     new VAS_AutoBalance_AllMapScript;
     new VAS_AutoBalance_CommandScript;
+    new VAS_AutoBalance_GlobalScript;
 }
