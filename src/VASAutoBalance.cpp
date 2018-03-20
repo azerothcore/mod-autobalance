@@ -311,12 +311,15 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
             if (!enabled)
                 return;
 
+            if (player->IsGameMaster())
+                return;
+            
             AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
 
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
             if (player) {
-                if (!player->IsGameMaster() && player->getLevel() > mapVasInfo->mapLevel)
+                if (player->getLevel() > mapVasInfo->mapLevel)
                     mapVasInfo->mapLevel = player->getLevel();
             } else {
                 Map::PlayerList const &playerList = map->GetPlayers();
@@ -338,7 +341,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 
             if (PlayerChangeNotify > 0)
             {
-                if ((map->GetEntry()->IsDungeon()) && (!player || player->IsGameMaster()))
+                if (map->GetEntry()->IsDungeon() && player)
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
                     if (!playerList.isEmpty())
@@ -360,6 +363,9 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
         {
             if (!enabled)
                 return;
+            
+            if (player->IsGameMaster())
+                return;
 
             AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
 
@@ -375,7 +381,7 @@ class VAS_AutoBalance_AllMapScript : public AllMapScript
 
             if (PlayerChangeNotify > 0)
             {
-                if ((map->GetEntry()->IsDungeon()) && (!player || player->IsGameMaster()))
+                if (map->GetEntry()->IsDungeon() && player)
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
                     if (!playerList.isEmpty())
