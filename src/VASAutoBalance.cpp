@@ -848,8 +848,8 @@ public:
         for (std::size_t i = 0; i < list.size(); i++)
         {
             Player* player = list[i];
-            if (!player)
-                return;
+            if (!player || player->getLevel() <= DEFAULT_MAX_LEVEL)
+                continue;
             
             player->AddItem(reward, 1 + difficulty); // difficulty boost
         }
