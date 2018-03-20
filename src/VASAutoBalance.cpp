@@ -510,8 +510,16 @@ public:
         uint8 originalLevel = creatureTemplate->maxlevel;
 
         uint8 level = mapVasInfo->mapLevel;
+        
+        uint8 areaMinLvl, areaMaxLvl;
+        getAreaLevel(creature->GetMap(), creature->GetAreaId(), areaMinLvl, areaMaxLvl);
+        
+        // avoid level changing for critters and special creatures (spell summons etc.) in instances
+        bool skipLevel=false;
+        if (originalLevel <= 1 && areaMinLvl >= 5)
+            skipLevel = true;
 
-        if (LevelScaling && creature->GetMap()->IsDungeon() && !checkLevelOffset(level, originalLevel)) {  // avoid level change within the offsets or when not in dungeon/raid
+        if (LevelScaling && creature->GetMap()->IsDungeon() && !skipLevel && !checkLevelOffset(level, originalLevel)) {  // change level only whithin the offsets and when in dungeon/raid
             if (level != creatureVasInfo->selectedLevel || creatureVasInfo->selectedLevel != creature->getLevel()) {
                 // keep bosses +3 level
                 creatureVasInfo->selectedLevel = level + bonusLevel;
@@ -571,7 +579,7 @@ public:
         }
 
         float hpStatsRate  = 1.0f;
-        if (!useDefStats && LevelScaling) {
+        if (!useDefStats && LevelScaling && !skipLevel) {
             float newBaseHealth = 0;
             if (level <= 60)
                 newBaseHealth=creatureStats->BaseHealth[0];
@@ -589,10 +597,8 @@ public:
             // allows health to be different with creatures that originally
             // differentiate their health by different level instead of multiplier field.
             // expecially in dungeons. The health reduction decrease if original level is similar to the area max level
-            uint8 min,max;
-            getAreaLevel(creature->GetMap(), creature->GetAreaId(), min, max);
-            if (originalLevel >= min && originalLevel < max) {
-                float reduction = newHealth / float(max-min) * (float(max-originalLevel)*0.3f); // never more than 30%
+            if (originalLevel >= areaMinLvl && originalLevel < areaMaxLvl) {
+                float reduction = newHealth / float(areaMaxLvl-areaMinLvl) * (float(areaMaxLvl-originalLevel)*0.3f); // never more than 30%
                 if (reduction > 0 && reduction < newHealth)
                     newHealth -= reduction;
             }
@@ -608,7 +614,7 @@ public:
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
 
         float manaStatsRate  = 1.0f;
-        if (!useDefStats && LevelScaling) {
+        if (!useDefStats && LevelScaling && !skipLevel) {
             float newMana =  creatureStats->GenerateMana(creatureTemplate);
             manaStatsRate = newMana/float(baseMana);
         }
@@ -624,7 +630,7 @@ public:
             damageMul = MinDamageModifier;
         }
         
-        if (!useDefStats && LevelScaling) {
+        if (!useDefStats && LevelScaling && !skipLevel) {
             float origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
             float newDmgBase = 0;
             if (level <= 60)
@@ -642,7 +648,7 @@ public:
         }
 
         creatureVasInfo->ArmorMultiplier = globalRate * armorMultiplier;
-        uint32 newBaseArmor= round(creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)));
+        uint32 newBaseArmor= round(creatureVasInfo->ArmorMultiplier * (useDefStats || !LevelScaling || skipLevel ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)));
 
         if (!sVasScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMul, newBaseArmor))
             return;
