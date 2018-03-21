@@ -1,4 +1,4 @@
-/*
+﻿/*
 * Copyright (C) 2018 AzerothCore <http://www.azerothcore.org>
 * Copyright (C) 2012 CVMagic <http://www.trinitycore.org/f/topic/6551-vas-autobalance/>
 * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
@@ -43,6 +43,7 @@
 #include <vector>
 #include "VASAutoBalance.h"
 #include "ScriptMgrMacros.h"
+#include "Group.h"
 
 bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
     bool ret=true;
@@ -108,7 +109,7 @@ static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
-static uint32 rewardRaid, rewardDungeon;
+static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier, InflectionPoint;
 
@@ -201,6 +202,7 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
         rewardRaid = sConfigMgr->GetIntDefault("VASAutoBalance.reward.raidToken", 49426);
         rewardDungeon = sConfigMgr->GetIntDefault("VASAutoBalance.reward.dungeonToken", 47241);
+        MinPlayerReward = sConfigMgr->GetFloatDefault("VASAutoBalance.reward.MinPlayerReward", 1);
 
         InflectionPoint = sConfigMgr->GetFloatDefault("VASAutoBalance.InflectionPoint", 0.5f);
         globalRate = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.global", 1.0f);
@@ -825,6 +827,9 @@ public:
 
         if (!rewardEnabled)
             return;
+
+        if (map->GetPlayersCountExceptGMs() < MinPlayerReward)
+            return;
         
         AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
 
@@ -834,8 +839,9 @@ public:
             || type != ENCOUNTER_CREDIT_KILL_CREATURE || !map->IsDungeon())
             return;
 
-        std::vector<Player*> list = map->GetPlayerListExceptGMs();
-        if (list.size() == 0)
+        Map::PlayerList const &playerList = map->GetPlayers();
+
+        if (playerList.isEmpty())
             return;
 
         uint32 reward = map->IsRaid() ? rewardRaid : rewardDungeon;
@@ -845,13 +851,12 @@ public:
         //instanceStart=0, endTime;
         uint8 difficulty = map->GetDifficulty();
 
-        for (std::size_t i = 0; i < list.size(); i++)
+        for (Map::PlayerList::const_iterator itr = playerList.begin(); itr != playerList.end(); ++itr)
         {
-            Player* player = list[i];
-            if (!player || player->getLevel() <= DEFAULT_MAX_LEVEL)
+            if (!itr->GetSource() || itr->GetSource()->getLevel() < DEFAULT_MAX_LEVEL)
                 continue;
             
-            player->AddItem(reward, 1 + difficulty); // difficulty boost
+            itr->GetSource()->AddItem(reward, 1 + difficulty); // difficulty boost
         }
     }
 };
