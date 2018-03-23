@@ -188,3 +188,13 @@ VASAutoBalance.reward.raidToken    = 49426
 VASAutoBalance.reward.dungeonToken = 47241
 
 #
+#   VASAutoBalance.reward.MinPlayerReward
+#       This conf option checks how many players are in the same 
+#       map before allowing the reward to be carried out
+#       if MinPlayerReward is set to two and player is soloing this conf doesn't reward then.
+#		this will give more a challenge to players for low level instances.
+#
+#       Default:     1
+
+VASAutoBalance.reward.MinPlayerReward = 1
+#

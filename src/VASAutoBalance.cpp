@@ -1,4 +1,4 @@
-/*
+﻿/*
 * Copyright (C) 2018 AzerothCore <http://www.azerothcore.org>
 * Copyright (C) 2012 CVMagic <http://www.trinitycore.org/f/topic/6551-vas-autobalance/>
 * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
@@ -43,6 +43,7 @@
 #include <vector>
 #include "VASAutoBalance.h"
 #include "ScriptMgrMacros.h"
+#include "Group.h"
 
 bool VasScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
     bool ret=true;
@@ -108,7 +109,7 @@ static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
-static uint32 rewardRaid, rewardDungeon;
+static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier, InflectionPoint;
 
@@ -146,6 +147,24 @@ int GetForcedCreatureId(int creatureId)
         return 0;
     }
     return forcedCreatureIds[creatureId];
+}
+
+
+void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
+    LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
+    if (dungeon && (map->IsDungeon() || map->IsRaid())) {
+        min  = dungeon->minlevel;
+        max  = dungeon->reclevel ? dungeon->reclevel : dungeon->maxlevel;
+    }
+    
+    if (!min && !max)
+    {
+        AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(areaid);
+        if (areaEntry && areaEntry->area_level > 0) {
+            min = areaEntry->area_level;
+            max = areaEntry->area_level;
+        }
+    }
 }
 
 class VAS_AutoBalance_WorldScript : public WorldScript
@@ -201,6 +220,7 @@ class VAS_AutoBalance_WorldScript : public WorldScript
         lowerOffset = sConfigMgr->GetIntDefault("VASAutoBalance.levelLowerOffset", 0);
         rewardRaid = sConfigMgr->GetIntDefault("VASAutoBalance.reward.raidToken", 49426);
         rewardDungeon = sConfigMgr->GetIntDefault("VASAutoBalance.reward.dungeonToken", 47241);
+        MinPlayerReward = sConfigMgr->GetFloatDefault("VASAutoBalance.reward.MinPlayerReward", 1);
 
         InflectionPoint = sConfigMgr->GetFloatDefault("VASAutoBalance.InflectionPoint", 0.5f);
         globalRate = sConfigMgr->GetFloatDefault("VASAutoBalance.rate.global", 1.0f);
@@ -431,23 +451,6 @@ public:
 
     bool checkLevelOffset(uint8 selectedLevel, uint8 targetLevel) {
         return selectedLevel && ((targetLevel >= selectedLevel && targetLevel <= (selectedLevel + higherOffset) ) || (targetLevel <= selectedLevel && targetLevel >= (selectedLevel - lowerOffset)));
-    }
-    
-    void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
-        LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
-        if (dungeon && (map->IsDungeon() || map->IsRaid())) {
-            min  = dungeon->minlevel;
-            max  = dungeon->reclevel ? dungeon->reclevel : dungeon->maxlevel;
-        }
-        
-        if (!min && !max)
-        {
-            AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(areaid);
-            if (areaEntry && areaEntry->area_level > 0) {
-                min = areaEntry->area_level;
-                max = areaEntry->area_level;
-            }
-        }
     }
 
     void ModifyCreatureAttributes(Creature* creature, bool resetSelLevel = false)
@@ -819,23 +822,30 @@ class VAS_AutoBalance_GlobalScript : public GlobalScript {
 public:
     VAS_AutoBalance_GlobalScript() : GlobalScript("VAS_AutoBalance_GlobalScript") { }
     
-    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* /*source*/, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/) override {
+    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* source, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/) override {
         //if (!dungeonCompleted)
         //    return;
 
         if (!rewardEnabled)
             return;
+
+        if (map->GetPlayersCountExceptGMs() < MinPlayerReward)
+            return;
         
         AutoBalanceMapInfo *mapVasInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("VAS_AutoBalanceMapInfo");
+        
+        uint8 areaMinLvl, areaMaxLvl;
+        getAreaLevel(map, source->GetAreaId(), areaMinLvl, areaMaxLvl);
 
         // skip if it's not a pre-wotlk dungeon/raid and if it's not scaled
-        if (!LevelScaling || lowerOffset >= 10 || mapVasInfo->mapLevel > 70 || !mapVasInfo->mapLevel
+        if (!LevelScaling || lowerOffset >= 10 || mapVasInfo->mapLevel <= 70 || areaMinLvl > 70
             // skip when not in dungeon or not kill credit
             || type != ENCOUNTER_CREDIT_KILL_CREATURE || !map->IsDungeon())
             return;
 
-        std::vector<Player*> list = map->GetPlayerListExceptGMs();
-        if (list.size() == 0)
+        Map::PlayerList const &playerList = map->GetPlayers();
+
+        if (playerList.isEmpty())
             return;
 
         uint32 reward = map->IsRaid() ? rewardRaid : rewardDungeon;
@@ -845,13 +855,12 @@ public:
         //instanceStart=0, endTime;
         uint8 difficulty = map->GetDifficulty();
 
-        for (std::size_t i = 0; i < list.size(); i++)
+        for (Map::PlayerList::const_iterator itr = playerList.begin(); itr != playerList.end(); ++itr)
         {
-            Player* player = list[i];
-            if (!player || player->getLevel() <= DEFAULT_MAX_LEVEL)
+            if (!itr->GetSource() || itr->GetSource()->IsGameMaster() || itr->GetSource()->getLevel() < DEFAULT_MAX_LEVEL)
                 continue;
             
-            player->AddItem(reward, 1 + difficulty); // difficulty boost
+            itr->GetSource()->AddItem(reward, 1 + difficulty); // difficulty boost
         }
     }
 };
