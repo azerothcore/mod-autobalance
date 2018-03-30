@@ -643,7 +643,7 @@ public:
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
-                if (LevelEndGameBoost == 1)
+                if (LevelEndGameBoost == 1 && !creature->GetMap()->IsRaid())
                     newDmgBase *= creatureVasInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureVasInfo->selectedLevel-70) * 0.3f : 1;
             }
             
