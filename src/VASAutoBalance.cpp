@@ -822,11 +822,11 @@ class VAS_AutoBalance_GlobalScript : public GlobalScript {
 public:
     VAS_AutoBalance_GlobalScript() : GlobalScript("VAS_AutoBalance_GlobalScript") { }
     
-    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* source, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/) override {
+    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* source, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated) override {
         //if (!dungeonCompleted)
         //    return;
 
-        if (!rewardEnabled)
+        if (!rewardEnabled || !updated)
             return;
 
         if (map->GetPlayersCountExceptGMs() < MinPlayerReward)
