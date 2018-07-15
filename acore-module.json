@@ -1,6 +1,6 @@
 {
   "name": "mod-vas-autobalance",
-  "versions" : [
+  "compatibility" : [
       { "version": "1.0.0", "branch": "none" },
       { "version": "2.0.0", "branch": "master" }
   ]
