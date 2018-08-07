@@ -151,11 +151,11 @@ VASAutoBalance.ForcedID5="8317,15203,15204,15205,15305,6109,26801,30508,26799,30
 VASAutoBalance.ForcedID2=""
 
 #
-#     VASAutoBalance.DisableID
+#     VASAutoBalance.DisabledID
 #        Disable scaling on specific creatures
 #
 
-VASAutoBalance.DisableID=""
+VASAutoBalance.DisabledID=""
 
 ##########################
 #
