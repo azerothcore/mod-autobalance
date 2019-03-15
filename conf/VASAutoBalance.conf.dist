@@ -15,7 +15,7 @@ VASAutoBalance.enable=1
 
 #     VASAutoBalance.InflectionPoint
 #        Adjust value of Hyperbolic Tangent function where
-#        the curve of scaling must change. An higher value means higher difficulty.
+#        the curve of scaling must change. An Lower value means higher difficulty.
 #
 #        Example: with 0.5, a creature of raid (40) will have half of its life with 20 players in
 #                 with 0.3, the same creature will have half of its life with 12 players in
