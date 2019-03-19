@@ -18,7 +18,7 @@ VASAutoBalance.enable=1
 #        the curve of scaling must change. An Lower value means higher difficulty.
 #
 #        Example: with 0.5, a creature of raid (40) will have half of its life with 20 players in
-#                 with 0.3, the same creature will have half of its life with 12 players in
+#                 with 0.8, the same creature will have half of its life with 12 players in
 #
 #        Default:     0.5
 
