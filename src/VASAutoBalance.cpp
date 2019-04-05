@@ -229,10 +229,11 @@ class VAS_AutoBalance_PlayerScript : public PlayerScript
         }
 
         void OnLogin(Player *Player)
-        {
-            if (enabled)
-                ChatHandler(Player->GetSession()).PSendSysMessage("This server is running a VAS_AutoBalance Module.");
-        }
+	{
+		if (sConfigMgr->GetBoolDefault("VASAutoBalanceAnnounce.enable", true)) {
+			ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00VAS_AutoBalance |rmodule.");
+		}
+	}
 
         virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) {
             if (!enabled || !player)
