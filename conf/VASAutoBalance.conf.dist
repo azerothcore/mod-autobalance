@@ -5,6 +5,15 @@
 
 ###################################################################################################
 #
+# VAS AUTOBALANCE ANNOUNCE
+#
+#     VASAutoBalanceAnnounce.enable
+#        Enable/Disable Autobalance system
+#        Default:     1 (1 = ON, 0 = OFF)
+
+VASAutoBalanceAnnounce.enable=1
+
+#
 # VAS AUTOBALANCE OPTIONS
 #
 #     VASAutoBalance.enable
