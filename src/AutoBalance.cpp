@@ -167,11 +167,11 @@ void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
     }
 }
 
-class _AutoBalance_WorldScript : public WorldScript
+class AutoBalance_WorldScript : public WorldScript
 {
     public:
-    _AutoBalance_WorldScript()
-        : WorldScript("_AutoBalance_WorldScript")
+    AutoBalance_WorldScript()
+        : WorldScript("AutoBalance_WorldScript")
     {
     }
 
@@ -220,18 +220,18 @@ class _AutoBalance_WorldScript : public WorldScript
     }
 };
 
-class _AutoBalance_PlayerScript : public PlayerScript
+class AutoBalance_PlayerScript : public PlayerScript
 {
     public:
-        _AutoBalance_PlayerScript()
-            : PlayerScript("_AutoBalance_PlayerScript")
+        AutoBalance_PlayerScript()
+            : PlayerScript("AutoBalance_PlayerScript")
         {
         }
 
         void OnLogin(Player *Player)
         {
             if (sConfigMgr->GetBoolDefault("AutoBalanceAnnounce.enable", true)) {
-                ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00_AutoBalance |rmodule.");
+                ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
             }
         }
 
@@ -242,18 +242,18 @@ class _AutoBalance_PlayerScript : public PlayerScript
             if (LevelScaling == 0)
                 return;
 
-            AutoBalanceMapInfo *mapABInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("_AutoBalanceMapInfo");
+            AutoBalanceMapInfo *mapABInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
             if (mapABInfo->mapLevel < player->getLevel())
                 mapABInfo->mapLevel = player->getLevel();
         }
 };
 
-class _AutoBalance_UnitScript : public UnitScript
+class AutoBalance_UnitScript : public UnitScript
 {
     public:
-    _AutoBalance_UnitScript()
-        : UnitScript("_AutoBalance_UnitScript", true)
+    AutoBalance_UnitScript()
+        : UnitScript("AutoBalance_UnitScript", true)
     {
     }
 
@@ -290,7 +290,7 @@ class _AutoBalance_UnitScript : public UnitScript
         if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
             return damage;
 
-        float damageMultiplier = attacker->CustomData.GetDefault<AutoBalanceCreatureInfo>("_AutoBalanceCreatureInfo")->DamageMultiplier;
+        float damageMultiplier = attacker->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->DamageMultiplier;
 
         if (damageMultiplier == 1)
             return damage;
@@ -309,11 +309,11 @@ class _AutoBalance_UnitScript : public UnitScript
 };
 
 
-class _AutoBalance_AllMapScript : public AllMapScript
+class AutoBalance_AllMapScript : public AllMapScript
 {
     public:
-    _AutoBalance_AllMapScript()
-        : AllMapScript("_AutoBalance_AllMapScript")
+    AutoBalance_AllMapScript()
+        : AllMapScript("AutoBalance_AllMapScript")
         {
         }
 
@@ -325,7 +325,7 @@ class _AutoBalance_AllMapScript : public AllMapScript
             if (player->IsGameMaster())
                 return;
 
-            AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("_AutoBalanceMapInfo");
+            AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
@@ -378,7 +378,7 @@ class _AutoBalance_AllMapScript : public AllMapScript
             if (player->IsGameMaster())
                 return;
 
-            AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("_AutoBalanceMapInfo");
+            AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
             // mapABInfo->playerCount--; (maybe we've to found a safe solution to avoid player recount each time)
             mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
@@ -411,11 +411,11 @@ class _AutoBalance_AllMapScript : public AllMapScript
         }
 };
 
-class _AutoBalance_AllCreatureScript : public AllCreatureScript
+class AutoBalance_AllCreatureScript : public AllCreatureScript
 {
 public:
-    _AutoBalance_AllCreatureScript()
-        : AllCreatureScript("_AutoBalance_AllCreatureScript")
+    AutoBalance_AllCreatureScript()
+        : AllCreatureScript("AutoBalance_AllCreatureScript")
     {
     }
 
@@ -453,13 +453,13 @@ public:
             return;
         }
 
-        AutoBalanceMapInfo *mapABInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("_AutoBalanceMapInfo");
+        AutoBalanceMapInfo *mapABInfo=creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
         if (!mapABInfo->mapLevel)
             return;
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
-        AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("_AutoBalanceCreatureInfo");
+        AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
         // force resetting selected level.
         // this is also a "workaround" to fix bug of not recalculated
@@ -675,10 +675,10 @@ public:
         creature->UpdateAllStats();
     }
 };
-class _AutoBalance_CommandScript : public CommandScript
+class AutoBalance_CommandScript : public CommandScript
 {
 public:
-    _AutoBalance_CommandScript() : CommandScript("_AutoBalance_CommandScript") { }
+    AutoBalance_CommandScript() : CommandScript("AutoBalance_CommandScript") { }
 
     std::vector<ChatCommand> GetCommands() const
     {
@@ -738,7 +738,7 @@ public:
             return false;
         }
 
-        AutoBalanceMapInfo *mapABInfo=pl->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("_AutoBalanceMapInfo");
+        AutoBalanceMapInfo *mapABInfo=pl->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
         mapABInfo->playerCount = pl->GetMap()->GetPlayersCountExceptGMs();
 
@@ -772,7 +772,7 @@ public:
             return false;
         }
 
-        AutoBalanceMapInfo *mapABInfo=pl->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("_AutoBalanceMapInfo");
+        AutoBalanceMapInfo *mapABInfo=pl->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
         handler->PSendSysMessage("Players on map: %u", mapABInfo->playerCount);
         handler->PSendSysMessage("Max level of players in this map: %u", mapABInfo->mapLevel);
@@ -791,7 +791,7 @@ public:
             return false;
         }
 
-        AutoBalanceCreatureInfo *creatureABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("_AutoBalanceCreatureInfo");
+        AutoBalanceCreatureInfo *creatureABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
         handler->PSendSysMessage("Instance player Count: %u", creatureABInfo->instancePlayerCount);
         handler->PSendSysMessage("Selected level: %u", creatureABInfo->selectedLevel);
@@ -805,9 +805,9 @@ public:
     }
 };
 
-class _AutoBalance_GlobalScript : public GlobalScript {
+class AutoBalance_GlobalScript : public GlobalScript {
 public:
-    _AutoBalance_GlobalScript() : GlobalScript("_AutoBalance_GlobalScript") { }
+    AutoBalance_GlobalScript() : GlobalScript("AutoBalance_GlobalScript") { }
 
     void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* source, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated) override {
         //if (!dungeonCompleted)
@@ -819,7 +819,7 @@ public:
         if (map->GetPlayersCountExceptGMs() < MinPlayerReward)
             return;
 
-        AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("_AutoBalanceMapInfo");
+        AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
         uint8 areaMinLvl, areaMaxLvl;
         getAreaLevel(map, source->GetAreaId(), areaMinLvl, areaMaxLvl);
@@ -856,11 +856,11 @@ public:
 
 void AddAutoBalanceScripts()
 {
-    new _AutoBalance_WorldScript;
-    new _AutoBalance_PlayerScript;
-    new _AutoBalance_UnitScript;
-    new _AutoBalance_AllCreatureScript;
-    new _AutoBalance_AllMapScript;
-    new _AutoBalance_CommandScript;
-    new _AutoBalance_GlobalScript;
+    new AutoBalance_WorldScript;
+    new AutoBalance_PlayerScript;
+    new AutoBalance_UnitScript;
+    new AutoBalance_AllCreatureScript;
+    new AutoBalance_AllMapScript;
+    new AutoBalance_CommandScript;
+    new AutoBalance_GlobalScript;
 }
