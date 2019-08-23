@@ -1,1 +1,1 @@
-void AddVASAutoBalanceScripts();
+void AddAutoBalanceScripts();

@@ -1,13 +1,13 @@
-#ifndef VAS_AUTOBALANCE_H
-#define VAS_AUTOBALANCE_H
+#ifndef MOD_AUTOBALANCE_H
+#define MOD_AUTOBALANCE_H
 
 #include "ScriptMgr.h"
 #include "Creature.h"
 
 // Manages registration, loading, and execution of scripts.
-class VasScriptMgr
+class ABScriptMgr
 {
-    friend class ACE_Singleton<VasScriptMgr, ACE_Null_Mutex>;
+    friend class ACE_Singleton<ABScriptMgr, ACE_Null_Mutex>;
     public: /* Initialization */
 
         // called at the start of ModifyCreatureAttributes method
@@ -20,24 +20,24 @@ class VasScriptMgr
         bool OnBeforeUpdateStats(Creature* creature, uint32 &scaledHealth, uint32 &scaledMana, float &damageMultiplier, uint32 &newBaseArmor);
 };
 
-#define sVasScriptMgr ACE_Singleton<VasScriptMgr, ACE_Null_Mutex>::instance()
+#define sABScriptMgr ACE_Singleton<ABScriptMgr, ACE_Null_Mutex>::instance()
 
 /*
-* Dedicated hooks for VasAutobalance Module
+* Dedicated hooks for Autobalance Module
 * Can be used to extend/customize this system
 */
-class VasModuleScript : public ModuleScript
+class ABModuleScript : public ModuleScript
 {
     protected:
 
-        VasModuleScript(const char* name);
+        ABModuleScript(const char* name);
 
-    public: 
+    public:
         virtual bool OnBeforeModifyAttributes(Creature* /*creature*/, uint32 & /*instancePlayerCount*/) { return true; }
         virtual bool OnAfterDefaultMultiplier(Creature* /*creature*/, float & /*defaultMultiplier*/) { return true; }
         virtual bool OnBeforeUpdateStats(Creature* /*creature*/, uint32 &/*scaledHealth*/, uint32 &/*scaledMana*/, float &/*damageMultiplier*/, uint32 &/*newBaseArmor*/) { return true; }
 };
 
-template class ScriptRegistry<VasModuleScript>;
+template class ScriptRegistry<ABModuleScript>;
 
 #endif
