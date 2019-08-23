@@ -693,7 +693,7 @@ public:
 
         static std::vector<ChatCommand> commandTable =
         {
-            { "autobalance",     SEC_GAMEMASTER,                            false, NULL,                      "", abCommandTable },
+            { "autobalance",     SEC_GAMEMASTER,                            false, NULL,                      "", ABCommandTable },
         };
         return commandTable;
     }
