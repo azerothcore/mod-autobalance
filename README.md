@@ -1,6 +1,5 @@
-<b>Make sure to support the main project:
-https://github.com/azerothcore/azerothcore-wotlk/</b>
-# AutoBalanceModule
+# ![logo](https://raw.githubusercontent.com/azerothcore/azerothcore.github.io/master/images/logo-github.png) AzerothCore
+## AutoBalanceModule
 - Latest build status with azerothcore: [![Build Status](https://travis-ci.org/azerothcore/mod-autobalance.svg?branch=master)](https://travis-ci.org/azerothcore/mod-autobalance)
 * Script Name: AutoBalance
 * Original Authors: KalCorp and Vaughner
