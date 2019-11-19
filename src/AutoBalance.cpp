@@ -144,7 +144,7 @@ int GetForcedCreatureId(int creatureId)
 {
     if (forcedCreatureIds.find(creatureId) == forcedCreatureIds.end()) // Don't want the forcedCreatureIds map to blowup to a massive empty array
     {
-        return 0;
+        return -1;
     }
     return forcedCreatureIds[creatureId];
 }
@@ -459,6 +459,21 @@ public:
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
+		uint32 mapId = creature->GetMapId();
+		if (mapId == 30  && mapId == 628)
+			return;
+		
+        uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
+        //    SOLO  - By MobID
+        if (GetForcedCreatureId(creatureTemplate->Entry) >= 0)
+        {
+            maxNumberOfPlayers = GetForcedCreatureId(creatureTemplate->Entry); // Force maxNumberOfPlayers to be changed to match the Configuration entry.
+			if (maxNumberOfPlayers == 0)
+			{
+				return;
+			}
+        }
+
         AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
         // force resetting selected level.
@@ -532,13 +547,6 @@ public:
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
         uint32 scaledHealth = 0;
         uint32 scaledMana = 0;
-
-        uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
-        //    SOLO  - By MobID
-        if (GetForcedCreatureId(creatureTemplate->Entry) > 0)
-        {
-            maxNumberOfPlayers = GetForcedCreatureId(creatureTemplate->Entry); // Force maxNumberOfPlayers to be changed to match the Configuration entry.
-        }
 
         // Note: InflectionPoint handle the number of players required to get 50% health.
         //       you'd adjust this to raise or lower the hp modifier for per additional player in a non-whole group.
