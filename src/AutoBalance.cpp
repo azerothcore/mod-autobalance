@@ -460,7 +460,7 @@ public:
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
 		uint32 mapId = creature->GetMapId();
-		if (mapId == 30  && mapId == 628)
+		if (mapId == 30 || mapId == 628)
 			return;
 		
         uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
