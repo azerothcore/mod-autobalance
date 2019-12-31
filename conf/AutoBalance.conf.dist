@@ -1,209 +1,70 @@
-[worldserver]
-
-#
 ###################################################################################################
-
-###################################################################################################
+#  AUTOBALANCE OPTIONS
 #
-# AUTOBALANCE ANNOUNCE
-#
-#     AutoBalanceAnnounce.enable
-#        Enable/Disable Autobalance system
-#        Default:     1 (1 = ON, 0 = OFF)
-
-AutoBalanceAnnounce.enable=1
-
-#
-# AUTOBALANCE OPTIONS
-#
-#     AutoBalance.enable
-#        Enable/Disable Autobalance system
-#        Default:     1 (1 = ON, 0 = OFF)
-
-AutoBalance.enable=1
-
-#     AutoBalance.InflectionPoint
-#        Adjust value of Hyperbolic Tangent function where
-#        the curve of scaling must change. A lower value means higher difficulty.
-#
-#        Example: with 0.5, a creature of raid (40) will have half of its life with 20 players in
-#                 with 0.8, the same creature will have half of its life with 12 players in
-#
-#        Default:     0.5
-
-AutoBalance.InflectionPoint=0.5
-
-#     AutoBalance.numPlayer
+#     AutoBalance.XPlayer
 #        Set Server to level of solo mode.
-#        Set to 0 to Disable -SOLO Mod.
-#        Example: .AutoBalance.XPlayer = 1 will set everything for a 1 player game.
+#        Set to 0 to Disable SOLO Mod.
+#        Example: AutoBalance.XPlayer = 1 will set everything for a 1 player game.
 #        Default:     1
 
-AutoBalance.numPlayer=1.0
+AutoBalance.XPlayer = 1
 
 #
-#     AutoBalance.levelScaling
-#        Check the max level of players in map and scale creature based on it
-#        0 = Disabled
-#        1 = Enabled only in dungeons
-#        2 = Always enabled
-#        Default:     1
-
-AutoBalance.levelScaling=1
-
-#
-#     AutoBalance.levelHigherOffset
-#     AutoBalance.levelLowerOffset
-#        Level Offsets between creatures will not be scaled by level.
-#        You can even use it to disable scaling from lower to higher levelScaling
-#        setting levelLowerOffset to 80 (max wotlk level) for example.
-#        default: 3 (higher), 0 (lower)
-
-AutoBalance.levelHigherOffset = 3
-AutoBalance.levelLowerOffset  = 0
-
-#
-#     AutoBalance.levelUseDbValuesWhenExists
-#        When enabled with levelScaling, the creature will use its default database values
-#        instead of level scaling formula when player/party level has correspondance with
-#        creature_template minlevel/maxlevel.
-#
-#        Default:     0 (1 = ON, 0 = OFF)
-
-AutoBalance.levelUseDbValuesWhenExists = 0
-
-#
-#     AutoBalance.LevelEndGameBoost
-#        End game creatures have an exponential (not linear) regression
-#        that is not correctly handled by db values. Keep this enabled
-#        to have stats as near possible to the official ones.
-#
-#        Default:     1 (1 = ON, 0 = OFF)
-
-AutoBalance.LevelEndGameBoost = 1
-
-#
-#     AutoBalance.Instances
+#     AutoBalance.AutoInstance
 #        Set instances to Auto chance XPlayer depending on players in it.
 #        Default:     1 (1 = ON, 0 = OFF)
 
-AutoBalance.Instances=1
-#
-#     AutoBalance.DungeonsOnly
-#        Only apply scaling changes to dungeons and raids
-#        Default:     1 (1 = ON, 0 = OFF)
-AutoBalance.DungeonsOnly=1
+AutoBalance.AutoInstance = 1
 
 #
-#     AutoBalance.DebugLevel
+#     AutoBalance.Debug
 #        0 = None
 #        1 = Errors Only
 #        2 = Errors and Basic Information
-#        3 = All  Info
-#        Default:     2
+#        3 = All Info
+#        Default:     1
 
-AutoBalance.DebugLevel=2
+AutoBalance.Debug = 0
 
 #
-#     .AutoBalance.PlayerChangeNotify
+#     AutoBalance.PlayerChangeNotify
 #        Set Auto Notifications to all players in Instance that player count has changed.
 #        Default:     1 (1 = ON, 0 = OFF)
 
-AutoBalance.PlayerChangeNotify=1
+AutoBalance.PlayerChangeNotify = 1
 
 #
-#     AutoBalance.MinHPModifier
+#     AutoBalance.Color
+#        In Game Color for mod information in chat window.
+#        Default:     cffFF8000 (Orange)
+
+AutoBalance.Color = cffFF8000
+
+#
+#     Min.HP.Mod
 #        Minimum Modifier setting for Health Modification
-#        Default:     0.01
+#        Default:     0.20
 
-AutoBalance.MinHPModifier=0.01
+Min.HP.Mod = 0.20
 
 #
-#     AutoBalance.MinDamageModifier
+#     Min.D.Mod
 #        Minimum Modifier setting for Damage Modification
-#        Default:     0.01
+#        Default:     0.10
 
-AutoBalance.MinDamageModifier=0.01
-
-
-#
-#     AutoBalance.rate.*
-#        You can tune all rates increasing/decreasing difficulty in a linear way
-#        Note that global rate will increase all other rates. For example:
-#        global = 2.0 , damage = 1.5  -> it means that damage will be 3.0
-#        Default:     1.0
-
-AutoBalance.rate.global = 1.0
-AutoBalance.rate.health = 1.0
-AutoBalance.rate.mana   = 1.0
-AutoBalance.rate.armor  = 1.0
-AutoBalance.rate.damage = 1.0
+Min.D.Mod = 0.10
 
 #
-#     AutoBalance.playerCountDifficultyOffset
-#        Offset of players inside an instance
-#        Default:     0
-
-AutoBalance.playerCountDifficultyOffset=0
-
-#
-#     AutoBalance.ForcedIDXX
+#     AutoBalance.XX.Name
 #        Sets MobIDs for the group they belong to.
-#        All 5 Man Mobs should go in .AutoBalance.5.Name
-#        All 10 Man Mobs should go in .AutoBalance.10.Name etc.
+#        All 5 Man Mobs should go in AutoBalance.5.Name
+#        All 10 Man Mobs should go in AutoBalance.10.Name etc.
 
-AutoBalance.ForcedID40="11583,16441,30057,13020,15589,14435,18192,14889,14888,14887,14890,15302,15818,15742,15741,15740,18338"
-AutoBalance.ForcedID25="22997,21966,21965,21964,21806,21215,21845,19728,12397,17711,18256,18192,"
-AutoBalance.ForcedID20=""
-AutoBalance.ForcedID10="15689,15550,16152,17521,17225,16028,29324,31099"
-AutoBalance.ForcedID5="8317,15203,15204,15205,15305,6109,26801,30508,26799,30495,26803,30497,27859,27249"
-AutoBalance.ForcedID2=""
-
-#
-#     AutoBalance.DisabledID
-#        Disable scaling on specific creatures
-#
-
-AutoBalance.DisabledID=""
-
-##########################
-#
-# REWARD SYSTEM (experimental)
-#
-##########################
-
+AutoBalance.40.Name = "11583,16441,30057,13020,15589,14435,18192,14889,14888,14887,14890,15302,15818,15742,15741,15740,18338"
+AutoBalance.25.Name = "22997,21966,21965,21964,21806,21215,21845,19728,12397,17711,18256,18192,"
+AutoBalance.10.Name = "15689,15550,16152,17521,17225,16028,29324,31099"
+AutoBalance.5.Name = "15203,15204,15205,15305,6109,26801,30508,26799,30495,26803,30497,27859,27249"
+AutoBalance.2.Name = "25549,24558,25574,24559,25556,25557,25578,24561,25555,24555,25541,24553,25550,24554,24552,25564,15931,29373"
 
 #
-#   AutoBalance.reward.enable
-#       This is an experimental feature to reward a player that kill a boss when
-#       a pre-wotlk dungeon/raid is completed with creature levelling enabled.
-#       This is an idea to boost old contents even if you're end-game player.
-#
-#       Default:     0 (1 = ON, 0 = OFF)
-
-AutoBalance.reward.enable = 0
-
-
-#
-#   AutoBalance.reward.raidToken
-#   AutoBalance.reward.dungeonToken
-#
-#
-#       Default:
-#           raidToken -> emblem of frost (49426)
-#           dungeonToken -> emblem of triumph (47241)
-
-AutoBalance.reward.raidToken    = 49426
-AutoBalance.reward.dungeonToken = 47241
-
-#
-#   AutoBalance.reward.MinPlayerReward
-#       This conf option checks how many players are in the same
-#       map before allowing the reward to be carried out
-#       if MinPlayerReward is set to two and player is soloing this conf doesn't reward then.
-#		this will give more a challenge to players for low level instances.
-#
-#       Default:     1
-
-AutoBalance.reward.MinPlayerReward = 1
-#
+###################################################################################################

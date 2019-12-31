@@ -8,6 +8,7 @@
 class ABScriptMgr
 {
     friend class ACE_Singleton<ABScriptMgr, ACE_Null_Mutex>;
+
     public: /* Initialization */
 
         // called at the start of ModifyCreatureAttributes method
@@ -35,7 +36,10 @@ class ABModuleScript : public ModuleScript
     public:
         virtual bool OnBeforeModifyAttributes(Creature* /*creature*/, uint32 & /*instancePlayerCount*/) { return true; }
         virtual bool OnAfterDefaultMultiplier(Creature* /*creature*/, float & /*defaultMultiplier*/) { return true; }
-        virtual bool OnBeforeUpdateStats(Creature* /*creature*/, uint32 &/*scaledHealth*/, uint32 &/*scaledMana*/, float &/*damageMultiplier*/, uint32 &/*newBaseArmor*/) { return true; }
+        virtual bool OnBeforeUpdateStats(Creature* /*creature*/, uint32 &/*scaledHealth*/, uint32 &/*scaledMana*/, float &/*damageMultiplier*/, uint32 &/*newBaseArmor*/)
+        {
+            return true;
+        }
 };
 
 template class ScriptRegistry<ABModuleScript>;
