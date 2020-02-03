@@ -347,8 +347,8 @@ class AutoBalance_AllMapScript : public AllMapScript
                 }
             }
 
-            // mapABInfo->playerCount++; (maybe we've to found a safe solution to avoid player recount each time)
-            mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
+            //mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             if (PlayerChangeNotify > 0)
             {
@@ -380,8 +380,8 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            // mapABInfo->playerCount--; (maybe we've to found a safe solution to avoid player recount each time)
-            mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
+            // mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
