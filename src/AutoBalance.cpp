@@ -559,40 +559,49 @@ public:
         //       sure the modifier never goes above the value or 1.0 or below 0.
         //
         float defaultMultiplier = 1.0f;
-        if (creatureABInfo->instancePlayerCount < maxNumberOfPlayers) {
+        if (creatureABInfo->instancePlayerCount < maxNumberOfPlayers)
+        {
             float inflectionValue  = (float)maxNumberOfPlayers;
-            if (instanceMap->IsHeroic()) {
-                if (instanceMap->IsRaid()) {
-                    if (instanceMap->GetMaxPlayers() == 10) {
-                        inflectionValue *= InflectionPointRaid10MHeroic;
-                    }
-                    else if (instanceMap->GetMaxPlayers() == 25) {
-                        inflectionValue *= InflectionPointRaid25MHeroic;
-                    }
-                    else {
-                        inflectionValue *= InflectionPointRaidHeroic;
+
+            if (instanceMap->IsHeroic())
+            {
+                if (instanceMap->IsRaid())
+                {
+                    switch (instanceMap->GetMaxPlayers())
+                    {
+                        case 10:
+                            inflectionValue *= InflectionPointRaid10MHeroic;
+                            break;
+                        case 25:
+                            inflectionValue *= InflectionPointRaid25MHeroic;
+                            break;
+                        default:
+                            inflectionValue *= InflectionPointRaidHeroic;
                     }
                 }
-                else {
+                else
                     inflectionValue *= InflectionPointHeroic;
-                }
             }
-            else {
-                if (instanceMap->IsRaid()) {
-                    if (instanceMap->GetMaxPlayers() == 10) {
-                        inflectionValue *= InflectionPointRaid10M;
-                    }
-                    else if (instanceMap->GetMaxPlayers() == 25) {
-                        inflectionValue *= InflectionPointRaid25M;
-                    }
-                    else {
-                        inflectionValue *= InflectionPointRaid;
+            else
+            {
+                if (instanceMap->IsRaid())
+                {
+                    switch (instanceMap->GetMaxPlayers())
+                    {
+                        case 10:
+                            inflectionValue *= InflectionPointRaid10M;
+                            break;
+                        case 25:
+                            inflectionValue *= InflectionPointRaid25M;
+                            break;
+                        default:
+                            inflectionValue *= InflectionPointRaid;
                     }
                 }
-                else {
+                else
                     inflectionValue *= InflectionPoint;
-                }
             }
+
             float diff = ((float)maxNumberOfPlayers/5)*1.5f;
             defaultMultiplier = (tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
         }
