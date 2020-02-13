@@ -108,10 +108,10 @@ public:
 static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
-static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
+static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier, InflectionPoint;
+static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint;
 
 int GetValidDebugLevel()
 {
@@ -214,8 +214,8 @@ class AutoBalance_WorldScript : public WorldScript
         manaMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.mana", 1.0f);
         armorMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.armor", 1.0f);
         damageMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.damage", 1.0f);
-        numPlayerConf=sConfigMgr->GetFloatDefault("AutoBalance.numPlayer", 1.0f);
         MinHPModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier", 0.1f);
+        MinManaModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier", 0.1f);
         MinDamageModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier", 0.1f);
     }
 };
@@ -610,6 +610,12 @@ public:
         }
 
         creatureABInfo->ManaMultiplier =  manaStatsRate * manaMultiplier * defaultMultiplier * globalRate;
+
+        if (creatureABInfo->ManaMultiplier <= MinManaModifier)
+        {
+            creatureABInfo->ManaMultiplier = MinManaModifier;
+        }
+
         scaledMana = round(baseMana * creatureABInfo->ManaMultiplier);
 
         float damageMul = defaultMultiplier * globalRate * damageMultiplier;

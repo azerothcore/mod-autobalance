@@ -111,6 +111,13 @@ AutoBalance.PlayerChangeNotify=1
 AutoBalance.MinHPModifier=0.01
 
 #
+#     AutoBalance.MinManaModifier
+#        Minimum Modifier setting for Mana Modification
+#        Default:     0.01
+
+AutoBalance.MinManaModifier=0.01
+
+#
 #     AutoBalance.MinDamageModifier
 #        Minimum Modifier setting for Damage Modification
 #        Default:     0.01
