@@ -110,7 +110,7 @@ static std::map<int, int> forcedCreatureIds;
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, FullGroupXP;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint;
 
 int GetValidDebugLevel()
@@ -193,12 +193,13 @@ class AutoBalance_WorldScript : public WorldScript
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("AutoBalance.ForcedID2", ""), 2);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("AutoBalance.DisabledID", ""), 0);
 
-        enabled = sConfigMgr->GetIntDefault("AutoBalance.enable", 1) == 1;
-        LevelEndGameBoost = sConfigMgr->GetIntDefault("AutoBalance.LevelEndGameBoost", 1) == 1;
-        DungeonsOnly = sConfigMgr->GetIntDefault("AutoBalance.DungeonsOnly", 1) == 1;
-        PlayerChangeNotify = sConfigMgr->GetIntDefault("AutoBalance.PlayerChangeNotify", 1) == 1;
-        LevelUseDb = sConfigMgr->GetIntDefault("AutoBalance.levelUseDbValuesWhenExists", 1) == 1;
-        rewardEnabled = sConfigMgr->GetIntDefault("AutoBalance.reward.enable", 1) == 1;
+        enabled = sConfigMgr->GetBoolDefault("AutoBalance.enable", 1);
+        LevelEndGameBoost = sConfigMgr->GetBoolDefault("AutoBalance.LevelEndGameBoost", 1);
+        DungeonsOnly = sConfigMgr->GetBoolDefault("AutoBalance.DungeonsOnly", 1);
+        PlayerChangeNotify = sConfigMgr->GetBoolDefault("AutoBalance.PlayerChangeNotify", 1);
+        LevelUseDb = sConfigMgr->GetBoolDefault("AutoBalance.levelUseDbValuesWhenExists", 1);
+        rewardEnabled = sConfigMgr->GetBoolDefault("AutoBalance.reward.enable", 1);
+        FullGroupXP = sConfigMgr->GetBoolDefault("AutoBalance.DungeonFullGroupXP", 0);
 
         LevelScaling = sConfigMgr->GetIntDefault("AutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetIntDefault("AutoBalance.playerCountDifficultyOffset", 0);
@@ -251,7 +252,7 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
         {
-            if (victim && sConfigMgr->GetBoolDefault("AutoBalance.DungeonFullGroupXP", 0))
+            if (victim && FullGroupXP)
             {
                 Map* map = player->GetMap();
 
