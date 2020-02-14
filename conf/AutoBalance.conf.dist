@@ -75,15 +75,17 @@ AutoBalance.levelUseDbValuesWhenExists = 0
 AutoBalance.LevelEndGameBoost = 1
 
 #
-#     AutoBalance.Instances
-#        Set instances to Auto chance XPlayer depending on players in it.
-#        Default:     1 (1 = ON, 0 = OFF)
+#     AutoBalance.DungeonFullGroupXP
+#        Ensure that the player always gets the same XP as if entering the dungeon with a full group
+#        Default:     0 (1 = ON, 0 = OFF)
 
-AutoBalance.Instances=1
+AutoBalance.DungeonFullGroupXP=0
+
 #
 #     AutoBalance.DungeonsOnly
 #        Only apply scaling changes to dungeons and raids
 #        Default:     1 (1 = ON, 0 = OFF)
+
 AutoBalance.DungeonsOnly=1
 
 #

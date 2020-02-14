@@ -228,14 +228,15 @@ class AutoBalance_PlayerScript : public PlayerScript
         {
         }
 
-        void OnLogin(Player *Player)
+        void OnLogin(Player *Player) override
         {
             if (sConfigMgr->GetBoolDefault("AutoBalanceAnnounce.enable", true)) {
                 ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
             }
         }
 
-        virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) {
+        virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
+        {
             if (!enabled || !player)
                 return;
 
@@ -246,6 +247,22 @@ class AutoBalance_PlayerScript : public PlayerScript
 
             if (mapABInfo->mapLevel < player->getLevel())
                 mapABInfo->mapLevel = player->getLevel();
+        }
+
+        void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
+        {
+            if (victim && sConfigMgr->GetBoolDefault("AutoBalance.DungeonFullGroupXP", 0))
+            {
+                Map* map = player->GetMap();
+
+                if (map->IsDungeon())
+                {
+                    // Ensure that the players always get the same XP, even when entering the dungeon alone
+                    uint32 maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
+                    uint32 currentPlayerCount = map->GetPlayersCountExceptGMs();
+                    amount *= (float)currentPlayerCount / maxPlayerCount;
+                }
+            }
         }
 };
 
