@@ -111,7 +111,7 @@ static std::map<int, int> forcedCreatureIds;
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint;
+static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic;
 
 int GetValidDebugLevel()
 {
@@ -210,6 +210,13 @@ class AutoBalance_WorldScript : public WorldScript
         MinPlayerReward = sConfigMgr->GetFloatDefault("AutoBalance.reward.MinPlayerReward", 1);
 
         InflectionPoint = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPoint", 0.5f);
+        InflectionPointRaid = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid", InflectionPoint);
+        InflectionPointRaid25M = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid25M", InflectionPointRaid);
+        InflectionPointRaid10M = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRiad10M", InflectionPointRaid);
+        InflectionPointHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointHeroic", InflectionPoint);
+        InflectionPointRaidHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaidHeroic", InflectionPointRaid);
+        InflectionPointRaid25MHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaid25M);
+        InflectionPointRaid10MHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRiad10MHeroic", InflectionPointRaid10M);
         globalRate = sConfigMgr->GetFloatDefault("AutoBalance.rate.global", 1.0f);
         healthMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.health", 1.0f);
         manaMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.mana", 1.0f);
@@ -550,8 +557,8 @@ public:
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
         uint32 scaledHealth = 0;
         uint32 scaledMana = 0;
-
-        uint32 maxNumberOfPlayers = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()))->GetMaxPlayers();
+        InstanceMap* instanceMap = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()));
+        uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
         //    SOLO  - By MobID
         if (GetForcedCreatureId(creatureTemplate->Entry) > 0)
         {
@@ -570,8 +577,49 @@ public:
         //       sure the modifier never goes above the value or 1.0 or below 0.
         //
         float defaultMultiplier = 1.0f;
-        if (creatureABInfo->instancePlayerCount < maxNumberOfPlayers) {
-            float inflectionValue  = (float)maxNumberOfPlayers * InflectionPoint;
+        if (creatureABInfo->instancePlayerCount < maxNumberOfPlayers)
+        {
+            float inflectionValue  = (float)maxNumberOfPlayers;
+
+            if (instanceMap->IsHeroic())
+            {
+                if (instanceMap->IsRaid())
+                {
+                    switch (instanceMap->GetMaxPlayers())
+                    {
+                        case 10:
+                            inflectionValue *= InflectionPointRaid10MHeroic;
+                            break;
+                        case 25:
+                            inflectionValue *= InflectionPointRaid25MHeroic;
+                            break;
+                        default:
+                            inflectionValue *= InflectionPointRaidHeroic;
+                    }
+                }
+                else
+                    inflectionValue *= InflectionPointHeroic;
+            }
+            else
+            {
+                if (instanceMap->IsRaid())
+                {
+                    switch (instanceMap->GetMaxPlayers())
+                    {
+                        case 10:
+                            inflectionValue *= InflectionPointRaid10M;
+                            break;
+                        case 25:
+                            inflectionValue *= InflectionPointRaid25M;
+                            break;
+                        default:
+                            inflectionValue *= InflectionPointRaid;
+                    }
+                }
+                else
+                    inflectionValue *= InflectionPoint;
+            }
+
             float diff = ((float)maxNumberOfPlayers/5)*1.5f;
             defaultMultiplier = (tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
         }
