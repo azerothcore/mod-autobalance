@@ -110,7 +110,7 @@ static std::map<int, int> forcedCreatureIds;
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, FullGroupXP;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint;
 
 int GetValidDebugLevel()
@@ -199,7 +199,7 @@ class AutoBalance_WorldScript : public WorldScript
         PlayerChangeNotify = sConfigMgr->GetBoolDefault("AutoBalance.PlayerChangeNotify", 1);
         LevelUseDb = sConfigMgr->GetBoolDefault("AutoBalance.levelUseDbValuesWhenExists", 1);
         rewardEnabled = sConfigMgr->GetBoolDefault("AutoBalance.reward.enable", 1);
-        FullGroupXP = sConfigMgr->GetBoolDefault("AutoBalance.DungeonFullGroupXP", 0);
+        DungeonScaleDownXP = sConfigMgr->GetBoolDefault("AutoBalance.DungeonScaleDownXP", 0);
 
         LevelScaling = sConfigMgr->GetIntDefault("AutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetIntDefault("AutoBalance.playerCountDifficultyOffset", 0);
@@ -252,7 +252,7 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
         {
-            if (victim && FullGroupXP)
+            if (victim && DungeonScaleDownXP)
             {
                 Map* map = player->GetMap();
 
