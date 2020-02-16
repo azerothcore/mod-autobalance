@@ -8,7 +8,7 @@
 # AUTOBALANCE ANNOUNCE
 #
 #     AutoBalanceAnnounce.enable
-#        Enable/Disable Autobalance system
+#        Announce the module on login
 #        Default:     1 (1 = ON, 0 = OFF)
 
 AutoBalanceAnnounce.enable=1
@@ -17,7 +17,7 @@ AutoBalanceAnnounce.enable=1
 # AUTOBALANCE OPTIONS
 #
 #     AutoBalance.enable
-#        Enable/Disable Autobalance system
+#        Enable/Disable the autobalance system
 #        Default:     1 (1 = ON, 0 = OFF)
 
 AutoBalance.enable=1
