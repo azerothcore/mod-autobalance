@@ -91,15 +91,21 @@ AutoBalance.levelUseDbValuesWhenExists = 0
 AutoBalance.LevelEndGameBoost = 1
 
 #
-#     AutoBalance.Instances
-#        Set instances to Auto chance XPlayer depending on players in it.
-#        Default:     1 (1 = ON, 0 = OFF)
+#     AutoBalance.DungeonScaleDownXP
+#        Decrease individual player's amount of XP gained during a dungeon to match the
+#        amount of XP gained during a full group run. Example: In a 5-man group, you
+#        earn 1/5 of the total XP per kill, but if you solo the dungeon with
+#        AutoBalance.DungeonScaleDownXP = 0, you will earn 5/5 of the total XP.
+#        With the option enabled, you will earn 1/5.
+#        Default:     0 (1 = ON, 0 = OFF)
 
-AutoBalance.Instances=1
+AutoBalance.DungeonScaleDownXP = 0
+
 #
 #     AutoBalance.DungeonsOnly
 #        Only apply scaling changes to dungeons and raids
 #        Default:     1 (1 = ON, 0 = OFF)
+
 AutoBalance.DungeonsOnly=1
 
 #
@@ -125,6 +131,13 @@ AutoBalance.PlayerChangeNotify=1
 #        Default:     0.01
 
 AutoBalance.MinHPModifier=0.01
+
+#
+#     AutoBalance.MinManaModifier
+#        Minimum Modifier setting for Mana Modification
+#        Default:     0.01
+
+AutoBalance.MinManaModifier=0.01
 
 #
 #     AutoBalance.MinDamageModifier

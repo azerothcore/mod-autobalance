@@ -108,10 +108,10 @@ public:
 static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
-static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, numPlayerConf;
+static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinDamageModifier, InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
+static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic;
 
 int GetValidDebugLevel()
 {
@@ -193,12 +193,13 @@ class AutoBalance_WorldScript : public WorldScript
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("AutoBalance.ForcedID2", ""), 2);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetStringDefault("AutoBalance.DisabledID", ""), 0);
 
-        enabled = sConfigMgr->GetIntDefault("AutoBalance.enable", 1) == 1;
-        LevelEndGameBoost = sConfigMgr->GetIntDefault("AutoBalance.LevelEndGameBoost", 1) == 1;
-        DungeonsOnly = sConfigMgr->GetIntDefault("AutoBalance.DungeonsOnly", 1) == 1;
-        PlayerChangeNotify = sConfigMgr->GetIntDefault("AutoBalance.PlayerChangeNotify", 1) == 1;
-        LevelUseDb = sConfigMgr->GetIntDefault("AutoBalance.levelUseDbValuesWhenExists", 1) == 1;
-        rewardEnabled = sConfigMgr->GetIntDefault("AutoBalance.reward.enable", 1) == 1;
+        enabled = sConfigMgr->GetBoolDefault("AutoBalance.enable", 1);
+        LevelEndGameBoost = sConfigMgr->GetBoolDefault("AutoBalance.LevelEndGameBoost", 1);
+        DungeonsOnly = sConfigMgr->GetBoolDefault("AutoBalance.DungeonsOnly", 1);
+        PlayerChangeNotify = sConfigMgr->GetBoolDefault("AutoBalance.PlayerChangeNotify", 1);
+        LevelUseDb = sConfigMgr->GetBoolDefault("AutoBalance.levelUseDbValuesWhenExists", 1);
+        rewardEnabled = sConfigMgr->GetBoolDefault("AutoBalance.reward.enable", 1);
+        DungeonScaleDownXP = sConfigMgr->GetBoolDefault("AutoBalance.DungeonScaleDownXP", 0);
 
         LevelScaling = sConfigMgr->GetIntDefault("AutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetIntDefault("AutoBalance.playerCountDifficultyOffset", 0);
@@ -221,8 +222,8 @@ class AutoBalance_WorldScript : public WorldScript
         manaMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.mana", 1.0f);
         armorMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.armor", 1.0f);
         damageMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.damage", 1.0f);
-        numPlayerConf=sConfigMgr->GetFloatDefault("AutoBalance.numPlayer", 1.0f);
         MinHPModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier", 0.1f);
+        MinManaModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier", 0.1f);
         MinDamageModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier", 0.1f);
     }
 };
@@ -235,14 +236,15 @@ class AutoBalance_PlayerScript : public PlayerScript
         {
         }
 
-        void OnLogin(Player *Player)
+        void OnLogin(Player *Player) override
         {
             if (sConfigMgr->GetBoolDefault("AutoBalanceAnnounce.enable", true)) {
                 ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
             }
         }
 
-        virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) {
+        virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
+        {
             if (!enabled || !player)
                 return;
 
@@ -253,6 +255,22 @@ class AutoBalance_PlayerScript : public PlayerScript
 
             if (mapABInfo->mapLevel < player->getLevel())
                 mapABInfo->mapLevel = player->getLevel();
+        }
+
+        void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
+        {
+            if (victim && DungeonScaleDownXP)
+            {
+                Map* map = player->GetMap();
+
+                if (map->IsDungeon())
+                {
+                    // Ensure that the players always get the same XP, even when entering the dungeon alone
+                    uint32 maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
+                    uint32 currentPlayerCount = map->GetPlayersCountExceptGMs();
+                    amount *= (float)currentPlayerCount / maxPlayerCount;
+                }
+            }
         }
 };
 
@@ -658,6 +676,12 @@ public:
         }
 
         creatureABInfo->ManaMultiplier =  manaStatsRate * manaMultiplier * defaultMultiplier * globalRate;
+
+        if (creatureABInfo->ManaMultiplier <= MinManaModifier)
+        {
+            creatureABInfo->ManaMultiplier = MinManaModifier;
+        }
+
         scaledMana = round(baseMana * creatureABInfo->ManaMultiplier);
 
         float damageMul = defaultMultiplier * globalRate * damageMultiplier;
