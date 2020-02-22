@@ -140,11 +140,11 @@ void LoadForcedCreatureIdsFromString(std::string creatureIds, int forcedPlayerCo
     }
 }
 
-int GetForcedCreatureId(int creatureId)
+int GetForcedNumPlayers(int creatureId)
 {
     if (forcedCreatureIds.find(creatureId) == forcedCreatureIds.end()) // Don't want the forcedCreatureIds map to blowup to a massive empty array
     {
-        return 0;
+        return -1;
     }
     return forcedCreatureIds[creatureId];
 }
@@ -484,6 +484,15 @@ public:
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
+        InstanceMap* instanceMap = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()));
+        uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
+        uint32 forcedNumPlayers = GetForcedNumPlayers(creatureTemplate->Entry);
+
+        if (forcedNumPlayers > 0)
+            maxNumberOfPlayers = forcedNumPlayers; // Force maxNumberOfPlayers to be changed to match the Configuration entries ForcedID2, ForcedID5, ForcedID10, ForcedID20, ForcedID25, ForcedID40
+        else if (forcedNumPlayers == 0)
+            return; // forcedNumPlayers 0 means that the creature is contained in DisabledID -> no scaling
+
         AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
         // force resetting selected level.
@@ -557,13 +566,6 @@ public:
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
         uint32 scaledHealth = 0;
         uint32 scaledMana = 0;
-        InstanceMap* instanceMap = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()));
-        uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
-        //    SOLO  - By MobID
-        if (GetForcedCreatureId(creatureTemplate->Entry) > 0)
-        {
-            maxNumberOfPlayers = GetForcedCreatureId(creatureTemplate->Entry); // Force maxNumberOfPlayers to be changed to match the Configuration entry.
-        }
 
         // Note: InflectionPoint handle the number of players required to get 50% health.
         //       you'd adjust this to raise or lower the hp modifier for per additional player in a non-whole group.
