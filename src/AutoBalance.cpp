@@ -486,7 +486,7 @@ public:
 
         InstanceMap* instanceMap = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()));
         uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
-        uint32 forcedNumPlayers = GetForcedNumPlayers(creatureTemplate->Entry);
+        int forcedNumPlayers = GetForcedNumPlayers(creatureTemplate->Entry);
 
         if (forcedNumPlayers > 0)
             maxNumberOfPlayers = forcedNumPlayers; // Force maxNumberOfPlayers to be changed to match the Configuration entries ForcedID2, ForcedID5, ForcedID10, ForcedID20, ForcedID25, ForcedID40
