@@ -25,14 +25,10 @@ AutoBalance.enable=1
 #     AutoBalance.InflectionPoint series
 #        Adjust value of Hyperbolic Tangent function where
 #        the curve of scaling must change. A lower value means higher difficulty.
-#        InflectionPoint is the fallback value for everything
-#        InflectionPointRaid is the fallback value for raids
-#        InflectionPointRaid25M is the fallback value for 25 man raids
-#        InflectionPointRaid10M is the fallback value for 10 man raids
-#        InflectionPointHeroic is the value for Heroic Dungeons
-#        InflectionPointRaidHeroic is the value for heroic raids that are neither 10 man nor 25 man
-#        InflectionPointRaid25MHeroic is the value for 25 man heroic raids
-#        InflectionPointRaid10MHeroic is the value for 10 man heroic raids
+#        InflectionPoint & InflectionPointHeroic are the fallback values for 5-man dungeons
+#        InflectionPointRaid10M & InflectionPointRaid10MHeroic are the fallback values for 10 man raids
+#        InflectionPointRaid25M & InflectionPointRaid25MHeroic are the fallback values for 25 man raids
+#        InflectionPointRaid & InflectionPointRaidHeroic are the fallback values for other raids (40-man, 20-man, 15-man, or custom size)
 #        The inflection points fallback to the most specific number
 #
 #        Example: with 0.5 in InflectionPointRaid, a creature of raid (40) will have half of its life with 20 players in
@@ -41,13 +37,17 @@ AutoBalance.enable=1
 #        Default:     0.5
 
 AutoBalance.InflectionPoint=0.5
-AutoBalance.InflectionPointRaid=0.5
-AutoBalance.InflectionPointRaid25M=0.5
-AutoBalance.InflectionPointRaid10M=0.5
 AutoBalance.InflectionPointHeroic=0.5
-AutoBalance.InflectionPointRaidHeroic=0.5
-AutoBalance.InflectionPointRaid25MHeroic=0.5
+
+AutoBalance.InflectionPointRaid10M=0.5
 AutoBalance.InflectionPointRaid10MHeroic=0.5
+
+AutoBalance.InflectionPointRaid25M=0.5
+AutoBalance.InflectionPointRaid25MHeroic=0.5
+
+AutoBalance.InflectionPointRaid=0.5
+AutoBalance.InflectionPointRaidHeroic=0.5
+
 
 #
 #     AutoBalance.levelScaling
