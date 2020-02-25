@@ -320,9 +320,9 @@ class AutoBalance_UnitScript : public UnitScript
         if (damageMultiplier == 1)
             return damage;
 
-        if (!((DungeonsOnly < 1
+        if (!(!DungeonsOnly
                 || (target->GetMap()->IsDungeon() && attacker->GetMap()->IsDungeon()) || (attacker->GetMap()->IsBattleground()
-                     && target->GetMap()->IsBattleground()))))
+                     && target->GetMap()->IsBattleground())))
             return damage;
 
 
@@ -375,7 +375,7 @@ class AutoBalance_AllMapScript : public AllMapScript
             mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
             //mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
-            if (PlayerChangeNotify > 0)
+            if (PlayerChangeNotify)
             {
                 if (map->GetEntry()->IsDungeon() && player)
                 {
@@ -415,7 +415,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 return;
             }
 
-            if (PlayerChangeNotify > 0)
+            if (PlayerChangeNotify)
             {
                 if (map->GetEntry()->IsDungeon() && player)
                 {
@@ -470,7 +470,7 @@ public:
         if (!creature || !creature->GetMap())
             return;
 
-        if (!creature->GetMap()->IsDungeon() && !creature->GetMap()->IsBattleground() && DungeonsOnly == 1)
+        if (!creature->GetMap()->IsDungeon() && !creature->GetMap()->IsBattleground() && DungeonsOnly)
             return;
 
         if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
@@ -556,7 +556,7 @@ public:
         creatureABInfo->entry = creature->GetEntry();
 
         bool useDefStats = false;
-        if (LevelUseDb == 1 && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
+        if (LevelUseDb && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
             useDefStats = true;
 
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(originalLevel, creatureTemplate->unit_class);
@@ -646,7 +646,7 @@ public:
             else {
                 newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
-                if (LevelEndGameBoost == 1)
+                if (LevelEndGameBoost)
                     newBaseHealth *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
             }
 
@@ -704,7 +704,7 @@ public:
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
-                if (LevelEndGameBoost == 1 && !creature->GetMap()->IsRaid())
+                if (LevelEndGameBoost && !creature->GetMap()->IsRaid())
                     newDmgBase *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
             }
 
