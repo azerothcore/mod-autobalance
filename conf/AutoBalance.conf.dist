@@ -8,7 +8,7 @@
 # AUTOBALANCE ANNOUNCE
 #
 #     AutoBalanceAnnounce.enable
-#        Enable/Disable Autobalance system
+#        Announce the module on login
 #        Default:     1 (1 = ON, 0 = OFF)
 
 AutoBalanceAnnounce.enable=1
@@ -17,28 +17,44 @@ AutoBalanceAnnounce.enable=1
 # AUTOBALANCE OPTIONS
 #
 #     AutoBalance.enable
-#        Enable/Disable Autobalance system
+#        Enable/Disable the autobalance system
 #        Default:     1 (1 = ON, 0 = OFF)
 
 AutoBalance.enable=1
 
-#     AutoBalance.InflectionPoint
+#     AutoBalance.InflectionPoint series
 #        Adjust value of Hyperbolic Tangent function where
 #        the curve of scaling must change. A lower value means higher difficulty.
+#        InflectionPoint is the fallback value for everything
+#        InflectionPointRaid is the fallback value for raids
+#        InflectionPointRaid25M is the fallback value for 25 man raids
+#        InflectionPointRaid10M is the fallback value for 10 man raids
+#        InflectionPointHeroic is the value for Heroic Dungeons
+#        InflectionPointRaidHeroic is the value for heroic raids that are neither 10 man nor 25 man
+#        InflectionPointRaid25MHeroic is the value for 25 man heroic raids
+#        InflectionPointRaid10MHeroic is the value for 10 man heroic raids
+#        The inflection points fallback to the most specific number
 #
-#        Example: with 0.5, a creature of raid (40) will have half of its life with 20 players in
+#        Example: with 0.5 in InflectionPointRaid, a creature of raid (40) will have half of its life with 20 players in
 #                 with 0.8, the same creature will have half of its life with 12 players in
 #
 #        Default:     0.5
 
 AutoBalance.InflectionPoint=0.5
+AutoBalance.InflectionPointRaid=0.5
+AutoBalance.InflectionPointRaid25M=0.5
+AutoBalance.InflectionPointRaid10M=0.5
+AutoBalance.InflectionPointHeroic=0.5
+AutoBalance.InflectionPointRaidHeroic=0.5
+AutoBalance.InflectionPointRaid25MHeroic=0.5
+AutoBalance.InflectionPointRaid10MHeroic=0.5
 
 #
 #     AutoBalance.levelScaling
-#        Check the max level of players in map and scale creature based on it
+#        Check the max level of players in map and scale creature based on it.
+#        This triggers depending on the two options below AutoBalance.levelHigherOffset and AutoBalance.levelLowerOffset
 #        0 = Disabled
-#        1 = Enabled only in dungeons
-#        2 = Always enabled
+#        1 = Enabled (only in dungeons/raids)
 #        Default:     1
 
 AutoBalance.levelScaling=1
@@ -75,15 +91,21 @@ AutoBalance.levelUseDbValuesWhenExists = 0
 AutoBalance.LevelEndGameBoost = 1
 
 #
-#     AutoBalance.Instances
-#        Set instances to Auto chance XPlayer depending on players in it.
-#        Default:     1 (1 = ON, 0 = OFF)
+#     AutoBalance.DungeonScaleDownXP
+#        Decrease individual player's amount of XP gained during a dungeon to match the
+#        amount of XP gained during a full group run. Example: In a 5-man group, you
+#        earn 1/5 of the total XP per kill, but if you solo the dungeon with
+#        AutoBalance.DungeonScaleDownXP = 0, you will earn 5/5 of the total XP.
+#        With the option enabled, you will earn 1/5.
+#        Default:     0 (1 = ON, 0 = OFF)
 
-AutoBalance.Instances=1
+AutoBalance.DungeonScaleDownXP = 0
+
 #
 #     AutoBalance.DungeonsOnly
 #        Only apply scaling changes to dungeons and raids
 #        Default:     1 (1 = ON, 0 = OFF)
+
 AutoBalance.DungeonsOnly=1
 
 #
@@ -109,6 +131,13 @@ AutoBalance.PlayerChangeNotify=1
 #        Default:     0.01
 
 AutoBalance.MinHPModifier=0.01
+
+#
+#     AutoBalance.MinManaModifier
+#        Minimum Modifier setting for Mana Modification
+#        Default:     0.01
+
+AutoBalance.MinManaModifier=0.01
 
 #
 #     AutoBalance.MinDamageModifier
