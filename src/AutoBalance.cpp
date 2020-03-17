@@ -227,9 +227,9 @@ class AutoBalance_WorldScript : public WorldScript
         MinManaModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier", 0.1f);
         MinDamageModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier", 0.1f);
     
-        uaiEnable = sConfigMgr->GetBoolDefault("AutoBalance.uai.enable", 1);
-        uaiPlayerCount = sConfigMgr->GetIntDefault("AutoBalance.uai.PlayerCount", 3);
-        uaiAuraList = sConfigMgr->GetStringDefault("AutoBalance.uai.AuraList", "80865,80866,80867,80868,80869,80870,80871");
+        uaiEnable = sConfigMgr->GetBoolDefault("AutoBalance.UnfairAuras.enable", 1);
+        uaiPlayerCount = sConfigMgr->GetIntDefault("AutoBalance.UnfairAuras.PlayerCount", 3);
+        uaiAuraList = sConfigMgr->GetStringDefault("AutoBalance.UnfairAuras.AuraList", "80865,80866,80867,80868,80869,80870,80871");
     }
 };
 
@@ -362,7 +362,7 @@ class AutoBalance_AllMapScript : public AllMapScript
             switch (enterExit) {
             case 1: /*Enter Map*/
                 if (map->IsDungeon() && map->GetPlayersCountExceptGMs() <= uaiPlayerCount) {
-                    for (int i = 0; i < result.size(); i++) {
+                    for (unsigned long int i = 0; i < result.size(); i++) {
                         int uaial = std::stoi(result.at(i));
                         player->AddAura(uaial, player);
                     }
@@ -374,7 +374,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                         {
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
-                                for (int i = 0; i < result.size(); i++) {
+                                for (unsigned long int i = 0; i < result.size(); i++) {
                                     int uaial = std::stoi(result.at(i));
                                     playerHandle->RemoveAura(uaial);
                                 }
@@ -383,7 +383,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                     }
                 }
                 else {
-                    for (int i = 0; i < result.size(); i++) {
+                    for (unsigned long int i = 0; i < result.size(); i++) {
                         int uaial = std::stoi(result.at(i));
                         player->RemoveAura(uaial);
                     }
@@ -397,7 +397,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                         {
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
-                                for (int i = 0; i < result.size(); i++) {
+                                for (unsigned long int i = 0; i < result.size(); i++) {
                                     int uaial = std::stoi(result.at(i));
                                     playerHandle->AddAura(uaial, playerHandle);
                                 }
@@ -407,7 +407,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 }
                 break;
             default:
-                for (int i = 0; i < result.size(); i++) {
+                for (unsigned long int i = 0; i < result.size(); i++) {
                     int uaial = std::stoi(result.at(i));
                     player->RemoveAura(uaial);
                 }

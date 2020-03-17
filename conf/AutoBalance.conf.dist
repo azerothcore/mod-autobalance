@@ -253,7 +253,7 @@ AutoBalance.reward.MinPlayerReward = 1
 #
 #        Default:     "80865,80866,80867,80868,80869,80870,80871"
 
-AutoBalance.uai.enable = 1
-AutoBalance.uai.PlayerCount = 1
-AutoBalance.uai.AuraList = "80865,80866,80867,80868,80869,80870,80871" 
+AutoBalance.UnfairAuras.enable = 1
+AutoBalance.UnfairAuras.PlayerCount = 1
+AutoBalance.UnfairAuras.AuraList = "80865,80866,80867,80868,80869,80870,80871" 
 #
