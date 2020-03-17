@@ -108,8 +108,8 @@ public:
 static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
-static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset, uaiPlayerCount;
-static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
+static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
+static uint32 rewardRaid, rewardDungeon, MinPlayerReward, uaiPlayerCount;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, uaiEnable;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic;
 static string uaiAuraList;
