@@ -222,9 +222,38 @@ AutoBalance.reward.dungeonToken = 47241
 #       This conf option checks how many players are in the same
 #       map before allowing the reward to be carried out
 #       if MinPlayerReward is set to two and player is soloing this conf doesn't reward then.
-#		this will give more a challenge to players for low level instances.
+#       this will give more a challenge to players for low level instances.
 #
 #       Default:     1
 
 AutoBalance.reward.MinPlayerReward = 1
+
+#
+# Unfair Aura Immunity
+#
+#     AutoBalance.uai.enable
+#        Enable/Disable the UAI feature
+#        Default:     1 (1 = ON, 0 = OFF)
+#
+#     AutoBalance.uai.PlayerCount
+#        Engauge the UAI system when the number of players in a dungeon is <= x
+#        Default:     3 (3 players or less)
+#
+#     AutoBalance.uai.AuraList
+#        Set the Immunity Auras theat player will recieve
+#        SQL Import file modules/AutoBalance/data/sql/world
+#        Unfair Aura List:
+#        Charm:       80865
+#        Fear:        80866
+#        Root:        80867
+#        Snare:       80868
+#        Stun:        80869
+#        Polymorph:   80870
+#        Daze:        80871
+#
+#        Default:     "80865,80866,80867,80868,80869,80870,80871"
+
+AutoBalance.uai.enable = 1
+AutoBalance.uai.PlayerCount = 1
+AutoBalance.uai.AuraList = "80865,80866,80867,80868,80869,80870,80871" 
 #
