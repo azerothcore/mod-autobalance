@@ -241,7 +241,7 @@ AutoBalance.reward.MinPlayerReward = 1
 #
 #     AutoBalance.uai.AuraList
 #        Set the Immunity Auras theat player will recieve
-#        SQL Import file modules/AutoBalance/data/sql/world
+#        SQL Import file modules/AutoBalance/sql/world
 #        Unfair Aura List:
 #        Charm:       80865
 #        Fear:        80866
