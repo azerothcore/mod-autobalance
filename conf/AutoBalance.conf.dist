@@ -51,8 +51,8 @@ AutoBalance.InflectionPointRaid10MHeroic=0.5
 
 #
 #     AutoBalance.BossInflectionMult
-#        Multiplies the inflection point of bosses, only applies to creatures considered dungeon bosses, 
-#		 such as those from dungeons or raids.
+#        Multiplies the inflection point of bosses, only applies to creatures considered dungeon bosses (from dungeons or raids).
+#        Example: If AutoBalance.BossInflectionMult = 0.4 and AutoBalance.InflectionPoint=0.5, the bosses inflection point will be 0.4*0.9 = 0.36 in a normal dungeon.
 #        Default:     1.0
 
 AutoBalance.BossInflectionMult=1.0
