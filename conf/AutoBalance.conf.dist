@@ -236,3 +236,31 @@ AutoBalance.reward.dungeonToken = 47241
 
 AutoBalance.reward.MinPlayerReward = 1
 #
+# Unfair Aura Immunity
+#
+#     AutoBalance.UnfairAuras.enable
+#        Enable/Disable the UAI feature
+#        Default:     1 (1 = ON, 0 = OFF)
+#
+#     AutoBalance.UnfairAuras.PlayerCount
+#        Engauge the UAI system when the number of players in a dungeon is <= x
+#        Default:     3 (3 players or less)
+#
+#     AutoBalance.UnfairAuras.AuraList
+#        Set the Immunity Auras that player's will receive
+#        SQL Import file modules/AutoBalance/sql/world
+#        Unfair Aura List:
+#        Charm:       80865
+#        Fear:        80866
+#        Root:        80867
+#        Snare:       80868
+#        Stun:        80869
+#        Polymorph:   80870
+#        Daze:        80871
+#
+#        Default:     "80865,80866,80867,80868,80869,80870,80871"
+
+AutoBalance.UnfairAuras.enable = 1
+AutoBalance.UnfairAuras.PlayerCount = 1
+AutoBalance.UnfairAuras.AuraList = "80865,80866,80867,80868,80869,80870,80871" 
+#

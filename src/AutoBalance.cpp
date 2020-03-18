@@ -109,10 +109,11 @@ static std::map<int, int> forcedCreatureIds;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
-static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
+static uint32 rewardRaid, rewardDungeon, MinPlayerReward, uaiPlayerCount;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, uaiEnable;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier,
 InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic, BossInflectionMult;
+static string uaiAuraList;
 
 int GetValidDebugLevel()
 {
@@ -227,6 +228,10 @@ class AutoBalance_WorldScript : public WorldScript
         MinHPModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier", 0.1f);
         MinManaModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier", 0.1f);
         MinDamageModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier", 0.1f);
+    
+        uaiEnable = sConfigMgr->GetBoolDefault("AutoBalance.UnfairAuras.enable", 1);
+        uaiPlayerCount = sConfigMgr->GetIntDefault("AutoBalance.UnfairAuras.PlayerCount", 3);
+        uaiAuraList = sConfigMgr->GetStringDefault("AutoBalance.UnfairAuras.AuraList", "80865,80866,80867,80868,80869,80870,80871");
     }
 };
 
@@ -344,6 +349,73 @@ class AutoBalance_AllMapScript : public AllMapScript
         {
         }
 
+        void UnfairAuraImmunity(Map* map, Player* player, int enterExit) {
+            string uaiAuraList_str = uaiAuraList;
+            vector<string> result;
+            stringstream s_stream(uaiAuraList_str);
+            while (s_stream.good()) {
+                string substr;
+                getline(s_stream, substr, ',');
+                result.push_back(substr);
+            }
+
+            // Enter Map = 1, Exit Map = 2
+            Map::PlayerList const& playerList = map->GetPlayers();
+            switch (enterExit) {
+            case 1: /*Enter Map*/
+                if (map->IsDungeon() && map->GetPlayersCountExceptGMs() <= uaiPlayerCount) {
+                    for (unsigned long int i = 0; i < result.size(); i++) {
+                        int uaial = std::stoi(result.at(i));
+                        player->AddAura(uaial, player);
+                    }
+                }
+                else if (map->IsDungeon() && map->GetPlayersCountExceptGMs() > uaiPlayerCount) {
+                    if (!playerList.isEmpty())
+                    {
+                        for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+                        {
+                            if (Player* playerHandle = playerIteration->GetSource())
+                            {
+                                for (unsigned long int i = 0; i < result.size(); i++) {
+                                    int uaial = std::stoi(result.at(i));
+                                    playerHandle->RemoveAura(uaial);
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    for (unsigned long int i = 0; i < result.size(); i++) {
+                        int uaial = std::stoi(result.at(i));
+                        player->RemoveAura(uaial);
+                    }
+                }
+                break;
+            case 2: /*Exit Map*/
+                if (map->IsDungeon() && (map->GetPlayersCountExceptGMs() - 1) <= uaiPlayerCount) {
+                    if (!playerList.isEmpty())
+                    {
+                        for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+                        {
+                            if (Player* playerHandle = playerIteration->GetSource())
+                            {
+                                for (unsigned long int i = 0; i < result.size(); i++) {
+                                    int uaial = std::stoi(result.at(i));
+                                    playerHandle->AddAura(uaial, playerHandle);
+                                }
+                            }
+                        }
+                    }
+                }
+                break;
+            default:
+                for (unsigned long int i = 0; i < result.size(); i++) {
+                    int uaial = std::stoi(result.at(i));
+                    player->RemoveAura(uaial);
+                }
+            }
+        }
+
         void OnPlayerEnterAll(Map* map, Player* player)
         {
             if (!enabled)
@@ -351,6 +423,9 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             if (player->IsGameMaster())
                 return;
+            
+            if (uaiEnable)
+                UnfairAuraImmunity(map, player, 1);
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
@@ -404,6 +479,9 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             if (player->IsGameMaster())
                 return;
+            
+            if (uaiEnable)
+                UnfairAuraImmunity(map, player, 2);
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
