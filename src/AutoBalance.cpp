@@ -111,7 +111,8 @@ static std::map<int, int> forcedCreatureIds;
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward, uaiPlayerCount;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, uaiEnable;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier, InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic;
+static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier,
+InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic, BossInflectionMult;
 static string uaiAuraList;
 
 int GetValidDebugLevel()
@@ -218,6 +219,7 @@ class AutoBalance_WorldScript : public WorldScript
         InflectionPointRaidHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaidHeroic", InflectionPointRaid);
         InflectionPointRaid25MHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaid25M);
         InflectionPointRaid10MHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid10MHeroic", InflectionPointRaid10M);
+        BossInflectionMult = sConfigMgr->GetFloatDefault("AutoBalance.BossInflectionMult", 1.0f);
         globalRate = sConfigMgr->GetFloatDefault("AutoBalance.rate.global", 1.0f);
         healthMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.health", 1.0f);
         manaMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.mana", 1.0f);
@@ -698,6 +700,9 @@ public:
                 }
                 else
                     inflectionValue *= InflectionPoint;
+            }
+            if (creature->IsDungeonBoss()) {
+                inflectionValue *= BossInflectionMult;
             }
 
             float diff = ((float)maxNumberOfPlayers/5)*1.5f;
