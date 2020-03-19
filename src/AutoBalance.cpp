@@ -349,7 +349,7 @@ class AutoBalance_AllMapScript : public AllMapScript
         {
         }
 
-        void UnfairAuraImmunity(Map* map, Player* player, int enterExit) {
+        void UnfairAuraImmunity(Map* map, Player* player, bool enterExit) {
             string uaiAuraList_str = uaiAuraList;
             vector<string> result;
             stringstream s_stream(uaiAuraList_str);
@@ -359,10 +359,9 @@ class AutoBalance_AllMapScript : public AllMapScript
                 result.push_back(substr);
             }
 
-            // Enter Map = 1, Exit Map = 2
             Map::PlayerList const& playerList = map->GetPlayers();
-            switch (enterExit) {
-            case 1: /*Enter Map*/
+            // Enter Map, enterExit = 1
+            if (enterExit) {
                 if (map->IsDungeon() && map->GetPlayersCountExceptGMs() <= uaiPlayerCount) {
                     for (unsigned long int i = 0; i < result.size(); i++) {
                         int uaial = std::stoi(result.at(i));
@@ -390,8 +389,9 @@ class AutoBalance_AllMapScript : public AllMapScript
                         player->RemoveAura(uaial);
                     }
                 }
-                break;
-            case 2: /*Exit Map*/
+            }
+            // Exit Map, enterExit = 0
+            else {
                 if (map->IsDungeon() && (map->GetPlayersCountExceptGMs() - 1) <= uaiPlayerCount) {
                     if (!playerList.isEmpty())
                     {
@@ -406,12 +406,6 @@ class AutoBalance_AllMapScript : public AllMapScript
                             }
                         }
                     }
-                }
-                break;
-            default:
-                for (unsigned long int i = 0; i < result.size(); i++) {
-                    int uaial = std::stoi(result.at(i));
-                    player->RemoveAura(uaial);
                 }
             }
         }
@@ -481,7 +475,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 return;
             
             if (uaiEnable)
-                UnfairAuraImmunity(map, player, 2);
+                UnfairAuraImmunity(map, player, 0);
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
