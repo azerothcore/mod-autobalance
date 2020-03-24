@@ -230,13 +230,16 @@ AutoBalance.reward.dungeonToken = 47241
 #       This conf option checks how many players are in the same
 #       map before allowing the reward to be carried out
 #       if MinPlayerReward is set to two and player is soloing this conf doesn't reward then.
-#		this will give more a challenge to players for low level instances.
+#       this will give more a challenge to players for low level instances.
 #
 #       Default:     1
 
 AutoBalance.reward.MinPlayerReward = 1
+
 #
 # Unfair Aura Immunity
+#
+#     Known Issues: Some spells (mostly form bosses) ignore Immunities
 #
 #     AutoBalance.UnfairAuras.enable
 #        Enable/Disable the UAI feature
@@ -250,17 +253,26 @@ AutoBalance.reward.MinPlayerReward = 1
 #        Set the Immunity Auras that player's will receive
 #        SQL Import file modules/AutoBalance/sql/world
 #        Unfair Aura List:
-#        Charm:       80865
-#        Fear:        80866
-#        Root:        80867
-#        Snare:       80868
-#        Stun:        80869
-#        Polymorph:   80870
-#        Daze:        80871
+#        Charm:        80865
+#        Fear:         80866
+#        Root:         80867
+#        Snare:        80868
+#        Stun:         80869
+#        Polymorph:    80870
+#        Daze:         80871
+#        *Curse:       80872
+#        *Disarm:      80873
+#        *Poison:      80874
+#        **Interrupt:  80875
+#        *Sleep:       80876
+#        **Silence:    80877
+#        *Knockback:   80878 
 #
-#        Default:     "80865,80866,80867,80868,80869,80870,80871"
+#        Default:      "80865,80866,80867,80868,80869,80870,80871"
+#        *  Needs Testing
+#        ** Needs Testing, and could be swaped
 
 AutoBalance.UnfairAuras.enable = 1
-AutoBalance.UnfairAuras.PlayerCount = 1
+AutoBalance.UnfairAuras.PlayerCount = 3
 AutoBalance.UnfairAuras.AuraList = "80865,80866,80867,80868,80869,80870,80871" 
 #
