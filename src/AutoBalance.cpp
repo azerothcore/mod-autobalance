@@ -349,7 +349,7 @@ class AutoBalance_AllMapScript : public AllMapScript
         {
         }
 
-        void UnfairAuraImmunity(Map* map, Player* player, bool enterExit) {
+        void UnfairAuraImmunity(Map* map, Player* player, uint32 cuPlayerGUID, bool enterExit) {
             string uaiAuraList_str = uaiAuraList;
             vector<string> result;
             stringstream s_stream(uaiAuraList_str);
@@ -399,9 +399,14 @@ class AutoBalance_AllMapScript : public AllMapScript
                         {
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
-                                for (unsigned long int i = 0; i < result.size(); i++) {
-                                    int uaial = std::stoi(result.at(i));
-                                    playerHandle->AddAura(uaial, playerHandle);
+                                //Add Auras to the remaing players in the dungeon, if uaiPlayerCount allows
+                                //Don't apply Auras to player's exiting the map (cuPlayer is Current Player)
+                                //Fixes server crash if the player logs out while in an instance.
+                                if (playerHandle->GetGUID() != cuPlayerGUID) {
+                                    for (unsigned long int i = 0; i < result.size(); i++) {
+                                        int uaial = std::stoi(result.at(i));
+                                        playerHandle->AddAura(uaial, playerHandle);
+                                    }
                                 }
                             }
                         }
@@ -419,7 +424,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 return;
             
             if (uaiEnable)
-                UnfairAuraImmunity(map, player, 1);
+                UnfairAuraImmunity(map, player, player->GetGUID(), 1);
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
@@ -475,7 +480,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 return;
             
             if (uaiEnable)
-                UnfairAuraImmunity(map, player, 0);
+                UnfairAuraImmunity(map, player, player->GetGUID(), 0);
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
