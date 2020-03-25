@@ -243,6 +243,37 @@ class AutoBalance_PlayerScript : public PlayerScript
         {
         }
 
+        // =====   Clear Edge Case Auars That ignore Immunities   =====
+        void OnBeforeUpdate(Player *player, uint32 /*p_time*/) override
+        {
+            if (uaiEnable) {
+                Map* map = player->GetMap();
+                if (map->IsDungeon()) {
+                    // No edge case for each 'UAI' aura because some fight mechanics could require an Aura to be active.
+                    //Sindragosa in ICC comes to mind
+                    if (player->HasAuraType(SPELL_AURA_MOD_CHARM)) {
+                        if (player->HasAura(80865)) {
+                            Unit* Uasshole = player->GetCharmerOrOwner();
+                            player->RemoveAurasByType(SPELL_AURA_MOD_CHARM);
+                            Uasshole->SetInCombatWith(player);
+                            Uasshole->AddThreat(player, 1); //Give a little threat in case there is only 1 player
+                        }
+                    }
+                    if (player->HasAuraType(SPELL_AURA_MOD_FEAR)) {
+                        if (player->HasAura(80866)) {
+                            player->RemoveAurasByType(SPELL_AURA_MOD_FEAR);
+                        }
+                    }
+                    if (player->HasAuraType(SPELL_AURA_MOD_SILENCE)) {
+                        if (player->HasAura(80877)) {
+                            player->RemoveAurasByType(SPELL_AURA_MOD_SILENCE);
+                        }
+                    }
+                }
+            }
+        }
+        // ===== End Clear Edge Case Auars =====
+
         void OnLogin(Player *Player) override
         {
             if (sConfigMgr->GetBoolDefault("AutoBalanceAnnounce.enable", true)) {
@@ -399,7 +430,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                         {
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
-                                //Add Auras to the remaing players in the dungeon, if uaiPlayerCount allows
+                                //Add Auras to the remaining players in the dungeon, if uaiPlayerCount allows
                                 //Don't apply Auras to player's exiting the map (cuPlayer is Current Player)
                                 //Fixes server crash if the player logs out while in an instance.
                                 if (playerHandle->GetGUID() != cuPlayerGUID) {
@@ -522,7 +553,6 @@ public:
         : AllCreatureScript("AutoBalance_AllCreatureScript")
     {
     }
-
 
     void Creature_SelectLevel(const CreatureTemplate* /*creatureTemplate*/, Creature* creature) override
     {
