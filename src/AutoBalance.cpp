@@ -374,8 +374,8 @@ class AutoBalance_AllMapScript : public AllMapScript
                 }
             }
 
-            mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
-            //mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            //mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
+            mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             if (PlayerChangeNotify)
             {
@@ -407,7 +407,24 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
+		if ((map->GetEntry()->IsDungeon() || map->GetEntry()->IsRaid()) && player)
+	{
+		Map::PlayerList const& playerList = map->GetPlayers();
+        for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+		{
+				if (playerIteration->GetSource()->IsAlive() && !playerIteration->GetSource()->IsInCombat())
+					{ 
+						mapABInfo->playerCount--;
+					}
+		   else if (Player* playerHandle = playerIteration->GetSource())
+                            {
+                                ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
+                                chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s has left %s During Combat, Re-Enter to Fix Scaling.|r", player->GetName().c_str(), map->GetMapName());
+                            }
+		return;
+		}
+	}				
+			// (maybe we've to found a safe solution to avoid player recount each time)
             // mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             // always check level, even if not conf enabled
