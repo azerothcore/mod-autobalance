@@ -421,8 +421,8 @@ class AutoBalance_AllMapScript : public AllMapScript
                                 ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
                                 chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s has left %s During Combat, Re-Enter to Fix Scaling.|r", player->GetName().c_str(), map->GetMapName());
                             }
-		return;
 		}
+		return;
 	}				
 			// (maybe we've to found a safe solution to avoid player recount each time)
             // mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
