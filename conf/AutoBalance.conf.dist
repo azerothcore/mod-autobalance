@@ -22,6 +22,11 @@ AutoBalanceAnnounce.enable=1
 
 AutoBalance.enable=1
 
+#     AutoBalance.AllowPerGroupEnable
+#        Allow/Disallow per group enabling of the autobalance system
+#        Default:     1 (1 = ON, 0 = OFF)
+AutoBalance.AllowPerGroupEnable = 1
+
 #     AutoBalance.InflectionPoint series
 #        Adjust value of Hyperbolic Tangent function where
 #        the curve of scaling must change. A lower value means higher difficulty.
