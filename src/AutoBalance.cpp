@@ -48,10 +48,10 @@
 bool ABScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
-        if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount))
-            ret=false; // we change ret value only when scripts return false
+    if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount))
+        ret=false; // we change ret value only when scripts return false
 
-    return ret;
+		return ret;
 }
 
 bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMultiplier) {
@@ -709,8 +709,8 @@ public:
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
-                if (LevelEndGameBoost && !creature->GetMap()->IsRaid())
-                    newDmgBase *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+            if (LevelEndGameBoost && !creature->GetMap()->IsRaid())
+                newDmgBase *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
             }
 
             damageMul *= newDmgBase/origDmgBase;
