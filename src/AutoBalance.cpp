@@ -61,7 +61,7 @@ bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMu
     if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier))
         {
         ret=false; // we change ret value only when scripts return false
-		}
+        }
     return ret;
 }
 
