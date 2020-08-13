@@ -49,8 +49,9 @@ bool ABScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instance
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
     if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount))
+        {
         ret=false; // we change ret value only when scripts return false
-
+        }
     return ret;
 }
 
@@ -58,8 +59,9 @@ bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMu
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
     if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier))
+        {
         ret=false; // we change ret value only when scripts return false
-
+		}
     return ret;
 }
 
@@ -67,8 +69,9 @@ bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, 
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret)
     if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor))
+        {
         ret=false;
-
+        }
     return ret;
 }
 
