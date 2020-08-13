@@ -51,7 +51,7 @@ bool ABScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instance
     if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount))
         ret=false; // we change ret value only when scripts return false
 
-		return ret;
+    return ret;
 }
 
 bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMultiplier) {
@@ -60,7 +60,7 @@ bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMu
     if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier))
         ret=false; // we change ret value only when scripts return false
 
-        return ret;
+    return ret;
 }
 
 bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor) {
@@ -69,7 +69,7 @@ bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, 
     if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor))
         ret=false;
 
-        return ret;
+    return ret;
 }
 
 ABModuleScript::ABModuleScript(const char* name)
