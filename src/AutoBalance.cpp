@@ -713,7 +713,9 @@ public:
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
             if (LevelEndGameBoost && !creature->GetMap()->IsRaid())
+                {
                 newDmgBase *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+                }
             }
 
             damageMul *= newDmgBase/origDmgBase;
