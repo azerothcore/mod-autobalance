@@ -48,28 +48,28 @@
 bool ABScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
-        if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount))
-            ret=false; // we change ret value only when scripts return false
-
+    if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount)) {
+        ret=false; // we change ret value only when scripts return false
+    }
     return ret;
 }
 
 bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMultiplier) {
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
-    if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier))
+    if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier)) {
         ret=false; // we change ret value only when scripts return false
-
-        return ret;
+    }
+    return ret;
 }
 
 bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor) {
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret)
-    if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor))
+    if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor)) {
         ret=false;
-
-        return ret;
+    }
+    return ret;
 }
 
 ABModuleScript::ABModuleScript(const char* name)
@@ -709,8 +709,9 @@ public:
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
-                if (LevelEndGameBoost && !creature->GetMap()->IsRaid())
+                if (LevelEndGameBoost && !creature->GetMap()->IsRaid()) {
                     newDmgBase *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+                }
             }
 
             damageMul *= newDmgBase/origDmgBase;
