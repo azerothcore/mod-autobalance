@@ -421,6 +421,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                         AutoBalanceCheck = true;
                 }
             }
+            //pklloveyou天鹿:
             if (AutoBalanceCheck)
             {
                 for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
