@@ -374,8 +374,8 @@ class AutoBalance_AllMapScript : public AllMapScript
                 }
             }
 
-            mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
-            //mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            //mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
+            mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             if (PlayerChangeNotify)
             {
@@ -407,8 +407,36 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
+            //mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
             // mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            if (map->GetEntry() && map->GetEntry()->IsDungeon())
+            {
+            bool AutoBalanceCheck = false;
+            Map::PlayerList const& pl = map->GetPlayers();
+            for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
+            {
+                if (Player* plr = itr->GetSource())
+                {
+                    if (plr->IsInCombat())
+                        AutoBalanceCheck = true;
+                }
+            }
+            if (AutoBalanceCheck)
+            {
+                for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
+                {
+                    if (Player* plr = itr->GetSource())
+                    {
+                        plr->GetSession()->SendNotification("非战斗中进出|cff4cff00%s|r，可以解除锁定", map->GetMapName());
+                        plr->GetSession()->SendNotification("玩家 |cffffffff[%s]|r 在战斗中离开了|cff4cff00%s|r，副本弹性锁定", player->GetName().c_str(), map->GetMapName());
+                    }
+                }
+            }
+            else
+            {
+                //mapABInfo->playerCount--;
+                mapABInfo->playerCount = map->GetPlayersCountExceptGMs() - 1;
+            }
 
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
