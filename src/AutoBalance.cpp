@@ -409,6 +409,7 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             //mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
             // mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            //pklloveyou天鹿:
             if (map->GetEntry() && map->GetEntry()->IsDungeon())
             {
             bool AutoBalanceCheck = false;
