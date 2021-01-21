@@ -30,6 +30,8 @@ CMakeLists.txt.user
 nbproject/
 .sync.ffs_db
 *.kate-swp
+.idea
+cmake-build-debug
 
 #
 # Eclipse
