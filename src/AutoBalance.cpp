@@ -412,32 +412,33 @@ class AutoBalance_AllMapScript : public AllMapScript
             //pklloveyou天鹿:
             if (map->GetEntry() && map->GetEntry()->IsDungeon())
             {
-            bool AutoBalanceCheck = false;
-            Map::PlayerList const& pl = map->GetPlayers();
-            for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
-            {
-                if (Player* plr = itr->GetSource())
-                {
-                    if (plr->IsInCombat())
-                        AutoBalanceCheck = true;
-                }
-            }
-            //pklloveyou天鹿:
-            if (AutoBalanceCheck)
-            {
+                bool AutoBalanceCheck = false;
+                Map::PlayerList const& pl = map->GetPlayers();
                 for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
                 {
                     if (Player* plr = itr->GetSource())
                     {
-                        plr->GetSession()->SendNotification("非战斗中进出|cff4cff00%s|r，可以解除锁定", map->GetMapName());
-                        plr->GetSession()->SendNotification("玩家 |cffffffff[%s]|r 在战斗中离开了|cff4cff00%s|r，副本弹性锁定", player->GetName().c_str(), map->GetMapName());
+                        if (plr->IsInCombat())
+                            AutoBalanceCheck = true;
                     }
                 }
-            }
-            else
-            {
-                //mapABInfo->playerCount--;
-                mapABInfo->playerCount = map->GetPlayersCountExceptGMs() - 1;
+                //pklloveyou天鹿:
+                if (AutoBalanceCheck)
+                {
+                    for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
+                    {
+                        if (Player* plr = itr->GetSource())
+                        {
+                            plr->GetSession()->SendNotification("非战斗中进出|cff4cff00%s|r，可以解除锁定", map->GetMapName());
+                            plr->GetSession()->SendNotification("玩家 |cffffffff[%s]|r 在战斗中离开了|cff4cff00%s|r，副本弹性锁定", player->GetName().c_str(), map->GetMapName());
+                        }
+                    }
+                }
+                else
+                {
+                    //mapABInfo->playerCount--;
+                    mapABInfo->playerCount = map->GetPlayersCountExceptGMs() - 1;
+                }
             }
 
             // always check level, even if not conf enabled
