@@ -429,8 +429,8 @@ class AutoBalance_AllMapScript : public AllMapScript
                     {
                         if (Player* plr = itr->GetSource())
                         {
-                            plr->GetSession()->SendNotification("非战斗中进出|cff4cff00%s|r，可以解除锁定", map->GetMapName());
-                            plr->GetSession()->SendNotification("玩家 |cffffffff[%s]|r 在战斗中离开了|cff4cff00%s|r，副本弹性锁定", player->GetName().c_str(), map->GetMapName());
+                            plr->GetSession()->SendNotification("|cff4cff00%s|rAccess can be unlocked during non-combat", map->GetMapName());
+                            plr->GetSession()->SendNotification("|cffffffff[%s]|rThe player left during the battle|cff4cff00%s|rInstance elastic lock", player->GetName().c_str(), map->GetMapName());
                         }
                     }
                 }
