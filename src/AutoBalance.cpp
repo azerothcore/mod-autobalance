@@ -374,8 +374,8 @@ class AutoBalance_AllMapScript : public AllMapScript
                 }
             }
 
-            mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
-            //mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            //mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
+            mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             if (PlayerChangeNotify)
             {
@@ -407,8 +407,39 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
+            //mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
             // mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            //pklloveyou天鹿:
+            if (map->GetEntry() && map->GetEntry()->IsDungeon())
+            {
+                bool AutoBalanceCheck = false;
+                Map::PlayerList const& pl = map->GetPlayers();
+                for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
+                {
+                    if (Player* plr = itr->GetSource())
+                    {
+                        if (plr->IsInCombat())
+                            AutoBalanceCheck = true;
+                    }
+                }
+                //pklloveyou天鹿:
+                if (AutoBalanceCheck)
+                {
+                    for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
+                    {
+                        if (Player* plr = itr->GetSource())
+                        {
+                            plr->GetSession()->SendNotification("|cff4cff00%s|rAccess can be unlocked during non-combat", map->GetMapName());
+                            plr->GetSession()->SendNotification("|cffffffff[%s]|rThe player left during the battle|cff4cff00%s|rInstance elastic lock", player->GetName().c_str(), map->GetMapName());
+                        }
+                    }
+                }
+                else
+                {
+                    //mapABInfo->playerCount--;
+                    mapABInfo->playerCount = map->GetPlayersCountExceptGMs() - 1;
+                }
+            }
 
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
