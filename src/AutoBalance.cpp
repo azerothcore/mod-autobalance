@@ -48,28 +48,28 @@
 bool ABScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
-        if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount))
-            ret=false; // we change ret value only when scripts return false
-
+    if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount)) {
+        ret=false; // we change ret value only when scripts return false
+    }
     return ret;
 }
 
 bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMultiplier) {
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
-    if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier))
+    if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier)) {
         ret=false; // we change ret value only when scripts return false
-
-        return ret;
+    }
+    return ret;
 }
 
 bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor) {
     bool ret=true;
     FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret)
-    if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor))
+    if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor)) {
         ret=false;
-
-        return ret;
+    }
+    return ret;
 }
 
 ABModuleScript::ABModuleScript(const char* name)
@@ -423,8 +423,8 @@ class AutoBalance_AllMapScript : public AllMapScript
                 }
             }
 
-            mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
-            //mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            //mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
+            mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
 
             if (PlayerChangeNotify)
             {
@@ -459,8 +459,39 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
+            //mapABInfo->playerCount--;// (maybe we've to found a safe solution to avoid player recount each time)
             // mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            //pklloveyou天鹿:
+            if (map->GetEntry() && map->GetEntry()->IsDungeon())
+            {
+                bool AutoBalanceCheck = false;
+                Map::PlayerList const& pl = map->GetPlayers();
+                for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
+                {
+                    if (Player* plr = itr->GetSource())
+                    {
+                        if (plr->IsInCombat())
+                            AutoBalanceCheck = true;
+                    }
+                }
+                //pklloveyou天鹿:
+                if (AutoBalanceCheck)
+                {
+                    for (Map::PlayerList::const_iterator itr = pl.begin(); itr != pl.end(); ++itr)
+                    {
+                        if (Player* plr = itr->GetSource())
+                        {
+                            plr->GetSession()->SendNotification("|cff4cff00%s|rAccess can be unlocked during non-combat", map->GetMapName());
+                            plr->GetSession()->SendNotification("|cffffffff[%s]|rThe player left during the battle|cff4cff00%s|rInstance elastic lock", player->GetName().c_str(), map->GetMapName());
+                        }
+                    }
+                }
+                else
+                {
+                    //mapABInfo->playerCount--;
+                    mapABInfo->playerCount = map->GetPlayersCountExceptGMs() - 1;
+                }
+            }
 
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
@@ -761,14 +792,15 @@ public:
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
-                if (LevelEndGameBoost && !creature->GetMap()->IsRaid())
+                if (LevelEndGameBoost && !creature->GetMap()->IsRaid()) {
                     newDmgBase *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+                }
             }
 
             damageMul *= newDmgBase/origDmgBase;
         }
 
-        creatureABInfo->ArmorMultiplier = globalRate * armorMultiplier;
+        creatureABInfo->ArmorMultiplier = defaultMultiplier * globalRate * armorMultiplier;
         uint32 newBaseArmor= round(creatureABInfo->ArmorMultiplier * (useDefStats || !LevelScaling || skipLevel ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)));
 
         if (!sABScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMul, newBaseArmor))
