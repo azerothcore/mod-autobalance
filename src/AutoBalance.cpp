@@ -133,7 +133,7 @@ static Player *GetGroupLeaderOrSelf(Player *player)
     {
         auto leaderGUID = group->GetLeaderGUID();
 
-        Player* leader = ObjectAccessor::FindPlayerInOrOutOfWorld(group->GetLeaderGUID());
+        Player* leader = ObjectAccessor::FindPlayer(group->GetLeaderGUID());
         if (NULL != leader)
             groupLeader = leader;
     }
