@@ -110,7 +110,7 @@ static std::map<int, int> forcedCreatureIds;
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, RaidsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier,
 InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic, BossInflectionMult;
 
@@ -197,6 +197,7 @@ class AutoBalance_WorldScript : public WorldScript
         enabled = sConfigMgr->GetBoolDefault("AutoBalance.enable", 1);
         LevelEndGameBoost = sConfigMgr->GetBoolDefault("AutoBalance.LevelEndGameBoost", 1);
         DungeonsOnly = sConfigMgr->GetBoolDefault("AutoBalance.DungeonsOnly", 1);
+        RaidsOnly = sConfigMgr->GetBoolDefault("AutoBalance.RaidsOnly", 0);
         PlayerChangeNotify = sConfigMgr->GetBoolDefault("AutoBalance.PlayerChangeNotify", 1);
         LevelUseDb = sConfigMgr->GetBoolDefault("AutoBalance.levelUseDbValuesWhenExists", 1);
         rewardEnabled = sConfigMgr->GetBoolDefault("AutoBalance.reward.enable", 1);
@@ -327,6 +328,8 @@ class AutoBalance_UnitScript : public UnitScript
                      && target->GetMap()->IsBattleground())))
             return damage;
 
+        if (RaidsOnly && !(target->GetMap()->IsRaid() && attacker->GetMap()->IsRaid()))
+            return damage;
 
         if ((attacker->IsHunterPet() || attacker->IsPet() || attacker->IsSummon()) && attacker->IsControlledByPlayer())
             return damage;
@@ -503,7 +506,10 @@ public:
         if (!creature || !creature->GetMap())
             return;
 
-        if (!creature->GetMap()->IsDungeon() && !creature->GetMap()->IsBattleground() && DungeonsOnly)
+        if (DungeonsOnly && !creature->GetMap()->IsDungeon() && !creature->GetMap()->IsBattleground())
+            return;
+
+        if (RaidsOnly && !creature->GetMap()->IsRaid())
             return;
 
         if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))

@@ -117,6 +117,14 @@ AutoBalance.DungeonScaleDownXP = 0
 AutoBalance.DungeonsOnly=1
 
 #
+#     AutoBalance.RaidsOnly
+#        Only apply scaling changes to raids
+#        Overrules AutoBalance.DungeonsOnly
+#        Default:     0 (1 = ON, 0 = OFF)
+
+AutoBalance.RaidsOnly=0
+
+#
 #     AutoBalance.DebugLevel
 #        0 = None
 #        1 = Errors Only
