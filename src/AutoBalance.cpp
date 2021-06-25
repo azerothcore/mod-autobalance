@@ -45,7 +45,7 @@
 #include "ScriptMgrMacros.h"
 #include "Group.h"
 
-ABScriptMgr * ABScriptMgr::instance() {
+ABScriptMgr* ABScriptMgr::instance() {
     static ABScriptMgr instance;
     return &instance;
 }

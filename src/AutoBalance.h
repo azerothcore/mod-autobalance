@@ -9,7 +9,7 @@ class ABScriptMgr
 {
     public: /* Initialization */
 
-        static ABScriptMgr instance();
+        static ABScriptMgr* instance();
         // called at the start of ModifyCreatureAttributes method
         // it can be used to add some condition to skip autobalancing system for example
         bool OnBeforeModifyAttributes(Creature* creature, uint32 & instancePlayerCount);
