@@ -260,8 +260,8 @@ class AutoBalance_PlayerScript : public PlayerScript
 
             AutoBalanceMapInfo *mapABInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            if (mapABInfo->mapLevel < player->getLevel())
-                mapABInfo->mapLevel = player->getLevel();
+            if (mapABInfo->mapLevel < player->GetLevel())
+                mapABInfo->mapLevel = player->GetLevel();
         }
 
         void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
@@ -362,8 +362,8 @@ class AutoBalance_AllMapScript : public AllMapScript
             // always check level, even if not conf enabled
             // because we can enable at runtime and we need this information
             if (player) {
-                if (player->getLevel() > mapABInfo->mapLevel)
-                    mapABInfo->mapLevel = player->getLevel();
+                if (player->GetLevel() > mapABInfo->mapLevel)
+                    mapABInfo->mapLevel = player->GetLevel();
             } else {
                 Map::PlayerList const &playerList = map->GetPlayers();
                 if (!playerList.isEmpty())
@@ -372,7 +372,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                     {
                         if (Player* playerHandle = playerIteration->GetSource())
                         {
-                            if (!playerHandle->IsGameMaster() && playerHandle->getLevel() > mapABInfo->mapLevel)
+                            if (!playerHandle->IsGameMaster() && playerHandle->GetLevel() > mapABInfo->mapLevel)
                                 mapABInfo->mapLevel = playerHandle->getLevel();
                         }
                     }
@@ -866,8 +866,8 @@ public:
             {
                 if (Player* playerHandle = playerIteration->GetSource())
                 {
-                    if (playerHandle->getLevel() > level)
-                        mapABInfo->mapLevel = level = playerHandle->getLevel();
+                    if (playerHandle->GetLevel() > level)
+                        mapABInfo->mapLevel = level = playerHandle->GetLevel();
                 }
             }
         }
@@ -960,7 +960,7 @@ public:
 
         for (Map::PlayerList::const_iterator itr = playerList.begin(); itr != playerList.end(); ++itr)
         {
-            if (!itr->GetSource() || itr->GetSource()->IsGameMaster() || itr->GetSource()->getLevel() < DEFAULT_MAX_LEVEL)
+            if (!itr->GetSource() || itr->GetSource()->IsGameMaster() || itr->GetSource()->GetLevel() < DEFAULT_MAX_LEVEL)
                 continue;
 
             itr->GetSource()->AddItem(reward, 1 + difficulty); // difficulty boost
