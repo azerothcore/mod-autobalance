@@ -875,11 +875,11 @@ public:
     static bool HandleABStateCommand(ChatHandler* handler, const char* args)
     {
         Player *player = handler->GetSession()->GetPlayer();
-        if (NULL == player)
+        if (!player)
             return false;
         Player *groupLeader = GetGroupLeaderOrSelf(player);
         // Should never happen, because when not in group, GetGroupOrSelf returns player
-        if (NULL == groupLeader)
+        if (!groupLeader)
             return false;
         AutoBalancePlayerInfo *playerABInfo = groupLeader->CustomData.GetDefault<AutoBalancePlayerInfo>("AutoBalancePlayerInfo");
         // TODO: should use database to store localized strings
@@ -893,7 +893,7 @@ public:
     static bool SetGroupAutobalance(ChatHandler *handler, bool enable)
     {
         Player *player = handler->GetSession()->GetPlayer();
-        if (NULL == player)
+        if (!player)
             return false;
         Player *groupLeader = GetGroupLeaderOrSelf(player);
         if (groupLeader != player)
