@@ -134,12 +134,12 @@ static Player *GetGroupLeaderOrSelf(Player *player)
     Player *groupLeader = player;
 
     // If player is in a group, get the group leader
-    if (NULL != group)
+    if (group)
     {
         auto leaderGUID = group->GetLeaderGUID();
 
         Player* leader = ObjectAccessor::FindPlayer(group->GetLeaderGUID());
-        if (NULL != leader)
+        if (leader)
             groupLeader = leader;
     }
     // Now, groupLeader is either the player if he is not grouped or the real group leader
@@ -916,12 +916,12 @@ public:
 
     static bool HandleABEnableCommand(ChatHandler* handler, const char* args)
     {
-        return SetABAutobalance(handler, true);
+        return SetGroupAutobalance(handler, true);
     }
 
     static bool HandleABDisableCommand(ChatHandler* handler, const char* args)
     {
-        return SetABAutobalance(handler, false);
+        return SetGroupAutobalance(handler, false);
     }
 
     static bool HandleABSetOffsetCommand(ChatHandler* handler, const char* args)
