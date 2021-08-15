@@ -890,7 +890,7 @@ public:
         return true;
     }
 
-    static bool SetABAutobalance(ChatHandler *handler, bool enable)
+    static bool SetGroupAutobalance(ChatHandler *handler, bool enable)
     {
         Player *player = handler->GetSession()->GetPlayer();
         if (NULL == player)
