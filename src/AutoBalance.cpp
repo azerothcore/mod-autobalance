@@ -35,7 +35,7 @@
 #include "Creature.h"
 #include "Player.h"
 #include "ObjectMgr.h"
-#include "MapManager.h"
+#include "MapMgr.h"
 #include "World.h"
 #include "Map.h"
 #include "ScriptMgr.h"
