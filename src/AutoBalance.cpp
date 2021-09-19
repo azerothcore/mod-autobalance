@@ -972,11 +972,11 @@ public:
 
 void AddAutoBalanceScripts()
 {
-    new AutoBalance_WorldScript;
-    new AutoBalance_PlayerScript;
-    new AutoBalance_UnitScript;
-    new AutoBalance_AllCreatureScript;
-    new AutoBalance_AllMapScript;
-    new AutoBalance_CommandScript;
-    new AutoBalance_GlobalScript;
+    new AutoBalance_WorldScript();
+    new AutoBalance_PlayerScript();
+    new AutoBalance_UnitScript();
+    new AutoBalance_AllCreatureScript();
+    new AutoBalance_AllMapScript();
+    new AutoBalance_CommandScript();
+    new AutoBalance_GlobalScript();
 }
