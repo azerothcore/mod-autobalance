@@ -28,7 +28,6 @@
 * instance mobs & world bosses' level, health, mana, and damage.
 */
 
-
 #include "Configuration/Config.h"
 #include "Unit.h"
 #include "Chat.h"
@@ -44,6 +43,12 @@
 #include "AutoBalance.h"
 #include "ScriptMgrMacros.h"
 #include "Group.h"
+
+#if AC_COMPILER == AC_COMPILER_GNU
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+using namespace Acore::ChatCommands;
 
 ABScriptMgr* ABScriptMgr::instance() {
     static ABScriptMgr instance;
