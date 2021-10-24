@@ -121,7 +121,7 @@ static std::map<int, int> forcedCreatureIds;
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier,
+static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinHPModifier10, MinHPModifier25, MinHPModifier40, MinManaModifier, MinManaModifier10,  MinManaModifier25, MinManaModifier40, MinDamageModifier, MinDamageModifier10, MinDamageModifier25, MinDamageModifier40,
 InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic, BossInflectionMult;
 
 int GetValidDebugLevel()
@@ -237,6 +237,16 @@ class AutoBalance_WorldScript : public WorldScript
         MinHPModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier", 0.1f);
         MinManaModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier", 0.1f);
         MinDamageModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier", 0.1f);
+        MinHPModifier10 = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier10", 0.1f);
+        MinManaModifier10 = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier10", 0.1f);
+        MinDamageModifier10 = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier10", 0.1f);
+        MinHPModifier25 = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier25", 0.1f);
+        MinManaModifier25 = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier25", 0.1f);
+        MinDamageModifier25 = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier25", 0.1f);
+        MinHPModifier40 = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier40", 0.1f);
+        MinManaModifier40 = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier40", 0.1f);
+        MinDamageModifier40 = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier40", 0.1f);
+
     }
 };
 
@@ -675,12 +685,35 @@ public:
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
 
-        creatureABInfo->HealthMultiplier =   healthMultiplier * defaultMultiplier * globalRate;
-
-        if (creatureABInfo->HealthMultiplier <= MinHPModifier)
+        creatureABInfo->HealthMultiplier = healthMultiplier * defaultMultiplier * globalRate;
+        if (instanceMap->IsRaid())
         {
-            creatureABInfo->HealthMultiplier = MinHPModifier;
+            switch (instanceMap->GetMaxPlayers())
+            {
+            case 10:
+                if (creatureABInfo->HealthMultiplier <= MinHPModifier10)
+                {
+                    creatureABInfo->HealthMultiplier = MinHPModifier10;
+                }
+                break;
+            case 25:
+                if (creatureABInfo->HealthMultiplier <= MinHPModifier25)
+                {
+                    creatureABInfo->HealthMultiplier = MinHPModifier25;
+                }
+                break;
+            default:
+                if (creatureABInfo->HealthMultiplier <= MinHPModifier40)
+                {
+                    creatureABInfo->HealthMultiplier = MinHPModifier40;
+                };
+            }
         }
+        else if (creatureABInfo->HealthMultiplier <= MinHPModifier)
+        {
+                creatureABInfo->HealthMultiplier = MinHPModifier;
+        }
+
 
         float hpStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling && !skipLevel) {
@@ -725,20 +758,69 @@ public:
 
         creatureABInfo->ManaMultiplier =  manaStatsRate * manaMultiplier * defaultMultiplier * globalRate;
 
-        if (creatureABInfo->ManaMultiplier <= MinManaModifier)
-        {
-            creatureABInfo->ManaMultiplier = MinManaModifier;
-        }
+        if (instanceMap->IsRaid())
+                {
+                    switch (instanceMap->GetMaxPlayers())
+                    {
+                        case 10:
+                            if (creatureABInfo->ManaMultiplier <= MinManaModifier10)
+                                {
+                                    creatureABInfo->ManaMultiplier = MinManaModifier10;
+                                }
+                            break;
+                        case 25:
+                            if (creatureABInfo->ManaMultiplier <= MinManaModifier25)
+                                {
+                                    creatureABInfo->ManaMultiplier = MinManaModifier25;
+                                }
+                            break;
+                        default:
+                            if (creatureABInfo->ManaMultiplier <= MinManaModifier40)
+                                {
+                                    creatureABInfo->ManaMultiplier = MinManaModifier40;
+                                };
+                    }
+                }
+                else
+                    if (creatureABInfo->ManaMultiplier <= MinManaModifier)
+                        {
+                            creatureABInfo->ManaMultiplier = MinManaModifier;
+                        }
+
 
         scaledMana = round(baseMana * creatureABInfo->ManaMultiplier);
 
         float damageMul = defaultMultiplier * globalRate * damageMultiplier;
 
         // Can not be less then Min_D_Mod
-        if (damageMul <= MinDamageModifier)
-        {
-            damageMul = MinDamageModifier;
-        }
+        if (instanceMap->IsRaid())
+                {
+                    switch (instanceMap->GetMaxPlayers())
+                    {
+                        case 10:
+                            if (damageMul <= MinDamageModifier10)
+                                {
+                                    damageMul = MinDamageModifier10;
+                                }
+                            break;
+                        case 25:
+                            if (damageMul <= MinDamageModifier25)
+                                {
+                                    damageMul = MinDamageModifier25;
+                                }
+                            break;
+                        default:
+                            if (damageMul <= MinDamageModifier40)
+                                {
+                                    damageMul = MinDamageModifier40;
+                                };
+                    }
+                }
+                else
+                    if (damageMul <= MinDamageModifier)
+                        {
+                            damageMul = MinDamageModifier;
+                        }
 
         if (!useDefStats && LevelScaling && !skipLevel) {
             float origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
