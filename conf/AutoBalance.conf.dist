@@ -139,6 +139,9 @@ AutoBalance.PlayerChangeNotify=1
 #        Default:     0.01
 
 AutoBalance.MinHPModifier=0.01
+AutoBalance.MinHPModifier10=0.60
+AutoBalance.MinHPModifier25=0.48
+AutoBalance.MinHPModifier40=0.04
 
 #
 #     AutoBalance.MinManaModifier
@@ -146,6 +149,9 @@ AutoBalance.MinHPModifier=0.01
 #        Default:     0.01
 
 AutoBalance.MinManaModifier=0.01
+AutoBalance.MinManaModifier10=0.60
+AutoBalance.MinManaModifier25=0.48
+AutoBalance.MinManaModifier40=0.04
 
 #
 #     AutoBalance.MinDamageModifier
@@ -153,7 +159,9 @@ AutoBalance.MinManaModifier=0.01
 #        Default:     0.01
 
 AutoBalance.MinDamageModifier=0.01
-
+AutoBalance.MinDamageModifier10=0.60
+AutoBalance.MinDamageModifier25=0.48
+AutoBalance.MinDamageModifier40=0.04
 
 #
 #     AutoBalance.rate.*
