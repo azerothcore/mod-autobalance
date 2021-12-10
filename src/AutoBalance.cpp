@@ -126,7 +126,7 @@ InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRai
 
 int GetValidDebugLevel()
 {
-    int debugLevel = sConfigMgr->GetIntDefault("AutoBalance.DebugLevel", 2);
+    int debugLevel = sConfigMgr->GetOption<uint32>("AutoBalance.DebugLevel", 2);
 
     if ((debugLevel < 0) || (debugLevel > 3))
         {
@@ -204,39 +204,39 @@ class AutoBalance_WorldScript : public WorldScript
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID2", ""), 2);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.DisabledID", ""), 0);
 
-        enabled = sConfigMgr->GetBoolDefault("AutoBalance.enable", 1);
-        LevelEndGameBoost = sConfigMgr->GetBoolDefault("AutoBalance.LevelEndGameBoost", 1);
-        DungeonsOnly = sConfigMgr->GetBoolDefault("AutoBalance.DungeonsOnly", 1);
-        PlayerChangeNotify = sConfigMgr->GetBoolDefault("AutoBalance.PlayerChangeNotify", 1);
-        LevelUseDb = sConfigMgr->GetBoolDefault("AutoBalance.levelUseDbValuesWhenExists", 1);
-        rewardEnabled = sConfigMgr->GetBoolDefault("AutoBalance.reward.enable", 1);
-        DungeonScaleDownXP = sConfigMgr->GetBoolDefault("AutoBalance.DungeonScaleDownXP", 0);
+        enabled = sConfigMgr->GetOption<bool>("AutoBalance.enable", 1);
+        LevelEndGameBoost = sConfigMgr->GetOption<bool>("AutoBalance.LevelEndGameBoost", 1);
+        DungeonsOnly = sConfigMgr->GetOption<bool>("AutoBalance.DungeonsOnly", 1);
+        PlayerChangeNotify = sConfigMgr->GetOption<bool>("AutoBalance.PlayerChangeNotify", 1);
+        LevelUseDb = sConfigMgr->GetOption<bool>("AutoBalance.levelUseDbValuesWhenExists", 1);
+        rewardEnabled = sConfigMgr->GetOption<bool>("AutoBalance.reward.enable", 1);
+        DungeonScaleDownXP = sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", 0);
 
-        LevelScaling = sConfigMgr->GetIntDefault("AutoBalance.levelScaling", 1);
-        PlayerCountDifficultyOffset = sConfigMgr->GetIntDefault("AutoBalance.playerCountDifficultyOffset", 0);
-        higherOffset = sConfigMgr->GetIntDefault("AutoBalance.levelHigherOffset", 3);
-        lowerOffset = sConfigMgr->GetIntDefault("AutoBalance.levelLowerOffset", 0);
-        rewardRaid = sConfigMgr->GetIntDefault("AutoBalance.reward.raidToken", 49426);
-        rewardDungeon = sConfigMgr->GetIntDefault("AutoBalance.reward.dungeonToken", 47241);
-        MinPlayerReward = sConfigMgr->GetFloatDefault("AutoBalance.reward.MinPlayerReward", 1);
+        LevelScaling = sConfigMgr->GetOption<uint32>("AutoBalance.levelScaling", 1);
+        PlayerCountDifficultyOffset = sConfigMgr->GetOption<uint32>("AutoBalance.playerCountDifficultyOffset", 0);
+        higherOffset = sConfigMgr->GetOption<uint32>("AutoBalance.levelHigherOffset", 3);
+        lowerOffset = sConfigMgr->GetOption<uint32>("AutoBalance.levelLowerOffset", 0);
+        rewardRaid = sConfigMgr->GetOption<uint32>("AutoBalance.reward.raidToken", 49426);
+        rewardDungeon = sConfigMgr->GetOption<uint32>("AutoBalance.reward.dungeonToken", 47241);
+        MinPlayerReward = sConfigMgr->GetOption<float>("AutoBalance.reward.MinPlayerReward", 1);
 
-        InflectionPoint = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPoint", 0.5f);
-        InflectionPointRaid = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid", InflectionPoint);
-        InflectionPointRaid25M = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid25M", InflectionPointRaid);
-        InflectionPointRaid10M = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid10M", InflectionPointRaid);
-        InflectionPointHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointHeroic", InflectionPoint);
-        InflectionPointRaidHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaidHeroic", InflectionPointRaid);
-        InflectionPointRaid25MHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaid25M);
-        InflectionPointRaid10MHeroic = sConfigMgr->GetFloatDefault("AutoBalance.InflectionPointRaid10MHeroic", InflectionPointRaid10M);
-        BossInflectionMult = sConfigMgr->GetFloatDefault("AutoBalance.BossInflectionMult", 1.0f);
-        globalRate = sConfigMgr->GetFloatDefault("AutoBalance.rate.global", 1.0f);
-        healthMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.health", 1.0f);
-        manaMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.mana", 1.0f);
-        armorMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.armor", 1.0f);
-        damageMultiplier = sConfigMgr->GetFloatDefault("AutoBalance.rate.damage", 1.0f);
-        MinHPModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinHPModifier", 0.1f);
-        MinManaModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinManaModifier", 0.1f);
-        MinDamageModifier = sConfigMgr->GetFloatDefault("AutoBalance.MinDamageModifier", 0.1f);
+        InflectionPoint = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint", 0.5f);
+        InflectionPointRaid = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid", InflectionPoint);
+        InflectionPointRaid25M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M", InflectionPointRaid);
+        InflectionPointRaid10M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M", InflectionPointRaid);
+        InflectionPointHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic", InflectionPoint);
+        InflectionPointRaidHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic", InflectionPointRaid);
+        InflectionPointRaid25MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaid25M);
+        InflectionPointRaid10MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic", InflectionPointRaid10M);
+        BossInflectionMult = sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f);
+        globalRate = sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f);
+        healthMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f);
+        manaMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f);
+        armorMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f);
+        damageMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f);
+        MinHPModifier = sConfigMgr->GetOption<float>("AutoBalance.MinHPModifier", 0.1f);
+        MinManaModifier = sConfigMgr->GetOption<float>("AutoBalance.MinManaModifier", 0.1f);
+        MinDamageModifier = sConfigMgr->GetOption<float>("AutoBalance.MinDamageModifier", 0.1f);
     }
 };
 
@@ -250,7 +250,7 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         void OnLogin(Player *Player) override
         {
-            if (sConfigMgr->GetBoolDefault("AutoBalanceAnnounce.enable", true)) {
+            if (sConfigMgr->GetOption<bool>("AutoBalanceAnnounce.enable", true)) {
                 ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
             }
         }
