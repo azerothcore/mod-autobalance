@@ -50,36 +50,55 @@
 
 using namespace Acore::ChatCommands;
 
-ABScriptMgr* ABScriptMgr::instance() {
+ABScriptMgr* ABScriptMgr::instance()
+{
     static ABScriptMgr instance;
     return &instance;
 }
 
-bool ABScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount) {
-    bool ret=true;
-    FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
-    if (!itr->second->OnBeforeModifyAttributes(creature, instancePlayerCount)) {
-        ret=false; // we change ret value only when scripts return false
+bool ABScriptMgr::OnBeforeModifyAttributes(Creature *creature, uint32 & instancePlayerCount)
+{
+    auto ret = IsValidBoolScript<ABModuleScript>([&](ABModuleScript* script)
+    {
+        return !script->OnBeforeModifyAttributes(creature, instancePlayerCount);
+    });
+
+    if (ret && *ret)
+    {
+        return false;
     }
-    return ret;
+
+    return true;
 }
 
-bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float & defaultMultiplier) {
-    bool ret=true;
-    FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret) // return true by default if not scripts
-    if (!itr->second->OnAfterDefaultMultiplier(creature, defaultMultiplier)) {
-        ret=false; // we change ret value only when scripts return false
+bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float& defaultMultiplier)
+{
+    auto ret = IsValidBoolScript<ABModuleScript>([&](ABModuleScript* script)
+    {
+        return !script->OnAfterDefaultMultiplier(creature, defaultMultiplier);
+    });
+
+    if (ret && *ret)
+    {
+        return false;
     }
-    return ret;
+
+    return true;
 }
 
-bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor) {
-    bool ret=true;
-    FOR_SCRIPTS_RET(ABModuleScript, itr, end, ret)
-    if (!itr->second->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor)) {
-        ret=false;
+bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor)
+{
+    auto ret = IsValidBoolScript<ABModuleScript>([&](ABModuleScript* script)
+    {
+        return !script->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMultiplier, newBaseArmor);
+    });
+
+    if (ret && *ret)
+    {
+        return false;
     }
-    return ret;
+
+    return true;
 }
 
 ABModuleScript::ABModuleScript(const char* name)
