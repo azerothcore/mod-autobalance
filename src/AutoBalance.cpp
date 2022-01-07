@@ -390,7 +390,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                     mapABInfo->mapLevel = player->getLevel();
             } else {
                 Map::PlayerList const &playerList = map->GetPlayers();
-                if (!playerList.isEmpty())
+                if (!playerList.IsEmpty())
                 {
                     for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
                     {
@@ -411,7 +411,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 if (map->GetEntry()->IsDungeon() && player)
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
-                    if (!playerList.isEmpty())
+                    if (!playerList.IsEmpty())
                     {
                         for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
                         {
@@ -482,7 +482,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 if (map->GetEntry()->IsDungeon() && player)
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
-                    if (!playerList.isEmpty())
+                    if (!playerList.IsEmpty())
                     {
                         for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
                         {
@@ -884,7 +884,7 @@ public:
 
         Map::PlayerList const &playerList = pl->GetMap()->GetPlayers();
         uint8 level = 0;
-        if (!playerList.isEmpty())
+        if (!playerList.IsEmpty())
         {
             for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
             {
@@ -972,7 +972,7 @@ public:
 
         Map::PlayerList const &playerList = map->GetPlayers();
 
-        if (playerList.isEmpty())
+        if (playerList.IsEmpty())
             return;
 
         uint32 reward = map->IsRaid() ? rewardRaid : rewardDungeon;
