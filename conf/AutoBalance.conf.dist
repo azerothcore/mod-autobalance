@@ -8,7 +8,7 @@
 # AUTOBALANCE ANNOUNCE
 #
 #     AutoBalanceAnnounce.enable
-#        Announce the module on login
+#        Announce the module on login if it is enabled
 #        Default:     1 (1 = ON, 0 = OFF)
 
 AutoBalanceAnnounce.enable=1
