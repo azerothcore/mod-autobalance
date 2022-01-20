@@ -269,7 +269,7 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         void OnLogin(Player *Player) override
         {
-            if (sConfigMgr->GetOption<bool>("AutoBalanceAnnounce.enable", true)) {
+            if (sConfigMgr->GetOption<bool>("AutoBalanceAnnounce.enable", true)) && (sConfigMgr->GetOption<bool>("AutoBalance.enable", true)) {
                 ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
             }
         }
