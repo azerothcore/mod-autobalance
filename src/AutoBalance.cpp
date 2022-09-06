@@ -135,6 +135,9 @@ public:
 
 // The map values correspond with the .AutoBalance.XX.Name entries in the configuration file.
 static std::map<int, int> forcedCreatureIds;
+static std::map<uint32, uint8> enabledDungeonIds;
+static std::map<uint32, float> dungeonOverrides;
+static std::map<uint32, float> bossOverrides;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
@@ -152,6 +155,78 @@ int GetValidDebugLevel()
         return 1;
         }
     return debugLevel;
+}
+
+void LoadEnabledDungeons(std::string dungeonIdString) // Used for reading the string from the configuration file for selecting dungeons to scale
+{
+    std::string delimitedValue;
+    std::stringstream dungeonIdStream;
+
+    dungeonIdStream.str(dungeonIdString);
+    while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
+    {
+        std::string pairOne, pairTwo;
+        std::stringstream dungeonPairStream(delimitedValue);
+        dungeonPairStream>>pairOne>>pairTwo;
+        uint32 dungeonMapId = atoi(pairOne.c_str());
+        uint8 minPlayers = atoi(pairTwo.c_str());
+        enabledDungeonIds[dungeonMapId] = minPlayers;
+    }
+}
+
+void LoadDungeonOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for selecting dungeons to override
+{
+    std::string delimitedValue;
+    std::stringstream dungeonIdStream;
+
+    dungeonIdStream.str(dungeonIdString);
+    while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
+    {
+        std::string pairOne, pairTwo;
+        std::stringstream dungeonPairStream(delimitedValue);
+        dungeonPairStream>>pairOne>>pairTwo;
+        uint32 dungeonMapId = atoi(pairOne.c_str());
+        float dungeonInflection = atof(pairTwo.c_str());
+        dungeonOverrides[dungeonMapId] = dungeonInflection;
+    }
+}
+
+void LoadBossOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for selecting dungeons to override boss inflection
+{
+    std::string delimitedValue;
+    std::stringstream dungeonIdStream;
+
+    dungeonIdStream.str(dungeonIdString);
+    while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
+    {
+        std::string pairOne, pairTwo;
+        std::stringstream dungeonPairStream(delimitedValue);
+        dungeonPairStream>>pairOne>>pairTwo;
+        uint32 dungeonMapId = atoi(pairOne.c_str());
+        float bossInflection = atof(pairTwo.c_str());
+        bossOverrides[dungeonMapId] = bossInflection;
+    }
+}
+
+
+boolean isEnabledDungeon(uint32 dungeonId)
+{
+    return (enabledDungeonIds.find(dungeonId) != enabledDungeonIds.end());
+}
+
+boolean perDungeonScalingEnabled()
+{
+    return (!enabledDungeonIds.empty());
+}
+
+boolean hasDungeonOverride(uint32 dungeonId)
+{
+    return (dungeonOverrides.find(dungeonId) != dungeonOverrides.end());
+}
+
+boolean hasBossOverride(uint32 dungeonId)
+{
+    return (bossOverrides.find(dungeonId) != bossOverrides.end());
 }
 
 void LoadForcedCreatureIdsFromString(std::string creatureIds, int forcedPlayerCount) // Used for reading the string from the configuration file to for those creatures who need to be scaled for XX number of players.
@@ -216,12 +291,18 @@ class AutoBalance_WorldScript : public WorldScript
     void SetInitialWorldSettings()
     {
         forcedCreatureIds.clear();
+        enabledDungeonIds.clear();
+        dungeonOverrides.clear();
+        bossOverrides.clear();
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID40", ""), 40);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID25", ""), 25);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID10", ""), 10);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID5", ""), 5);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID2", ""), 2);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.DisabledID", ""), 0);
+        LoadEnabledDungeons(sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonPlayerCounts", ""));
+        LoadDungeonOverrides(sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonScaling", ""));
+        LoadBossOverrides(sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonBossScaling", ""));
 
         enabled = sConfigMgr->GetOption<bool>("AutoBalance.enable", 1);
         LevelEndGameBoost = sConfigMgr->GetOption<bool>("AutoBalance.LevelEndGameBoost", 1);
@@ -547,6 +628,11 @@ public:
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
         InstanceMap* instanceMap = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()));
+        uint32 mapId = instanceMap->GetEntry()->MapID;
+        if (perDungeonScalingEnabled() && !isEnabledDungeon(mapId))
+        {
+            return;
+        }
         uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
         int forcedNumPlayers = GetForcedNumPlayers(creatureTemplate->Entry);
 
@@ -570,6 +656,10 @@ public:
             return;
 
         uint32 curCount=mapABInfo->playerCount + PlayerCountDifficultyOffset;
+        if (perDungeonScalingEnabled())
+        {
+            curCount = adjustCurCount(curCount, mapId);
+        }
 
         uint8 bonusLevel = creatureTemplate->rank == CREATURE_ELITE_WORLDBOSS ? 3 : 0;
         // already scaled
@@ -644,47 +734,60 @@ public:
         if (creatureABInfo->instancePlayerCount < maxNumberOfPlayers)
         {
             float inflectionValue  = (float)maxNumberOfPlayers;
-
-            if (instanceMap->IsHeroic())
+            if (hasDungeonOverride(mapId))
             {
-                if (instanceMap->IsRaid())
-                {
-                    switch (instanceMap->GetMaxPlayers())
-                    {
-                        case 10:
-                            inflectionValue *= InflectionPointRaid10MHeroic;
-                            break;
-                        case 25:
-                            inflectionValue *= InflectionPointRaid25MHeroic;
-                            break;
-                        default:
-                            inflectionValue *= InflectionPointRaidHeroic;
-                    }
-                }
-                else
-                    inflectionValue *= InflectionPointHeroic;
+                inflectionValue *= dungeonOverrides[mapId];
             }
             else
             {
-                if (instanceMap->IsRaid())
+                if (instanceMap->IsHeroic())
                 {
-                    switch (instanceMap->GetMaxPlayers())
+                    if (instanceMap->IsRaid())
                     {
-                        case 10:
-                            inflectionValue *= InflectionPointRaid10M;
-                            break;
-                        case 25:
-                            inflectionValue *= InflectionPointRaid25M;
-                            break;
-                        default:
-                            inflectionValue *= InflectionPointRaid;
+                        switch (instanceMap->GetMaxPlayers())
+                        {
+                            case 10:
+                                inflectionValue *= InflectionPointRaid10MHeroic;
+                                break;
+                            case 25:
+                                inflectionValue *= InflectionPointRaid25MHeroic;
+                                break;
+                            default:
+                                inflectionValue *= InflectionPointRaidHeroic;
+                        }
                     }
+                    else
+                        inflectionValue *= InflectionPointHeroic;
                 }
                 else
-                    inflectionValue *= InflectionPoint;
+                {
+                    if (instanceMap->IsRaid())
+                    {
+                        switch (instanceMap->GetMaxPlayers())
+                        {
+                            case 10:
+                                inflectionValue *= InflectionPointRaid10M;
+                                break;
+                            case 25:
+                                inflectionValue *= InflectionPointRaid25M;
+                                break;
+                            default:
+                                inflectionValue *= InflectionPointRaid;
+                        }
+                    }
+                    else
+                        inflectionValue *= InflectionPoint;
+                }
             }
             if (creature->IsDungeonBoss()) {
-                inflectionValue *= BossInflectionMult;
+                if (hasBossOverride(mapId))
+                {
+                    inflectionValue *= bossOverrides[mapId];
+                }
+                else
+                {
+                    inflectionValue *= BossInflectionMult;
+                }
             }
 
             float diff = ((float)maxNumberOfPlayers/5)*1.5f;
@@ -813,6 +916,13 @@ public:
             creature->setPowerType(pType); // fix creatures with different power types
 
         creature->UpdateAllStats();
+    }
+
+private:
+    uint32 adjustCurCount(uint32 inputCount, uint32 dungeonId)
+    {
+        uint8 minPlayers = enabledDungeonIds[dungeonId];
+        return inputCount < minPlayers ? minPlayers : inputCount;
     }
 };
 class AutoBalance_CommandScript : public CommandScript
