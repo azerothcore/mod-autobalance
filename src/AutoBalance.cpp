@@ -209,22 +209,22 @@ void LoadBossOverrides(std::string dungeonIdString) // Used for reading the stri
 }
 
 
-boolean isEnabledDungeon(uint32 dungeonId)
+bool isEnabledDungeon(uint32 dungeonId)
 {
     return (enabledDungeonIds.find(dungeonId) != enabledDungeonIds.end());
 }
 
-boolean perDungeonScalingEnabled()
+bool perDungeonScalingEnabled()
 {
     return (!enabledDungeonIds.empty());
 }
 
-boolean hasDungeonOverride(uint32 dungeonId)
+bool hasDungeonOverride(uint32 dungeonId)
 {
     return (dungeonOverrides.find(dungeonId) != dungeonOverrides.end());
 }
 
-boolean hasBossOverride(uint32 dungeonId)
+bool hasBossOverride(uint32 dungeonId)
 {
     return (bossOverrides.find(dungeonId) != bossOverrides.end());
 }
