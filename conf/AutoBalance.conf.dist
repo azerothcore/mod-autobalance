@@ -110,6 +110,17 @@ AutoBalance.LevelEndGameBoost = 1
 AutoBalance.DungeonScaleDownXP = 0
 
 #
+#     AutoBalance.DungeonScaleDownMoney
+#        Decrease individual player's amount of money gained during a dungeon to match the
+#        amount of money gained during a full group run. Example: In a 5-man group, you
+#        earn 1/5 of the total money per kill, but if you solo the dungeon with
+#        AutoBalance.DungeonScaleDownMoney = 0, you will earn 5/5 of the total money.
+#        With the option enabled, you will earn 1/5.
+#        Default:     0 (1 = ON, 0 = OFF)
+
+AutoBalance.DungeonScaleDownMoney = 0
+
+#
 #     AutoBalance.DungeonsOnly
 #        Only apply scaling changes to dungeons and raids
 #        Default:     1 (1 = ON, 0 = OFF)

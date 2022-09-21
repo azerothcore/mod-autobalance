@@ -142,7 +142,7 @@ static std::map<uint32, float> bossOverrides;
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, DungeonScaleDownMoney;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier,
 InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic, BossInflectionMult;
 
@@ -311,6 +311,7 @@ class AutoBalance_WorldScript : public WorldScript
         LevelUseDb = sConfigMgr->GetOption<bool>("AutoBalance.levelUseDbValuesWhenExists", 1);
         rewardEnabled = sConfigMgr->GetOption<bool>("AutoBalance.reward.enable", 1);
         DungeonScaleDownXP = sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", 0);
+        DungeonScaleDownMoney = sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownMoney", 0);
 
         LevelScaling = sConfigMgr->GetOption<uint32>("AutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetOption<uint32>("AutoBalance.playerCountDifficultyOffset", 0);
@@ -383,6 +384,23 @@ class AutoBalance_PlayerScript : public PlayerScript
                     amount *= (float)currentPlayerCount / maxPlayerCount;
                 }
             }
+        }
+
+        void OnBeforeLootMoney(Player* player, Loot* loot) override
+        {
+            if (DungeonScaleDownMoney)
+            {
+                Map* map = player->GetMap();
+
+                if (map->IsDungeon())
+                {
+                    // Ensure that the players always get the same XP, even when entering the dungeon alone
+                    uint32 maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
+                    uint32 currentPlayerCount = map->GetPlayersCountExceptGMs();
+                    loot->gold *= uint32((float)currentPlayerCount / (float)maxPlayerCount);
+                }
+            }
+
         }
 };
 
