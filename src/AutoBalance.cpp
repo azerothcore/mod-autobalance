@@ -168,8 +168,8 @@ void LoadEnabledDungeons(std::string dungeonIdString) // Used for reading the st
         std::string pairOne, pairTwo;
         std::stringstream dungeonPairStream(delimitedValue);
         dungeonPairStream>>pairOne>>pairTwo;
-        uint32 dungeonMapId = atoi(pairOne.c_str());
-        uint8 minPlayers = atoi(pairTwo.c_str());
+        auto dungeonMapId = atoi(pairOne.c_str());
+        auto minPlayers = atoi(pairTwo.c_str());
         enabledDungeonIds[dungeonMapId] = minPlayers;
     }
 }
@@ -185,8 +185,8 @@ void LoadDungeonOverrides(std::string dungeonIdString) // Used for reading the s
         std::string pairOne, pairTwo;
         std::stringstream dungeonPairStream(delimitedValue);
         dungeonPairStream>>pairOne>>pairTwo;
-        uint32 dungeonMapId = atoi(pairOne.c_str());
-        float dungeonInflection = atof(pairTwo.c_str());
+        auto dungeonMapId = atoi(pairOne.c_str());
+        auto dungeonInflection = atof(pairTwo.c_str());
         dungeonOverrides[dungeonMapId] = dungeonInflection;
     }
 }
@@ -202,8 +202,8 @@ void LoadBossOverrides(std::string dungeonIdString) // Used for reading the stri
         std::string pairOne, pairTwo;
         std::stringstream dungeonPairStream(delimitedValue);
         dungeonPairStream>>pairOne>>pairTwo;
-        uint32 dungeonMapId = atoi(pairOne.c_str());
-        float bossInflection = atof(pairTwo.c_str());
+        auto dungeonMapId = atoi(pairOne.c_str());
+        auto bossInflection = atof(pairTwo.c_str());
         bossOverrides[dungeonMapId] = bossInflection;
     }
 }
@@ -379,8 +379,8 @@ class AutoBalance_PlayerScript : public PlayerScript
                 if (map->IsDungeon())
                 {
                     // Ensure that the players always get the same XP, even when entering the dungeon alone
-                    uint32 maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
-                    uint32 currentPlayerCount = map->GetPlayersCountExceptGMs();
+                    auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
+                    auto currentPlayerCount = map->GetPlayersCountExceptGMs();
                     amount *= (float)currentPlayerCount / maxPlayerCount;
                 }
             }
@@ -394,9 +394,9 @@ class AutoBalance_PlayerScript : public PlayerScript
 
                 if (map->IsDungeon())
                 {
-                    // Ensure that the players always get the same XP, even when entering the dungeon alone
-                    uint32 maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
-                    uint32 currentPlayerCount = map->GetPlayersCountExceptGMs();
+                    // Ensure that the players always get the same money, even when entering the dungeon alone
+                    auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
+                    auto currentPlayerCount = map->GetPlayersCountExceptGMs();
                     loot->gold *= uint32((float)currentPlayerCount / (float)maxPlayerCount);
                 }
             }
