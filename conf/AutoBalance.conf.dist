@@ -110,6 +110,17 @@ AutoBalance.LevelEndGameBoost = 1
 AutoBalance.DungeonScaleDownXP = 0
 
 #
+#     AutoBalance.DungeonScaleDownMoney
+#        Decrease individual player's amount of money gained during a dungeon to match the
+#        amount of money gained during a full group run. Example: In a 5-man group, you
+#        earn 1/5 of the total money per kill, but if you solo the dungeon with
+#        AutoBalance.DungeonScaleDownMoney = 0, you will earn 5/5 of the total money.
+#        With the option enabled, you will earn 1/5.
+#        Default:     0 (1 = ON, 0 = OFF)
+
+AutoBalance.DungeonScaleDownMoney = 0
+
+#
 #     AutoBalance.DungeonsOnly
 #        Only apply scaling changes to dungeons and raids
 #        Default:     1 (1 = ON, 0 = OFF)
@@ -194,6 +205,42 @@ AutoBalance.ForcedID2=""
 #
 
 AutoBalance.DisabledID=""
+
+#
+#     AutoBalance.PerDungeonPlayerCounts
+#        Allows setting a per-dungeon setting for minimum number of players to scale. For example, dungeons could remain at 5 players, but raids could be chosen to scale down to 5 players as well.
+#        Formatted as "[dungeonId] [playerCount], [dungeonId] [playerCount], [dungeonId] [playerCount], ..."
+#        Example: AutoBalance.PerDungeonPlayerCounts="33 1,34 1,36 1,43 1,47 1,48 1,70 1,90 1,109 1,129 1,189 1,209 1,349 1,389 1, 289 2, 329 2, 230 2, 429 2, 309 5, 409 5"
+#        For dungeons not listed, the dungeon's original player count (5, 10, 20, 25, or 40) is used as the minimum, meaning no scaling will take place.
+#        To disable, leave empty; all dungeons will then scale down to 1 player minimum. This is the default setting.
+#        Default: ""
+#
+
+AutoBalance.PerDungeonPlayerCounts=""
+
+#
+#     AutoBalance.PerDungeonScaling
+#        Allows setting a per-dungeon scaling inflection value
+#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
+#        Example: AutoBalance.PerDungeonScaling="229 0.15, 309 0.3"
+#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
+#        To disable, leave empty. This is the default setting.
+#        Default: ""
+#
+
+AutoBalance.PerDungeonScaling=""
+
+#
+#     AutoBalance.PerDungeonBossScaling
+#        Allows setting a per-dungeon scaling inflection value for bosses
+#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
+#        Example: AutoBalance.PerDungeonBossScaling="229 0.5, 309 1.2, 409 1, 249 1.5"
+#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
+#        To disable, leave empty. This is the default setting.
+#        Default: ""
+#
+
+AutoBalance.PerDungeonBossScaling=""
 
 ##########################
 #
