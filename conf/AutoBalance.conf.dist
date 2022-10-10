@@ -128,6 +128,13 @@ AutoBalance.DungeonScaleDownMoney = 0
 AutoBalance.DungeonsOnly=1
 
 #
+#     AutoBalance.CountNpcBots
+#        NPCBots mod integration. Makes bots count as players for player count calculation
+#        Default:     1 (1 = ON, 0 = OFF)
+
+AutoBalance.CountNpcBots=1
+
+#
 #     AutoBalance.DebugLevel
 #        0 = None
 #        1 = Errors Only

@@ -48,6 +48,13 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+//npcbot
+#if not(defined(MOD_PRESENT_NPCBOTS)) || MOD_PRESENT_NPCBOTS != 1
+ #error "NPCBots mod is not installed! This version of Autobalance only supports AzerothCore+NPCBots."
+#endif
+#include "botmgr.h"
+//end npcbot
+
 using namespace Acore::ChatCommands;
 
 ABScriptMgr* ABScriptMgr::instance()
@@ -142,7 +149,7 @@ static std::map<uint32, float> bossOverrides;
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
-static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, DungeonScaleDownMoney;
+static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, DungeonScaleDownMoney, CountNpcBots;
 static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier,
 InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic, BossInflectionMult;
 
@@ -272,6 +279,30 @@ void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
     }
 }
 
+//npcbot
+uint32 GetMapNonGMPlayersCountWithBots(Map const* map)
+{
+    uint32 count = 0;
+    bool limitBots = BotMgr::LimitBots(map);
+    for (MapReference const& ref : map->GetPlayers()) {
+        if (Player const* player = ref.GetSource()) {
+            ++count;
+            if (CountNpcBots && player->HaveBot()) {
+                BotMap const* botmap = player->GetBotMgr()->GetBotMap();
+                for (BotMap::const_iterator itr = botmap->begin(); itr != botmap->end(); ++itr) {
+                    Creature const* cre = itr->second;
+                    if (!cre || cre->IsTempBot() || (limitBots && (!cre->IsInWorld() || cre->FindMap() != map)))
+                        continue;
+                    ++count;
+                }
+            }
+        }
+    }
+
+    return count;
+}
+//end npcbot
+
 class AutoBalance_WorldScript : public WorldScript
 {
     public:
@@ -312,6 +343,9 @@ class AutoBalance_WorldScript : public WorldScript
         rewardEnabled = sConfigMgr->GetOption<bool>("AutoBalance.reward.enable", 1);
         DungeonScaleDownXP = sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", 0);
         DungeonScaleDownMoney = sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownMoney", 0);
+        //npcbot
+        CountNpcBots = sConfigMgr->GetOption<bool>("AutoBalance.CountNpcBots", true);
+        //end npcbot
 
         LevelScaling = sConfigMgr->GetOption<uint32>("AutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetOption<uint32>("AutoBalance.playerCountDifficultyOffset", 0);
@@ -380,7 +414,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                 {
                     // Ensure that the players always get the same XP, even when entering the dungeon alone
                     auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
-                    auto currentPlayerCount = map->GetPlayersCountExceptGMs();
+                    auto currentPlayerCount = GetMapNonGMPlayersCountWithBots(map);
                     amount *= (float)currentPlayerCount / maxPlayerCount;
                 }
             }
@@ -396,7 +430,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                 {
                     // Ensure that the players always get the same money, even when entering the dungeon alone
                     auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
-                    auto currentPlayerCount = map->GetPlayersCountExceptGMs();
+                    auto currentPlayerCount = GetMapNonGMPlayersCountWithBots(map);
                     loot->gold *= uint32((float)currentPlayerCount / (float)maxPlayerCount);
                 }
             }
@@ -466,11 +500,48 @@ class AutoBalance_UnitScript : public UnitScript
 
 class AutoBalance_AllMapScript : public AllMapScript
 {
+    //npcbot
+    class PlayersCountRecheckEvent : public BasicEvent
+    {
+    public:
+        explicit PlayersCountRecheckEvent(AutoBalance_AllMapScript* script, Map* map, Player const* player)
+            : _script(script), _map(map), _player(player) {}
+        PlayersCountRecheckEvent(PlayersCountRecheckEvent const&) = delete;
+
+        bool Execute(uint64 /*e_time*/, uint32 /*p_time*/)
+        {
+            if (_player->HaveBot())
+                _script->AfterBotsEnter(_map, _player);
+            return true;
+        }
+
+    private:
+        AutoBalance_AllMapScript* _script;
+        Map* _map;
+        Player const* _player;
+    };
+    //end npcbot
+
     public:
     AutoBalance_AllMapScript()
         : AllMapScript("AutoBalance_AllMapScript")
         {
         }
+
+        //npcbot
+        void AfterBotsEnter(Map* map, Player const* player)
+        {
+            AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+            mapABInfo->playerCount = GetMapNonGMPlayersCountWithBots(map);
+            if (PlayerChangeNotify) {
+                for (MapReference const& ref : map->GetPlayers()) {
+                    if (Player const* playerHandle = ref.GetSource()) {
+                        ChatHandler(playerHandle->GetSession()).PSendSysMessage("|cffFF0000 [AutoBalance+NPCBots]|r|cffFF8000 %s's bots entered %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
+                    }
+                }
+            }
+        }
+        //end npcbot
 
         void OnPlayerEnterAll(Map* map, Player* player)
         {
@@ -478,6 +549,9 @@ class AutoBalance_AllMapScript : public AllMapScript
                 return;
 
             if (player->IsGameMaster())
+                return;
+
+            if (DungeonsOnly && !map->IsDungeon())
                 return;
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
@@ -503,11 +577,17 @@ class AutoBalance_AllMapScript : public AllMapScript
             }
 
             //mapABInfo->playerCount++; //(maybe we've to found a safe solution to avoid player recount each time)
-            mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+            mapABInfo->playerCount = GetMapNonGMPlayersCountWithBots(map);
+
+            //npcbot: recalculate players count once all bots are teleported
+            //event will be automatically deleted if player teleports out of the map before execution
+            //max teleport delay for bot is 8000ms
+            player->m_Events.AddEvent(new PlayersCountRecheckEvent(this, map, player), player->m_Events.CalculateTime(8500));
+            //end npcbot
 
             if (PlayerChangeNotify)
             {
-                if (map->GetEntry()->IsDungeon() && player)
+                if (player)
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
                     if (!playerList.IsEmpty())
@@ -517,7 +597,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
                                 ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s entered the Instance %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s entered %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
                             }
                         }
                     }
@@ -531,6 +611,9 @@ class AutoBalance_AllMapScript : public AllMapScript
                 return;
 
             if (player->IsGameMaster())
+                return;
+
+            if (DungeonsOnly && !map->IsDungeon())
                 return;
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
@@ -565,7 +648,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 else
                 {
                     //mapABInfo->playerCount--;
-                    mapABInfo->playerCount = map->GetPlayersCountExceptGMs() - 1;
+                    mapABInfo->playerCount = GetMapNonGMPlayersCountWithBots(map); - 1;
                 }
             }
 
@@ -578,7 +661,7 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             if (PlayerChangeNotify)
             {
-                if (map->GetEntry()->IsDungeon() && player)
+                if (player)
                 {
                     Map::PlayerList const &playerList = map->GetPlayers();
                     if (!playerList.IsEmpty())
@@ -588,7 +671,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
                                 ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s left the Instance %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount, PlayerCountDifficultyOffset);
+                                chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s left %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount, PlayerCountDifficultyOffset);
                             }
                         }
                     }
@@ -652,6 +735,10 @@ public:
             return;
         }
         uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
+        //npcbot: number of players for world maps
+        if (maxNumberOfPlayers == 0 && instanceMap->GetEntry()->IsWorldMap())
+            maxNumberOfPlayers = MAXGROUPSIZE;
+        //end npcbot
         int forcedNumPlayers = GetForcedNumPlayers(creatureTemplate->Entry);
 
         if (forcedNumPlayers > 0)
@@ -1008,7 +1095,7 @@ public:
 
         AutoBalanceMapInfo *mapABInfo=pl->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-        mapABInfo->playerCount = pl->GetMap()->GetPlayersCountExceptGMs();
+        mapABInfo->playerCount = GetMapNonGMPlayersCountWithBots(pl->GetMap());
 
         Map::PlayerList const &playerList = pl->GetMap()->GetPlayers();
         uint8 level = 0;
@@ -1084,7 +1171,7 @@ public:
         if (!rewardEnabled || !updated)
             return;
 
-        if (map->GetPlayersCountExceptGMs() < MinPlayerReward)
+        if (GetMapNonGMPlayersCountWithBots(map) < MinPlayerReward)
             return;
 
         AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
