@@ -348,7 +348,7 @@ class AutoBalance_WorldScript : public WorldScript
         //end npcbot
 
         LevelScaling = sConfigMgr->GetOption<uint32>("AutoBalance.levelScaling", 1);
-        PlayerCountDifficultyOffset = sConfigMgr->GetOption<uint32>("AutoBalance.playerCountDifficultyOffset", 0);
+        PlayerCountDifficultyOffset = sConfigMgr->GetOption<int32>("AutoBalance.playerCountDifficultyOffset", 0);
         higherOffset = sConfigMgr->GetOption<uint32>("AutoBalance.levelHigherOffset", 3);
         lowerOffset = sConfigMgr->GetOption<uint32>("AutoBalance.levelLowerOffset", 0);
         rewardRaid = sConfigMgr->GetOption<uint32>("AutoBalance.reward.raidToken", 49426);
@@ -536,7 +536,7 @@ class AutoBalance_AllMapScript : public AllMapScript
             if (PlayerChangeNotify) {
                 for (MapReference const& ref : map->GetPlayers()) {
                     if (Player const* playerHandle = ref.GetSource()) {
-                        ChatHandler(playerHandle->GetSession()).PSendSysMessage("|cffFF0000 [AutoBalance+NPCBots]|r|cffFF8000 %s's bots entered %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
+                        ChatHandler(playerHandle->GetSession()).PSendSysMessage("|cffFF0000 [AutoBalance+NPCBots]|r|cffFF8000 %s's bots entered %s. Auto setting player count to %i (Player Difficulty Offset = %i) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
                     }
                 }
             }
@@ -597,7 +597,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
                                 ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s entered %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s entered %s. Auto setting player count to %i (Player Difficulty Offset = %i) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
                             }
                         }
                     }
@@ -671,7 +671,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
                                 ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s left %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount, PlayerCountDifficultyOffset);
+                                chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s left %s. Auto setting player count to %i (Player Difficulty Offset = %i) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
                             }
                         }
                     }
@@ -760,7 +760,7 @@ public:
         if (!creature->IsAlive())
             return;
 
-        uint32 curCount=mapABInfo->playerCount + PlayerCountDifficultyOffset;
+        int32 curCount=mapABInfo->playerCount + PlayerCountDifficultyOffset;
         if (perDungeonScalingEnabled())
         {
             curCount = adjustCurCount(curCount, mapId);
@@ -1066,7 +1066,7 @@ public:
 
         if (offset)
         {
-            offseti = (uint32)atoi(offset);
+            offseti = (int32)atoi(offset);
             handler->PSendSysMessage("Changing Player Difficulty Offset to %i.", offseti);
             PlayerCountDifficultyOffset = offseti;
             return true;
