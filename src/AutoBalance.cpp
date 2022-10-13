@@ -800,7 +800,7 @@ public:
         if (originalLevel <= 1 && areaMinLvl >= 5)
             skipLevel = true;
 
-        if (LevelScaling && creature->GetMap()->IsDungeon() && !skipLevel && !checkLevelOffset(level, originalLevel)) {  // change level only whithin the offsets and when in dungeon/raid
+        if (LevelScaling && (!DungeonsOnly || creature->GetMap()->IsDungeon()) && !skipLevel && !checkLevelOffset(level, originalLevel)) {  // change level only whithin the offsets and when in dungeon/raid
             if (level != creatureABInfo->selectedLevel || creatureABInfo->selectedLevel != creature->getLevel()) {
                 // keep bosses +3 level
                 creatureABInfo->selectedLevel = level + bonusLevel;
