@@ -466,7 +466,8 @@ class AutoBalance_UnitScript : public UnitScript
         damage = _Modifer_DealDamage(target, attacker, damage);
     }
 
-    void ModifyHealRecieved(Unit* target, Unit* attacker, uint32& damage) override {
+    void ModifyHealReceived(Unit* target, Unit* attacker, uint32& damage, SpellInfo const*) override
+    {
         damage = _Modifer_DealDamage(target, attacker, damage);
     }
 
