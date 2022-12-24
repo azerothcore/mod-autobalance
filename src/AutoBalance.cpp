@@ -417,7 +417,7 @@ class AutoBalance_UnitScript : public UnitScript
         return _Modifer_DealDamage(playerVictim, AttackerUnit, damage);
     }
 
-    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage) override
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* /*spellInfo*/) override
     {
         damage = _Modifer_DealDamage(target, attacker, damage);
     }
