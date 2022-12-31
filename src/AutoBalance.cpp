@@ -385,9 +385,8 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         void OnLogin(Player *Player) override
         {
-            if ((sConfigMgr->GetOption<bool>("AutoBalanceAnnounce.enable", true)) && (sConfigMgr->GetOption<bool>("AutoBalance.enable", true))) {
+            if (enabled && sConfigMgr->GetOption<bool>("AutoBalanceAnnounce.enable", true))
                 ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
-            }
         }
 
         virtual void OnLevelChanged(Player* player, uint8 /*oldlevel*/) override
@@ -406,7 +405,7 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
         {
-            if (victim && DungeonScaleDownXP)
+            if (enabled && victim && DungeonScaleDownXP)
             {
                 Map* map = player->GetMap();
 
@@ -422,7 +421,7 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         void OnBeforeLootMoney(Player* player, Loot* loot) override
         {
-            if (DungeonScaleDownMoney)
+            if (enabled && DungeonScaleDownMoney)
             {
                 Map* map = player->GetMap();
 
@@ -451,7 +450,7 @@ class AutoBalance_UnitScript : public UnitScript
         return _Modifer_DealDamage(playerVictim, AttackerUnit, damage);
     }
 
-    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage) override
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* /*spellInfo*/) override
     {
         damage = _Modifer_DealDamage(target, attacker, damage);
     }
@@ -1165,7 +1164,11 @@ class AutoBalance_GlobalScript : public GlobalScript {
 public:
     AutoBalance_GlobalScript() : GlobalScript("AutoBalance_GlobalScript") { }
 
-    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* source, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated) override {
+    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* source, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated) override
+    {
+        if (!enabled)
+            return;
+
         //if (!dungeonCompleted)
         //    return;
 
