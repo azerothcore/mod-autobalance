@@ -397,7 +397,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                     // Ensure that the players always get the same money, even when entering the dungeon alone
                     auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
                     auto currentPlayerCount = map->GetPlayersCountExceptGMs();
-                    loot->gold *= uint32((float)currentPlayerCount / (float)maxPlayerCount);
+                    loot->gold = uint32(loot->gold * ((float)currentPlayerCount / (float)maxPlayerCount));
                 }
             }
 
