@@ -208,7 +208,6 @@ void LoadBossOverrides(std::string dungeonIdString) // Used for reading the stri
     }
 }
 
-
 bool isEnabledDungeon(uint32 dungeonId)
 {
     return (enabledDungeonIds.find(dungeonId) != enabledDungeonIds.end());
@@ -253,7 +252,6 @@ int GetForcedNumPlayers(int creatureId)
     }
     return forcedCreatureIds[creatureId];
 }
-
 
 void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
     LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
@@ -432,10 +430,10 @@ class AutoBalance_UnitScript : public UnitScript
         damage = _Modifer_DealDamage(target, attacker, damage);
     }
 
-    void ModifyHealReceived(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* /*spellInfo*/) override {
+    void ModifyHealReceived(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* /*spellInfo*/) override
+    {
         damage = _Modifer_DealDamage(target, attacker, damage);
     }
-
 
     uint32 _Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
     {
@@ -462,7 +460,6 @@ class AutoBalance_UnitScript : public UnitScript
         return damage * damageMultiplier;
     }
 };
-
 
 class AutoBalance_AllMapScript : public AllMapScript
 {
@@ -613,6 +610,14 @@ public:
 
         ModifyCreatureAttributes(creature, true);
     }
+    
+    void OnCreatureAddWorld(Creature* creature)  override
+    {
+        if (!enabled)
+            return;
+
+        ModifyCreatureAttributes(creature, true);
+    }
 
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
     {
@@ -647,7 +652,7 @@ public:
 
         InstanceMap* instanceMap = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()));
         uint32 mapId = instanceMap->GetEntry()->MapID;
-        if (perDungeonScalingEnabled() && !isEnabledDungeon(mapId))
+        if ((perDungeonScalingEnabled() && !isEnabledDungeon(mapId)) || instanceMap->IsBattlegroundOrArena())
         {
             return;
         }
@@ -1069,7 +1074,6 @@ public:
         handler->PSendSysMessage("Armor multiplier: %.6f", creatureABInfo->ArmorMultiplier);
 
         return true;
-
     }
 };
 
@@ -1119,8 +1123,6 @@ public:
         }
     }
 };
-
-
 
 void AddAutoBalanceScripts()
 {
