@@ -454,7 +454,7 @@ class AutoBalance_UnitScript : public UnitScript
             return damage;
 
 
-        if ((attacker->IsHunterPet() || attacker->IsPet() || attacker->IsSummon()) && attacker->IsControlledByPlayer())
+        if (attacker->IsControlledByPlayer())
             return damage;
 
         return damage * damageMultiplier;
@@ -639,7 +639,7 @@ public:
         if (!creature->GetMap()->IsDungeon() && !creature->GetMap()->IsBattleground() && DungeonsOnly)
             return;
 
-        if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
+        if (creature->IsControlledByPlayer())
         {
             return;
         }
