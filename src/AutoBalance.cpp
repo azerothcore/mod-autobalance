@@ -261,7 +261,6 @@ int GetForcedNumPlayers(int creatureId)
     return forcedCreatureIds[creatureId];
 }
 
-
 void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
     LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
     if (dungeon && (map->IsDungeon() || map->IsRaid())) {
@@ -276,6 +275,25 @@ void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
             min = areaEntry->area_level;
             max = areaEntry->area_level;
         }
+    }
+}
+
+float HealthModForRank(uint32 rank)
+{
+    switch (rank)
+    {
+        case CREATURE_ELITE_NORMAL:
+            return sWorld->getRate(RATE_CREATURE_NORMAL_HP);
+        case CREATURE_ELITE_ELITE:
+            return sWorld->getRate(RATE_CREATURE_ELITE_ELITE_HP);
+        case CREATURE_ELITE_RAREELITE:
+            return sWorld->getRate(RATE_CREATURE_ELITE_RAREELITE_HP);
+        case CREATURE_ELITE_WORLDBOSS:
+            return sWorld->getRate(RATE_CREATURE_ELITE_WORLDBOSS_HP);
+        case CREATURE_ELITE_RARE:
+            return sWorld->getRate(RATE_CREATURE_ELITE_RARE_HP);
+        default:
+            return sWorld->getRate(RATE_CREATURE_ELITE_ELITE_HP);
     }
 }
 
@@ -818,7 +836,9 @@ public:
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(originalLevel, creatureTemplate->unit_class);
         CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->selectedLevel, creatureTemplate->unit_class);
 
-        uint32 baseHealth = origCreatureStats->GenerateHealth(creatureTemplate);
+        float hp_rate = HealthModForRank(creatureTemplate->rank);
+
+        uint32 baseHealth = std::max<uint32>(1, origCreatureStats->GenerateHealth(creatureTemplate) * hp_rate);
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
         uint32 scaledHealth = 0;
         uint32 scaledMana = 0;
@@ -922,7 +942,7 @@ public:
                     newBaseHealth *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
             }
 
-            float newHealth =  newBaseHealth * creatureTemplate->ModHealth;
+            float newHealth =  std::max<float>(1.0f, newBaseHealth * creatureTemplate->ModHealth * hp_rate);
 
             // allows health to be different with creatures that originally
             // differentiate their health by different level instead of multiplier field.
