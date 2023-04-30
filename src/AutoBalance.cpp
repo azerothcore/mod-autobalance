@@ -260,7 +260,7 @@ void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
     if (dungeon && (map->IsDungeon() || map->IsRaid())) {
         min  = dungeon->MinLevel;
         max  = dungeon->TargetLevel ? dungeon->TargetLevel : dungeon->MaxLevel;
-    }
+    } 
 
     if (!min && !max)
     {
