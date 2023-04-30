@@ -259,7 +259,7 @@ void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
     LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
     if (dungeon && (map->IsDungeon() || map->IsRaid())) {
         min  = dungeon->MinLevel;
-        max  = dungeon->reclevel ? dungeon->reclevel : dungeon->maxlevel;
+        max  = dungeon->TargetLevel ? dungeon->TargetLevel : dungeon->MaxLevel;
     }
 
     if (!min && !max)
