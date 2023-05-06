@@ -370,7 +370,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                 mapABInfo->mapLevel = player->getLevel();
         }
 
-        void OnGiveXP(Player* player, uint32& amount, Unit* victim) override
+        void OnGiveXP(Player* player, uint32& amount, Unit* victim, uint8 /*xpSource*/) override
         {
             if (victim && DungeonScaleDownXP)
             {
