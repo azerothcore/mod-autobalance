@@ -264,8 +264,8 @@ int GetForcedNumPlayers(int creatureId)
 void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
     LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
     if (dungeon && (map->IsDungeon() || map->IsRaid())) {
-        min  = dungeon->minlevel;
-        max  = dungeon->reclevel ? dungeon->reclevel : dungeon->maxlevel;
+        min  = dungeon->MinLevel;
+        max  = dungeon->TargetLevel ? dungeon->TargetLevel : dungeon->MaxLevel;
     }
 
     if (!min && !max)
