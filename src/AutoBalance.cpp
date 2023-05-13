@@ -838,13 +838,13 @@ public:
                             inflectionValue *= InflectionPointRaid25MHeroic;
                             curveFloor = InflectionPointRaid25MHeroicCurveFloor;
                             curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
-                            bossMultiplier = InflectionPointRaid25MHeroic;
+                            bossMultiplier = InflectionPointRaid25MHeroicBoss;
                             break;
                         default:
                             inflectionValue *= InflectionPointRaidHeroic;
                             curveFloor = InflectionPointRaidHeroicCurveFloor;
                             curveCeiling = InflectionPointRaidHeroicCurveCeiling;
-                            bossMultiplier = InflectionPointRaidHeroic;
+                            bossMultiplier = InflectionPointRaidHeroicBoss;
                     }
                 }
                 else
@@ -877,7 +877,7 @@ public:
                             inflectionValue *= InflectionPointRaid20M;
                             curveFloor = InflectionPointRaid20MCurveFloor;
                             curveCeiling = InflectionPointRaid20MCurveCeiling;
-                            bossMultiplier = InflectionPointRaid20M;
+                            bossMultiplier = InflectionPointRaid20MBoss;
                             break;
                         case 25:
                             inflectionValue *= InflectionPointRaid25M;
@@ -889,13 +889,13 @@ public:
                             inflectionValue *= InflectionPointRaid40M;
                             curveFloor = InflectionPointRaid40MCurveFloor;
                             curveCeiling = InflectionPointRaid40MCurveCeiling;
-                            bossMultiplier = InflectionPointRaid40M;
+                            bossMultiplier = InflectionPointRaid40MBoss;
                             break;
                         default:
                             inflectionValue *= InflectionPointRaid;
                             curveFloor = InflectionPointRaidCurveFloor;
                             curveCeiling = InflectionPointRaidCurveCeiling;
-                            bossMultiplier = InflectionPointRaid;
+                            bossMultiplier = InflectionPointRaidBoss;
                     }
                 }
                 else
