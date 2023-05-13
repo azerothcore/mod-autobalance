@@ -10,7 +10,6 @@
 #     AutoBalanceAnnounce.enable
 #        Announce the module on login if it is enabled
 #        Default:     1 (1 = ON, 0 = OFF)
-
 AutoBalanceAnnounce.enable=1
 
 #
@@ -19,160 +18,168 @@ AutoBalanceAnnounce.enable=1
 #     AutoBalance.enable
 #        Enable/Disable the autobalance system
 #        Default:     1 (1 = ON, 0 = OFF)
-
 AutoBalance.enable=1
 
-#     AutoBalance.InflectionPoint series
-#        Adjust value of Hyperbolic Tangent function where
-#        the curve of scaling must change. A lower value means higher difficulty.
-#        InflectionPoint & InflectionPointHeroic are the fallback values for 5-man dungeons
-#        InflectionPointRaid10M & InflectionPointRaid10MHeroic are the fallback values for 10 man raids
-#        InflectionPointRaid25M & InflectionPointRaid25MHeroic are the fallback values for 25 man raids
-#        InflectionPointRaid & InflectionPointRaidHeroic are the fallback values for other raids (40-man, 20-man, 15-man, or custom size)
-#        The inflection points fallback to the most specific number
+##########################
 #
-#        Example: with 0.5 in InflectionPointRaid, a creature of raid (40) will have half of its life with 20 players in
-#                 with 0.8, the same creature will have half of its life with 12 players in
+# Stat Scaling
 #
-#        Default:     0.5
+##########################
 
+#     AutoBalance.InflectionPoint* series
+#        InflectionPoint
+#           Changes the inflection point of the Hyperbolic Tangent function that determines the enemy multiplier for a given player number.
+#           This adjusts the shape of the overall curve. A lower value means that difficulty will increase faster as you add players.
+#
+#           This image provies a visual of several InflectionPoint settings and its affect on the enemy stat multipliers.
+#           https://i.imgur.com/x42UnUR.png
+#
+#           Example: If InflectionPointRaid is 0.5, an enemy in a 40-player raid will have half its life with 20 players in the instance
+#                    If InflectionPointRaid is 0.8, an enemy in a 40-player raid will have half its life with 12 players in the instance
+#
+#           Default: 0.5
+#
+#        CurveFloor
+#           When the curve to determine the enemy multiplier is calculated, start the curve at this value.
+#
+#           This allows you to make enemies have higher stats for lower player counts without adversely affecting the stats of 
+#           higher player counts. Applied before `AutoBalance.rate.*` values.
+#
+#           To understand how CurveFloor and CurveCeiling affect the multiplier, see this image:
+#           https://i.imgur.com/I8S4cwJ.png
+#
+#           Default: 0.0
+#
+#        CurveCeiling
+#           When the curve to determine the enemy multiplier is calculated, end the curve at this value.
+#
+#           This allows you to make enemies have lower stats for higher player counts without adversely affecting the stats of
+#           lower player counts. Applied before `AutoBalance.rate.*` values.
+#
+#           To understand how CurveFloor and CurveCeiling affect the multiplier, see this image:
+#           https://i.imgur.com/I8S4cwJ.png
+#
+#           May be set to higher than 1.0 to increase difficulty of the instance over the stock values:
+#           https://i.imgur.com/DBPxT8E.png
+#
+#           Default: 1.0
+#
+#       BossModifier
+#           Further adjusts the inflection point of bosses. Only applies to creatures considered dungeon bosses (from dungeons or raids).
+#
+#           To better understand this effect, see the interactive spreadsheet explained below.
+#
+#           Default: 1.0
+#
+#
+#     An interactive spreadsheet is available for you to visually see what effect your settings have on the difficulty curve.
+#
+#     https://docs.google.com/spreadsheets/d/100cmKIJIjCZ-ncWd0K9ykO8KUgwFTcwg4h2nfE_UeCc/edit?usp=sharing
+#
+#     To use it, copy the sheet to your own Google Drive and edit the values on the left with the yellow background.
+#     The "Final Multiplier" value is the actual multiplier that will be applied to enemies in a given dungeon.
+
+### 5-player dungeons
 AutoBalance.InflectionPoint=0.5
+AutoBalance.InflectionPoint.CurveFloor=0.0
+AutoBalance.InflectionPoint.CurveCeiling=1.0
+AutoBalance.InflectionPoint.BossModifier=1.0
+
+### 5-player heroic dungeons
 AutoBalance.InflectionPointHeroic=0.5
+AutoBalance.InflectionPointHeroic.CurveFloor=0.0
+AutoBalance.InflectionPointHeroic.CurveCeiling=1.0
+AutoBalance.InflectionPointHeroic.BossModifier=1.0
 
-AutoBalance.InflectionPointRaid10M=0.5
-AutoBalance.InflectionPointRaid10MHeroic=0.5
-
-AutoBalance.InflectionPointRaid25M=0.5
-AutoBalance.InflectionPointRaid25MHeroic=0.5
-
+### Default for all raids
 AutoBalance.InflectionPointRaid=0.5
+AutoBalance.InflectionPointRaid.CurveFloor=0.0
+AutoBalance.InflectionPointRaid.CurveCeiling=1.0
+AutoBalance.InflectionPointRaid.BossModifier=1.0
+
+### Default for all heroic raids
 AutoBalance.InflectionPointRaidHeroic=0.5
+AutoBalance.InflectionPointRaidHeroic.CurveFloor=0.0
+AutoBalance.InflectionPointRaidHeroic.CurveCeiling=1.0
+AutoBalance.InflectionPointRaidHeroic.BossModifier=1.0
 
+###
+### By default, all instances use the settings configured above. To customize settings for a particular instance size,
+### uncomment the appropriate configuration lines below and adjust values to your liking.
+###
 
-#
-#     AutoBalance.BossInflectionMult
-#        Multiplies the inflection point of bosses, only applies to creatures considered dungeon bosses (from dungeons or raids).
-#        Example: If AutoBalance.BossInflectionMult = 0.4 and AutoBalance.InflectionPoint=0.5, the bosses inflection point will be 0.4*0.9 = 0.36 in a normal dungeon.
-#        Default:     1.0
+### 10-player raids
+#AutoBalance.InflectionPointRaid10M=0.5
+#AutoBalance.InflectionPointRaid10M.CurveFloor=0.0
+#AutoBalance.InflectionPointRaid10M.CurveCeiling=1.0
+#AutoBalance.InflectionPointRaid10M.BossModifier=1.0
 
-AutoBalance.BossInflectionMult=1.0
+### 10-player heroic raids
+#AutoBalance.InflectionPointRaid10MHeroic=0.5
+#AutoBalance.InflectionPointRaid10MHeroic.CurveFloor=0.0
+#AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling=1.0
+#AutoBalance.InflectionPointRaid10MHeroic.BossModifier=1.0
 
-#
-#     AutoBalance.levelScaling
-#        Check the max level of players in map and scale creature based on it.
-#        This triggers depending on the two options below AutoBalance.levelHigherOffset and AutoBalance.levelLowerOffset
-#        0 = Disabled
-#        1 = Enabled (only in dungeons/raids)
-#        Default:     1
+### 15-player raids
+#AutoBalance.InflectionPointRaid15M=0.5
+#AutoBalance.InflectionPointRaid15M.CurveFloor=0.0
+#AutoBalance.InflectionPointRaid15M.CurveCeiling=1.0
+#AutoBalance.InflectionPointRaid15M.BossModifier=1.0
 
-AutoBalance.levelScaling=1
+### 20-player raids
+#AutoBalance.InflectionPointRaid20M=0.5
+#AutoBalance.InflectionPointRaid20M.CurveFloor=0.0
+#AutoBalance.InflectionPointRaid20M.CurveCeiling=1.0
+#AutoBalance.InflectionPointRaid20M.BossModifier=1.0
 
-#
-#     AutoBalance.levelHigherOffset
-#     AutoBalance.levelLowerOffset
-#        Level Offsets between creatures will not be scaled by level.
-#        You can even use it to disable scaling from lower to higher levelScaling
-#        setting levelLowerOffset to 80 (max wotlk level) for example.
-#        default: 3 (higher), 0 (lower)
+### 25-player raids
+#AutoBalance.InflectionPointRaid25M=0.5
+#AutoBalance.InflectionPointRaid25M.CurveFloor=0.0
+#AutoBalance.InflectionPointRaid25M.CurveCeiling=1.0
+#AutoBalance.InflectionPointRaid25M.BossModifier=1.0
 
-AutoBalance.levelHigherOffset = 3
-AutoBalance.levelLowerOffset  = 0
+### 25-player heroic raids
+#AutoBalance.InflectionPointRaid25MHeroic=0.5
+#AutoBalance.InflectionPointRaid25MHeroic.CurveFloor=0.0
+#AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling=1.0
+#AutoBalance.InflectionPointRaid25MHeroic.BossModifier=1.0
 
-#
-#     AutoBalance.levelUseDbValuesWhenExists
-#        When enabled with levelScaling, the creature will use its default database values
-#        instead of level scaling formula when player/party level has correspondance with
-#        creature_template minlevel/maxlevel.
-#
-#        Default:     0 (1 = ON, 0 = OFF)
-
-AutoBalance.levelUseDbValuesWhenExists = 0
-
-#
-#     AutoBalance.LevelEndGameBoost
-#        End game creatures have an exponential (not linear) regression
-#        that is not correctly handled by db values. Keep this enabled
-#        to have stats as near possible to the official ones.
-#
-#        Default:     1 (1 = ON, 0 = OFF)
-
-AutoBalance.LevelEndGameBoost = 1
-
-#
-#     AutoBalance.DungeonScaleDownXP
-#        Decrease individual player's amount of XP gained during a dungeon to match the
-#        amount of XP gained during a full group run. Example: In a 5-man group, you
-#        earn 1/5 of the total XP per kill, but if you solo the dungeon with
-#        AutoBalance.DungeonScaleDownXP = 0, you will earn 5/5 of the total XP.
-#        With the option enabled, you will earn 1/5.
-#        Default:     0 (1 = ON, 0 = OFF)
-
-AutoBalance.DungeonScaleDownXP = 0
+### 40-player raids
+#AutoBalance.InflectionPointRaid40M=0.5
+#AutoBalance.InflectionPointRaid40M.CurveFloor=0.0
+#AutoBalance.InflectionPointRaid40M.CurveCeiling=1.0
+#AutoBalance.InflectionPointRaid40M.BossModifier=1.0
 
 #
-#     AutoBalance.DungeonScaleDownMoney
-#        Decrease individual player's amount of money gained during a dungeon to match the
-#        amount of money gained during a full group run. Example: In a 5-man group, you
-#        earn 1/5 of the total money per kill, but if you solo the dungeon with
-#        AutoBalance.DungeonScaleDownMoney = 0, you will earn 5/5 of the total money.
-#        With the option enabled, you will earn 1/5.
-#        Default:     0 (1 = ON, 0 = OFF)
-
-AutoBalance.DungeonScaleDownMoney = 0
+#     AutoBalance.PerDungeonScaling
+#        Allows setting a per-dungeon or per-raid scaling inflection value
+#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
+#        Example: AutoBalance.PerDungeonScaling="229 0.15, 309 0.3"
+#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
+#        To disable, leave empty. This is the default setting.
+AutoBalance.PerDungeonScaling=""
 
 #
-#     AutoBalance.DungeonsOnly
-#        Only apply scaling changes to dungeons and raids
-#        Default:     1 (1 = ON, 0 = OFF)
+#     AutoBalance.PerDungeonBossScaling
+#        Allows setting a per-dungeon scaling inflection value for bosses
+#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
+#        Example: AutoBalance.PerDungeonBossScaling="229 0.5, 309 1.2, 409 1, 249 1.5"
+#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
+#        To disable, leave empty. This is the default setting.
+AutoBalance.PerDungeonBossScaling=""
 
-AutoBalance.DungeonsOnly=1
-
-#
-#     AutoBalance.DebugLevel
-#        0 = None
-#        1 = Errors Only
-#        2 = Errors and Basic Information
-#        3 = All  Info
-#        Default:     2
-
-AutoBalance.DebugLevel=2
-
-#
-#     .AutoBalance.PlayerChangeNotify
-#        Set Auto Notifications to all players in Instance that player count has changed.
-#        Default:     1 (1 = ON, 0 = OFF)
-
-AutoBalance.PlayerChangeNotify=1
-
-#
-#     AutoBalance.MinHPModifier
-#        Minimum Modifier setting for Health Modification
-#        Default:     0.01
-
-AutoBalance.MinHPModifier=0.01
-
-#
-#     AutoBalance.MinManaModifier
-#        Minimum Modifier setting for Mana Modification
-#        Default:     0.01
-
-AutoBalance.MinManaModifier=0.01
-
-#
-#     AutoBalance.MinDamageModifier
-#        Minimum Modifier setting for Damage Modification
-#        Default:     0.01
-
-AutoBalance.MinDamageModifier=0.01
-
-
-#
 #     AutoBalance.rate.*
-#        You can tune all rates increasing/decreasing difficulty in a linear way
-#        Note that global rate will increase all other rates. For example:
-#        global = 2.0 , damage = 1.5  -> it means that damage will be 3.0
+#        Rate that is applied just before the multiplier is used on enemies. Allows you to linearly shift the curve up or
+#        down to increase or decrease a particualar stat.
+#
+#        Note that global rate will increase all other rates. If global=2.0 and damage=1.5, damage will be multiplied by 3.0.
+#
+#        Example: With AutoBalance.rate.health=1.0, an enemy has 1000 health after scaling.
+#                 With AutoBalance.rate.health=1.5, an enemy has 1500 health after scaling and rate adjustment.
+#
+#        Consult the interactive spreadsheet for more examples.
+#
 #        Default:     1.0
-
 AutoBalance.rate.global = 1.0
 AutoBalance.rate.health = 1.0
 AutoBalance.rate.mana   = 1.0
@@ -180,18 +187,45 @@ AutoBalance.rate.armor  = 1.0
 AutoBalance.rate.damage = 1.0
 
 #
-#     AutoBalance.playerCountDifficultyOffset
-#        Offset of players inside an instance
-#        Default:     0
+#     AutoBalance.MinHPModifier
+#        Minimum Modifier setting for Health Modification. An enemy's health will not be multiplied by a value smaller than this.
+#        Default:     0.01
+AutoBalance.MinHPModifier=0.01
 
+#
+#     AutoBalance.MinManaModifier
+#        Minimum Modifier setting for Mana Modification. An enemy's mana will not be multiplied by a value smaller than this.
+#        Default:     0.01
+AutoBalance.MinManaModifier=0.01
+
+#
+#     AutoBalance.MinDamageModifier
+#        Minimum Modifier setting for Damage Modification. An enemy's damage will not be multiplied by a value smaller than this.
+#        Default:     0.01
+AutoBalance.MinDamageModifier=0.01
+
+#
+#     AutoBalance.playerCountDifficultyOffset
+#        Offset of players inside an instance. Affects all instance types.
+#        Default:     0
 AutoBalance.playerCountDifficultyOffset=0
+
+#
+#     AutoBalance.PerDungeonPlayerCounts
+#        Allows setting a per-dungeon setting for minimum number of players to scale. For example, dungeons could remain at 5 players, but raids could be chosen to scale down to 5 players as well.
+#        Formatted as "[dungeonId] [playerCount], [dungeonId] [playerCount], [dungeonId] [playerCount], ..."
+#        Example: AutoBalance.PerDungeonPlayerCounts="33 1,34 1,36 1,43 1,47 1,48 1,70 1,90 1,109 1,129 1,189 1,209 1,349 1,389 1, 289 2, 329 2, 230 2, 429 2, 309 5, 409 5"
+#        For dungeons not listed, the dungeon's original player count (5, 10, 20, 25, or 40) is used as the minimum, meaning no scaling will take place.
+#        To disable, leave empty; all dungeons will then scale down to 1 player minimum. This is the default setting.
+#        Default: ""
+#
+AutoBalance.PerDungeonPlayerCounts=""
 
 #
 #     AutoBalance.ForcedIDXX
 #        Sets MobIDs for the group they belong to.
 #        All 5 Man Mobs should go in .AutoBalance.5.Name
 #        All 10 Man Mobs should go in .AutoBalance.10.Name etc.
-
 AutoBalance.ForcedID40="11583,16441,30057,13020,15589,14435,18192,14889,14888,14887,14890,15302,15818,15742,15741,15740,18338"
 AutoBalance.ForcedID25="22997,21966,21965,21964,21806,21215,21845,19728,12397,17711,18256,18192,"
 AutoBalance.ForcedID20=""
@@ -203,44 +237,103 @@ AutoBalance.ForcedID2=""
 #     AutoBalance.DisabledID
 #        Disable scaling on specific creatures
 #
-
 AutoBalance.DisabledID=""
 
+##########################
 #
-#     AutoBalance.PerDungeonPlayerCounts
-#        Allows setting a per-dungeon setting for minimum number of players to scale. For example, dungeons could remain at 5 players, but raids could be chosen to scale down to 5 players as well.
-#        Formatted as "[dungeonId] [playerCount], [dungeonId] [playerCount], [dungeonId] [playerCount], ..."
-#        Example: AutoBalance.PerDungeonPlayerCounts="33 1,34 1,36 1,43 1,47 1,48 1,70 1,90 1,109 1,129 1,189 1,209 1,349 1,389 1, 289 2, 329 2, 230 2, 429 2, 309 5, 409 5"
-#        For dungeons not listed, the dungeon's original player count (5, 10, 20, 25, or 40) is used as the minimum, meaning no scaling will take place.
-#        To disable, leave empty; all dungeons will then scale down to 1 player minimum. This is the default setting.
-#        Default: ""
+# Level Scaling
 #
-
-AutoBalance.PerDungeonPlayerCounts=""
+##########################
 
 #
-#     AutoBalance.PerDungeonScaling
-#        Allows setting a per-dungeon scaling inflection value
-#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
-#        Example: AutoBalance.PerDungeonScaling="229 0.15, 309 0.3"
-#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
-#        To disable, leave empty. This is the default setting.
-#        Default: ""
-#
-
-AutoBalance.PerDungeonScaling=""
+#     AutoBalance.levelScaling
+#        Check the max level of players in map and scale creature based on it.
+#        This triggers depending on the two options below AutoBalance.levelHigherOffset and AutoBalance.levelLowerOffset
+#        0 = Disabled
+#        1 = Enabled (only in dungeons/raids)
+#        Default:     1
+AutoBalance.levelScaling=1
 
 #
-#     AutoBalance.PerDungeonBossScaling
-#        Allows setting a per-dungeon scaling inflection value for bosses
-#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
-#        Example: AutoBalance.PerDungeonBossScaling="229 0.5, 309 1.2, 409 1, 249 1.5"
-#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
-#        To disable, leave empty. This is the default setting.
-#        Default: ""
-#
+#     AutoBalance.levelHigherOffset
+#     AutoBalance.levelLowerOffset
+#        Level Offsets between creatures will not be scaled by level.
+#        You can even use it to disable scaling from lower to higher levelScaling
+#        setting levelLowerOffset to 80 (max wotlk level) for example.
+#        default: 3 (higher), 0 (lower)
+AutoBalance.levelHigherOffset = 3
+AutoBalance.levelLowerOffset  = 0
 
-AutoBalance.PerDungeonBossScaling=""
+#
+#     AutoBalance.levelUseDbValuesWhenExists
+#        When enabled with levelScaling, the creature will use its default database values
+#        instead of level scaling formula when player/party level has correspondance with
+#        creature_template minlevel/maxlevel.
+#
+#        Default:     0 (1 = ON, 0 = OFF)
+AutoBalance.levelUseDbValuesWhenExists = 0
+
+#
+#     AutoBalance.LevelEndGameBoost
+#        End game creatures have an exponential (not linear) regression
+#        that is not correctly handled by db values. Keep this enabled
+#        to have stats as near possible to the official ones.
+#
+#        Default:     1 (1 = ON, 0 = OFF)
+AutoBalance.LevelEndGameBoost = 1
+
+##########################
+#
+# Reward Scaling
+#
+##########################
+
+#
+#     AutoBalance.DungeonScaleDownXP
+#        Decrease individual player's amount of XP gained during a dungeon to match the
+#        amount of XP gained during a full group run. Example: In a 5-man group, you
+#        earn 1/5 of the total XP per kill, but if you solo the dungeon with
+#        AutoBalance.DungeonScaleDownXP = 0, you will earn 5/5 of the total XP.
+#        With the option enabled, you will earn 1/5.
+#        Default:     0 (1 = ON, 0 = OFF)
+AutoBalance.DungeonScaleDownXP = 0
+
+#
+#     AutoBalance.DungeonScaleDownMoney
+#        Decrease individual player's amount of money gained during a dungeon to match the
+#        amount of money gained during a full group run. Example: In a 5-man group, you
+#        earn 1/5 of the total money per kill, but if you solo the dungeon with
+#        AutoBalance.DungeonScaleDownMoney = 0, you will earn 5/5 of the total money.
+#        With the option enabled, you will earn 1/5.
+#        Default:     0 (1 = ON, 0 = OFF)
+AutoBalance.DungeonScaleDownMoney = 0
+
+#
+#     AutoBalance.DungeonsOnly
+#        Only apply scaling changes to dungeons and raids
+#        Default:     1 (1 = ON, 0 = OFF)
+AutoBalance.DungeonsOnly=1
+
+##########################
+#
+# Messages
+#
+##########################
+
+#
+#     AutoBalance.DebugLevel
+#        0 = None
+#        1 = Errors Only
+#        2 = Errors and Basic Information
+#        3 = All  Info
+#        Default:     2
+AutoBalance.DebugLevel=2
+
+#
+#     .AutoBalance.PlayerChangeNotify
+#        Set Auto Notifications to all players in Instance that player count has changed.
+#        Default:     1 (1 = ON, 0 = OFF)
+AutoBalance.PlayerChangeNotify=1
 
 ##########################
 #
@@ -256,7 +349,6 @@ AutoBalance.PerDungeonBossScaling=""
 #       This is an idea to boost old contents even if you're end-game player.
 #
 #       Default:     0 (1 = ON, 0 = OFF)
-
 AutoBalance.reward.enable = 0
 
 
@@ -268,7 +360,6 @@ AutoBalance.reward.enable = 0
 #       Default:
 #           raidToken -> emblem of frost (49426)
 #           dungeonToken -> emblem of triumph (47241)
-
 AutoBalance.reward.raidToken    = 49426
 AutoBalance.reward.dungeonToken = 47241
 
@@ -280,6 +371,5 @@ AutoBalance.reward.dungeonToken = 47241
 #		this will give more a challenge to players for low level instances.
 #
 #       Default:     1
-
 AutoBalance.reward.MinPlayerReward = 1
-#
+

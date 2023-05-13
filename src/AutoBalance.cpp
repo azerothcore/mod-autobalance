@@ -143,8 +143,21 @@ static std::map<uint32, float> bossOverrides;
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, DungeonScaleDownMoney;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier,
-InflectionPoint, InflectionPointRaid, InflectionPointRaid10M, InflectionPointRaid25M, InflectionPointHeroic, InflectionPointRaidHeroic, InflectionPointRaid10MHeroic, InflectionPointRaid25MHeroic, BossInflectionMult;
+static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier;
+
+static float InflectionPoint, InflectionPointCurveFloor, InflectionPointCurveCeiling, InflectionPointBoss;
+static float InflectionPointHeroic, InflectionPointHeroicCurveFloor, InflectionPointHeroicCurveCeiling, InflectionPointHeroicBoss;
+static float InflectionPointRaid, InflectionPointRaidCurveFloor, InflectionPointRaidCurveCeiling, InflectionPointRaidBoss;
+static float InflectionPointRaidHeroic, InflectionPointRaidHeroicCurveFloor, InflectionPointRaidHeroicCurveCeiling, InflectionPointRaidHeroicBoss;
+
+static float InflectionPointRaid10M, InflectionPointRaid10MCurveFloor, InflectionPointRaid10MCurveCeiling, InflectionPointRaid10MBoss;
+static float InflectionPointRaid10MHeroic, InflectionPointRaid10MHeroicCurveFloor, InflectionPointRaid10MHeroicCurveCeiling, InflectionPointRaid10MHeroicBoss;
+static float InflectionPointRaid15M, InflectionPointRaid15MCurveFloor, InflectionPointRaid15MCurveCeiling, InflectionPointRaid15MBoss;
+static float InflectionPointRaid20M, InflectionPointRaid20MCurveFloor, InflectionPointRaid20MCurveCeiling, InflectionPointRaid20MBoss;
+static float InflectionPointRaid25M, InflectionPointRaid25MCurveFloor, InflectionPointRaid25MCurveCeiling, InflectionPointRaid25MBoss;
+static float InflectionPointRaid25MHeroic, InflectionPointRaid25MHeroicCurveFloor, InflectionPointRaid25MHeroicCurveCeiling, InflectionPointRaid25MHeroicBoss;
+static float InflectionPointRaid40M, InflectionPointRaid40MCurveFloor, InflectionPointRaid40MCurveCeiling, InflectionPointRaid40MBoss;
+
 
 int GetValidDebugLevel()
 {
@@ -322,22 +335,68 @@ class AutoBalance_WorldScript : public WorldScript
         MinPlayerReward = sConfigMgr->GetOption<float>("AutoBalance.reward.MinPlayerReward", 1);
 
         InflectionPoint = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint", 0.5f);
-        InflectionPointRaid = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid", InflectionPoint);
-        InflectionPointRaid25M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M", InflectionPointRaid);
-        InflectionPointRaid10M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M", InflectionPointRaid);
-        InflectionPointHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic", InflectionPoint);
-        InflectionPointRaidHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic", InflectionPointRaid);
-        InflectionPointRaid25MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaid25M);
-        InflectionPointRaid10MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic", InflectionPointRaid10M);
-        BossInflectionMult = sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f);
+        InflectionPointCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveFloor", 0.0f);
+        InflectionPointCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveCeiling", 1.0f);
+        InflectionPointBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+
+        InflectionPointHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic", 0.5f);
+        InflectionPointHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveFloor", 0.0f);
+        InflectionPointHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveCeiling", 1.0f);
+        InflectionPointHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+
+        InflectionPointRaid = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid", 0.5f);
+        InflectionPointRaidCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveFloor", 0.0f);
+        InflectionPointRaidCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveCeiling", 1.0f);
+        InflectionPointRaidBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+
+        InflectionPointRaidHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic", 0.5f);
+        InflectionPointRaidHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveFloor", 0.0f);
+        InflectionPointRaidHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveCeiling", 1.0f);
+        InflectionPointRaidHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+
+        InflectionPointRaid10M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M", InflectionPointRaid, false);
+        InflectionPointRaid10MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid10MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid10MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.BossModifier", InflectionPointRaidBoss, false);
+
+        InflectionPointRaid10MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic", InflectionPointRaidHeroic, false);
+        InflectionPointRaid10MHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveFloor", InflectionPointRaidHeroicCurveFloor, false);
+        InflectionPointRaid10MHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling", InflectionPointRaidHeroicCurveCeiling, false);
+        InflectionPointRaid10MHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.BossModifier", InflectionPointRaidHeroicBoss, false);
+
+        InflectionPointRaid15M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M", InflectionPointRaid, false);
+        InflectionPointRaid15MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid15MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid15MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.BossModifier", InflectionPointRaidBoss, false);
+
+        InflectionPointRaid20M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M", InflectionPointRaid, false);
+        InflectionPointRaid20MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid20MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid20MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.BossModifier", InflectionPointRaidBoss, false);
+
+        InflectionPointRaid25M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M", InflectionPointRaid, false);
+        InflectionPointRaid25MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid25MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid25MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.BossModifier", InflectionPointRaidBoss, false);
+
+        InflectionPointRaid25MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaidHeroic, false);
+        InflectionPointRaid25MHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveFloor", InflectionPointRaidHeroicCurveFloor, false);
+        InflectionPointRaid25MHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling", InflectionPointRaidHeroicCurveCeiling, false);
+        InflectionPointRaid25MHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.BossModifier", InflectionPointRaidHeroicBoss, false);
+
+        InflectionPointRaid40M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M", InflectionPointRaid, false);
+        InflectionPointRaid40MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid40MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid40MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.BossModifier", InflectionPointRaidBoss, false);
+
         globalRate = sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f);
         healthMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f);
         manaMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f);
         armorMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f);
         damageMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f);
         MinHPModifier = sConfigMgr->GetOption<float>("AutoBalance.MinHPModifier", 0.1f);
-        MinManaModifier = sConfigMgr->GetOption<float>("AutoBalance.MinManaModifier", 0.1f);
-        MinDamageModifier = sConfigMgr->GetOption<float>("AutoBalance.MinDamageModifier", 0.1f);
+        MinManaModifier = sConfigMgr->GetOption<float>("AutoBalance.MinManaModifier", 0.01f);
+        MinDamageModifier = sConfigMgr->GetOption<float>("AutoBalance.MinDamageModifier", 0.01f);
     }
 };
 
@@ -748,55 +807,115 @@ public:
         //       The +1 and /2 values raise the TanH function to a positive range and make
         //       sure the modifier never goes above the value or 1.0 or below 0.
         //
+        //       curveFloor and curveCeiling squishes the curve by adjusting the curve start and end points.
+        //       This allows for better control over high and low player count scaling.
+
         float defaultMultiplier = 1.0f;
-        if (creatureABInfo->instancePlayerCount < maxNumberOfPlayers)
+        float curveFloor = 0.0f;
+        float curveCeiling = 1.0f;
+        float bossMultiplier = 1.0f;
+
+        float inflectionValue  = (float)maxNumberOfPlayers;
+        if (hasDungeonOverride(mapId))
         {
-            float inflectionValue  = (float)maxNumberOfPlayers;
-            if (hasDungeonOverride(mapId))
+            inflectionValue *= dungeonOverrides[mapId];
+        }
+        else
+        {
+            if (instanceMap->IsHeroic())
             {
-                inflectionValue *= dungeonOverrides[mapId];
-            }
-            else
-            {
-                if (instanceMap->IsHeroic())
+                if (instanceMap->IsRaid())
                 {
-                    if (instanceMap->IsRaid())
+                    switch (instanceMap->GetMaxPlayers())
                     {
-                        switch (instanceMap->GetMaxPlayers())
-                        {
-                            case 10:
-                                inflectionValue *= InflectionPointRaid10MHeroic;
-                                break;
-                            case 25:
-                                inflectionValue *= InflectionPointRaid25MHeroic;
-                                break;
-                            default:
-                                inflectionValue *= InflectionPointRaidHeroic;
-                        }
+                        case 10:
+                            inflectionValue *= InflectionPointRaid10MHeroic;
+                            curveFloor = InflectionPointRaid10MHeroicCurveFloor;
+                            curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
+                            bossMultiplier = InflectionPointRaid10MHeroicBoss;
+                            break;
+                        case 25:
+                            inflectionValue *= InflectionPointRaid25MHeroic;
+                            curveFloor = InflectionPointRaid25MHeroicCurveFloor;
+                            curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
+                            bossMultiplier = InflectionPointRaid25MHeroic;
+                            break;
+                        default:
+                            inflectionValue *= InflectionPointRaidHeroic;
+                            curveFloor = InflectionPointRaidHeroicCurveFloor;
+                            curveCeiling = InflectionPointRaidHeroicCurveCeiling;
+                            bossMultiplier = InflectionPointRaidHeroic;
                     }
-                    else
-                        inflectionValue *= InflectionPointHeroic;
                 }
                 else
                 {
-                    if (instanceMap->IsRaid())
-                    {
-                        switch (instanceMap->GetMaxPlayers())
-                        {
-                            case 10:
-                                inflectionValue *= InflectionPointRaid10M;
-                                break;
-                            case 25:
-                                inflectionValue *= InflectionPointRaid25M;
-                                break;
-                            default:
-                                inflectionValue *= InflectionPointRaid;
-                        }
-                    }
-                    else
-                        inflectionValue *= InflectionPoint;
+                    inflectionValue *= InflectionPointHeroic;
+                    curveFloor = InflectionPointHeroicCurveFloor;
+                    curveCeiling = InflectionPointHeroicCurveCeiling;
+                    bossMultiplier = InflectionPointHeroicBoss;
                 }
             }
+            else
+            {
+                if (instanceMap->IsRaid())
+                {
+                    switch (instanceMap->GetMaxPlayers())
+                    {
+                        case 10:
+                            inflectionValue *= InflectionPointRaid10M;
+                            curveFloor = InflectionPointRaid10MCurveFloor;
+                            curveCeiling = InflectionPointRaid10MCurveCeiling;
+                            bossMultiplier = InflectionPointRaid10MBoss;
+                            break;
+                        case 15:
+                            inflectionValue *= InflectionPointRaid15M;
+                            curveFloor = InflectionPointRaid15MCurveFloor;
+                            curveCeiling = InflectionPointRaid15MCurveCeiling;
+                            bossMultiplier = InflectionPointRaid15MBoss;
+                            break;
+                        case 20:
+                            inflectionValue *= InflectionPointRaid20M;
+                            curveFloor = InflectionPointRaid20MCurveFloor;
+                            curveCeiling = InflectionPointRaid20MCurveCeiling;
+                            bossMultiplier = InflectionPointRaid20M;
+                            break;
+                        case 25:
+                            inflectionValue *= InflectionPointRaid25M;
+                            curveFloor = InflectionPointRaid25MCurveFloor;
+                            curveCeiling = InflectionPointRaid25MCurveCeiling;
+                            bossMultiplier = InflectionPointRaid25MBoss;
+                            break;
+                        case 40:
+                            inflectionValue *= InflectionPointRaid40M;
+                            curveFloor = InflectionPointRaid40MCurveFloor;
+                            curveCeiling = InflectionPointRaid40MCurveCeiling;
+                            bossMultiplier = InflectionPointRaid40M;
+                            break;
+                        default:
+                            inflectionValue *= InflectionPointRaid;
+                            curveFloor = InflectionPointRaidCurveFloor;
+                            curveCeiling = InflectionPointRaidCurveCeiling;
+                            bossMultiplier = InflectionPointRaid;
+                    }
+                }
+                else
+                {
+                    inflectionValue *= InflectionPoint;
+                    curveFloor = InflectionPointCurveFloor;
+                    curveCeiling = InflectionPointCurveCeiling;
+                    bossMultiplier = InflectionPointBoss;
+                }
+            }
+        }
+
+        if (creatureABInfo->instancePlayerCount >= maxNumberOfPlayers)
+        // We've maxed out the number of players, engage maximum difficulty!
+        {
+            defaultMultiplier = curveCeiling;
+        }
+        else
+        // Less than full instance, adjust accordingly
+        {
             if (creature->IsDungeonBoss()) {
                 if (hasBossOverride(mapId))
                 {
@@ -804,12 +923,15 @@ public:
                 }
                 else
                 {
-                    inflectionValue *= BossInflectionMult;
+                    inflectionValue *= bossMultiplier;
                 }
             }
 
             float diff = ((float)maxNumberOfPlayers/5)*1.5f;
             defaultMultiplier = (tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
+
+            // Adjust the multiplier based on the configured floor and ceiling values
+            defaultMultiplier = (defaultMultiplier * (curveCeiling - curveFloor) + curveFloor);
         }
 
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
@@ -953,15 +1075,16 @@ public:
         static std::vector<ChatCommand> ABCommandTable =
         {
             { "setoffset",        SEC_GAMEMASTER,                        true, &HandleABSetOffsetCommand,                 "Sets the global Player Difficulty Offset for instances. Example: (You + offset(1) = 2 player difficulty)." },
-            { "getoffset",        SEC_GAMEMASTER,                        true, &HandleABGetOffsetCommand,                 "Shows current global player offset value" },
+            { "getoffset",        SEC_GAMEMASTER,                        true, &HandleABGetOffsetCommand,                 "Shows current global player offset value." },
             { "checkmap",         SEC_GAMEMASTER,                        true, &HandleABCheckMapCommand,                  "Run a check for current map/instance, it can help in case you're testing autobalance with GM." },
-            { "mapstat",          SEC_GAMEMASTER,                        true, &HandleABMapStatsCommand,                  "Shows current autobalance information for this map-" },
+            { "mapstat",          SEC_GAMEMASTER,                        true, &HandleABMapStatsCommand,                  "Shows current autobalance information for this map" },
             { "creaturestat",     SEC_GAMEMASTER,                        true, &HandleABCreatureStatsCommand,             "Shows current autobalance information for selected creature." },
         };
 
         static std::vector<ChatCommand> commandTable =
         {
             { "autobalance",     SEC_GAMEMASTER,                            false, NULL,                      "", ABCommandTable },
+            { "ab",              SEC_GAMEMASTER,                            false, NULL,                      "", ABCommandTable },
         };
         return commandTable;
     }
