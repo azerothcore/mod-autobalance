@@ -74,7 +74,7 @@ AutoBalance.enable=1
 #
 #     An interactive spreadsheet is available for you to visually see what effect your settings have on the difficulty curve.
 #
-#     https://docs.google.com/spreadsheets/d/100cmKIJIjCZ-ncWd0K9ykO8KUgwFTcwg4h2nfE_UeCc/edit?usp=sharing
+#     https://docs.google.com/spreadsheets/d/100cmKIJIjCZ-ncWd0K9ykO8KUgwFTcwg4h2nfE_UeCc/copy
 #
 #     To use it, copy the sheet to your own Google Drive and edit the values on the left with the yellow background.
 #     The "Final Multiplier" value is the actual multiplier that will be applied to enemies in a given dungeon.
