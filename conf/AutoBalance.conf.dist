@@ -43,7 +43,7 @@ AutoBalance.enable=1
 #           When the curve to determine the enemy multiplier is calculated, start the curve at this value.
 #
 #           This allows you to make enemies have higher stats for lower player counts without adversely affecting the stats of 
-#           higher player counts. Applied before `AutoBalance.rate.*` values.
+#           higher player counts. Applied before `AutoBalance.StatModifier.*` values.
 #
 #           To understand how CurveFloor and CurveCeiling affect the multiplier, see this image:
 #           https://i.imgur.com/I8S4cwJ.png
@@ -54,7 +54,7 @@ AutoBalance.enable=1
 #           When the curve to determine the enemy multiplier is calculated, end the curve at this value.
 #
 #           This allows you to make enemies have lower stats for higher player counts without adversely affecting the stats of
-#           lower player counts. Applied before `AutoBalance.rate.*` values.
+#           lower player counts. Applied before `AutoBalance.StatModifier.*` values.
 #
 #           To understand how CurveFloor and CurveCeiling affect the multiplier, see this image:
 #           https://i.imgur.com/I8S4cwJ.png
