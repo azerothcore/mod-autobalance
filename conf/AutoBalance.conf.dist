@@ -239,60 +239,60 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 ###
 
 ### 10-player raids
-AutoBalance.StatModifierRaid10M.Global=1.0
-AutoBalance.StatModifierRaid10M.Health=1.0
-AutoBalance.StatModifierRaid10M.Mana=1.0
-AutoBalance.StatModifierRaid10M.Armor=1.0
-AutoBalance.StatModifierRaid10M.Damage=1.0
-AutoBalance.StatModifierRaid10M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid10M.Global=1.0
+#AutoBalance.StatModifierRaid10M.Health=1.0
+#AutoBalance.StatModifierRaid10M.Mana=1.0
+#AutoBalance.StatModifierRaid10M.Armor=1.0
+#AutoBalance.StatModifierRaid10M.Damage=1.0
+#AutoBalance.StatModifierRaid10M.Boss.Global=1.0
 
 ### 10-player heroic raids
-AutoBalance.StatModifierRaid10MHeroic.Global=1.0
-AutoBalance.StatModifierRaid10MHeroic.Health=1.0
-AutoBalance.StatModifierRaid10MHeroic.Mana=1.0
-AutoBalance.StatModifierRaid10MHeroic.Armor=1.0
-AutoBalance.StatModifierRaid10MHeroic.Damage=1.0
-AutoBalance.StatModifierRaid10MHeroic.Boss.Global=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Global=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Health=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Mana=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Armor=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Damage=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Boss.Global=1.0
 
 ### 15-player raids
-AutoBalance.StatModifierRaid15M.Global=1.0
-AutoBalance.StatModifierRaid15M.Health=1.0
-AutoBalance.StatModifierRaid15M.Mana=1.0
-AutoBalance.StatModifierRaid15M.Armor=1.0
-AutoBalance.StatModifierRaid15M.Damage=1.0
-AutoBalance.StatModifierRaid15M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid15M.Global=1.0
+#AutoBalance.StatModifierRaid15M.Health=1.0
+#AutoBalance.StatModifierRaid15M.Mana=1.0
+#AutoBalance.StatModifierRaid15M.Armor=1.0
+#AutoBalance.StatModifierRaid15M.Damage=1.0
+#AutoBalance.StatModifierRaid15M.Boss.Global=1.0
 
 ### 20-player raids
-AutoBalance.StatModifierRaid20M.Global=1.0
-AutoBalance.StatModifierRaid20M.Health=1.0
-AutoBalance.StatModifierRaid20M.Mana=1.0
-AutoBalance.StatModifierRaid20M.Armor=1.0
-AutoBalance.StatModifierRaid20M.Damage=1.0
-AutoBalance.StatModifierRaid20M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid20M.Global=1.0
+#AutoBalance.StatModifierRaid20M.Health=1.0
+#AutoBalance.StatModifierRaid20M.Mana=1.0
+#AutoBalance.StatModifierRaid20M.Armor=1.0
+#AutoBalance.StatModifierRaid20M.Damage=1.0
+#AutoBalance.StatModifierRaid20M.Boss.Global=1.0
 
 ### 25-player raids
-AutoBalance.StatModifierRaid25M.Global=1.0
-AutoBalance.StatModifierRaid25M.Health=1.0
-AutoBalance.StatModifierRaid25M.Mana=1.0
-AutoBalance.StatModifierRaid25M.Armor=1.0
-AutoBalance.StatModifierRaid25M.Damage=1.0
-AutoBalance.StatModifierRaid25M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid25M.Global=1.0
+#AutoBalance.StatModifierRaid25M.Health=1.0
+#AutoBalance.StatModifierRaid25M.Mana=1.0
+#AutoBalance.StatModifierRaid25M.Armor=1.0
+#AutoBalance.StatModifierRaid25M.Damage=1.0
+#AutoBalance.StatModifierRaid25M.Boss.Global=1.0
 
 ### 25-player heroic raids
-AutoBalance.StatModifierRaid25MHeroic.Global=1.0
-AutoBalance.StatModifierRaid25MHeroic.Health=1.0
-AutoBalance.StatModifierRaid25MHeroic.Mana=1.0
-AutoBalance.StatModifierRaid25MHeroic.Armor=1.0
-AutoBalance.StatModifierRaid25MHeroic.Damage=1.0
-AutoBalance.StatModifierRaid25MHeroic.Boss.Global=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Global=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Health=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Mana=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Armor=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Damage=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Boss.Global=1.0
 
 ### 40-player raids
-AutoBalance.StatModifierRaid40M.Global=1.0
-AutoBalance.StatModifierRaid40M.Health=1.0
-AutoBalance.StatModifierRaid40M.Mana=1.0
-AutoBalance.StatModifierRaid40M.Armor=1.0
-AutoBalance.StatModifierRaid40M.Damage=1.0
-AutoBalance.StatModifierRaid40M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid40M.Global=1.0
+#AutoBalance.StatModifierRaid40M.Health=1.0
+#AutoBalance.StatModifierRaid40M.Mana=1.0
+#AutoBalance.StatModifierRaid40M.Armor=1.0
+#AutoBalance.StatModifierRaid40M.Damage=1.0
+#AutoBalance.StatModifierRaid40M.Boss.Global=1.0
 
 #
 #     AutoBalance.MinHPModifier
