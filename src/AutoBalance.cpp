@@ -138,7 +138,7 @@ class AutoBalanceStatModifiers : public DataMap::Base
 {
 public:
     AutoBalanceStatModifiers() {}
-    AutoBalanceStatModifiers (float global, float health, float mana, float armor, float damage, float boss_global) :
+    AutoBalanceStatModifiers(float global, float health, float mana, float armor, float damage, float boss_global) :
         global(global), health(health), mana(mana), armor(armor), damage(damage), boss_global(boss_global) {}
     float global;
     float health;
@@ -265,6 +265,7 @@ void LoadStatModifierOverrides(std::string dungeonIdString) // Used for reading 
         std::string val1, val2, val3, val4, val5, val6, val7;
         std::stringstream dungeonStream(delimitedValue);
         dungeonStream >> val1 >> val2 >> val3 >> val4 >> val5 >> val6 >> val7;
+
         auto dungeonMapId = atoi(val1.c_str());
         AutoBalanceStatModifiers statModifiers = AutoBalanceStatModifiers(
             atof(val2.c_str()),
@@ -1125,128 +1126,128 @@ public:
         float statMod_damage =      1.0f;
         float statMod_boss_global = 1.0f;
 
-        if (hasStatModifierOverride(mapId))
+        // Apply the per-instance-type modifiers first
+        if (instanceMap->IsHeroic())
         {
-            AutoBalanceStatModifiers* myStatModifierOverrides = &statModifierOverrides[mapId];
-
-            statMod_global = myStatModifierOverrides->global;
-            statMod_health = myStatModifierOverrides->health;
-            statMod_mana = myStatModifierOverrides->mana;
-            statMod_armor = myStatModifierOverrides->armor;
-            statMod_damage = myStatModifierOverrides->damage;
-            statMod_boss_global = myStatModifierOverrides->boss_global;
-        }
-        else
-        {
-            if (instanceMap->IsHeroic())
+            if (instanceMap->IsRaid())
             {
-                if (instanceMap->IsRaid())
+                switch (instanceMap->GetMaxPlayers())
                 {
-                    switch (instanceMap->GetMaxPlayers())
-                    {
-                        case 10:
-                            statMod_global = StatModifierRaid10MHeroic_Global;
-                            statMod_health = StatModifierRaid10MHeroic_Health;
-                            statMod_mana = StatModifierRaid10MHeroic_Mana;
-                            statMod_armor = StatModifierRaid10MHeroic_Armor;
-                            statMod_damage = StatModifierRaid10MHeroic_Damage;
-                            statMod_boss_global = StatModifierRaid10MHeroic_Boss_Global;
+                    case 10:
+                        statMod_global = StatModifierRaid10MHeroic_Global;
+                        statMod_health = StatModifierRaid10MHeroic_Health;
+                        statMod_mana = StatModifierRaid10MHeroic_Mana;
+                        statMod_armor = StatModifierRaid10MHeroic_Armor;
+                        statMod_damage = StatModifierRaid10MHeroic_Damage;
+                        statMod_boss_global = StatModifierRaid10MHeroic_Boss_Global;
 
-                            break;
-                        case 25:
-                            statMod_global = StatModifierRaid25MHeroic_Global;
-                            statMod_health = StatModifierRaid25MHeroic_Health;
-                            statMod_mana = StatModifierRaid25MHeroic_Mana;
-                            statMod_armor = StatModifierRaid25MHeroic_Armor;
-                            statMod_damage = StatModifierRaid25MHeroic_Damage;
-                            statMod_boss_global = StatModifierRaid25MHeroic_Boss_Global;
+                        break;
+                    case 25:
+                        statMod_global = StatModifierRaid25MHeroic_Global;
+                        statMod_health = StatModifierRaid25MHeroic_Health;
+                        statMod_mana = StatModifierRaid25MHeroic_Mana;
+                        statMod_armor = StatModifierRaid25MHeroic_Armor;
+                        statMod_damage = StatModifierRaid25MHeroic_Damage;
+                        statMod_boss_global = StatModifierRaid25MHeroic_Boss_Global;
 
-                            break;
-                        default:
-                            statMod_global = StatModifierRaidHeroic_Global;
-                            statMod_health = StatModifierRaidHeroic_Health;
-                            statMod_mana = StatModifierRaidHeroic_Mana;
-                            statMod_armor = StatModifierRaidHeroic_Armor;
-                            statMod_damage = StatModifierRaidHeroic_Damage;
-                            statMod_boss_global = StatModifierRaidHeroic_Boss_Global;
-                    }
-                }
-                else
-                {
-                    statMod_global = StatModifierHeroic_Global;
-                    statMod_health = StatModifierHeroic_Health;
-                    statMod_mana = StatModifierHeroic_Mana;
-                    statMod_armor = StatModifierHeroic_Armor;
-                    statMod_damage = StatModifierHeroic_Damage;
-                    statMod_boss_global = StatModifierHeroic_Boss_Global;
+                        break;
+                    default:
+                        statMod_global = StatModifierRaidHeroic_Global;
+                        statMod_health = StatModifierRaidHeroic_Health;
+                        statMod_mana = StatModifierRaidHeroic_Mana;
+                        statMod_armor = StatModifierRaidHeroic_Armor;
+                        statMod_damage = StatModifierRaidHeroic_Damage;
+                        statMod_boss_global = StatModifierRaidHeroic_Boss_Global;
                 }
             }
             else
             {
-                if (instanceMap->IsRaid())
+                statMod_global = StatModifierHeroic_Global;
+                statMod_health = StatModifierHeroic_Health;
+                statMod_mana = StatModifierHeroic_Mana;
+                statMod_armor = StatModifierHeroic_Armor;
+                statMod_damage = StatModifierHeroic_Damage;
+                statMod_boss_global = StatModifierHeroic_Boss_Global;
+            }
+        }
+        else
+        {
+            if (instanceMap->IsRaid())
+            {
+                switch (instanceMap->GetMaxPlayers())
                 {
-                    switch (instanceMap->GetMaxPlayers())
-                    {
-                        case 10:
-                            statMod_global = StatModifierRaid10M_Global;
-                            statMod_health = StatModifierRaid10M_Health;
-                            statMod_mana = StatModifierRaid10M_Mana;
-                            statMod_armor = StatModifierRaid10M_Armor;
-                            statMod_damage = StatModifierRaid10M_Damage;
-                            statMod_boss_global = StatModifierRaid10M_Boss_Global;
+                    case 10:
+                        statMod_global = StatModifierRaid10M_Global;
+                        statMod_health = StatModifierRaid10M_Health;
+                        statMod_mana = StatModifierRaid10M_Mana;
+                        statMod_armor = StatModifierRaid10M_Armor;
+                        statMod_damage = StatModifierRaid10M_Damage;
+                        statMod_boss_global = StatModifierRaid10M_Boss_Global;
 
-                            break;
-                        case 15:
-                            statMod_global = StatModifierRaid15M_Global;
-                            statMod_health = StatModifierRaid15M_Health;
-                            statMod_mana = StatModifierRaid15M_Mana;
-                            statMod_armor = StatModifierRaid15M_Armor;
-                            statMod_damage = StatModifierRaid15M_Damage;
-                            statMod_boss_global = StatModifierRaid15M_Boss_Global;
-                            break;
-                        case 20:
-                            statMod_global = StatModifierRaid20M_Global;
-                            statMod_health = StatModifierRaid20M_Health;
-                            statMod_mana = StatModifierRaid20M_Mana;
-                            statMod_armor = StatModifierRaid20M_Armor;
-                            statMod_damage = StatModifierRaid20M_Damage;
-                            statMod_boss_global = StatModifierRaid20M_Boss_Global;
-                            break;
-                        case 25:
-                            statMod_global = StatModifierRaid25M_Global;
-                            statMod_health = StatModifierRaid25M_Health;
-                            statMod_mana = StatModifierRaid25M_Mana;
-                            statMod_armor = StatModifierRaid25M_Armor;
-                            statMod_damage = StatModifierRaid25M_Damage;
-                            statMod_boss_global = StatModifierRaid25M_Boss_Global;
-                            break;
-                        case 40:
-                            statMod_global = StatModifierRaid40M_Global;
-                            statMod_health = StatModifierRaid40M_Health;
-                            statMod_mana = StatModifierRaid40M_Mana;
-                            statMod_armor = StatModifierRaid40M_Armor;
-                            statMod_damage = StatModifierRaid40M_Damage;
-                            statMod_boss_global = StatModifierRaid40M_Boss_Global;
-                            break;
-                        default:
-                            statMod_global = StatModifierRaid_Global;
-                            statMod_health = StatModifierRaid_Health;
-                            statMod_mana = StatModifierRaid_Mana;
-                            statMod_armor = StatModifierRaid_Armor;
-                            statMod_damage = StatModifierRaid_Damage;
-                            statMod_boss_global = StatModifierRaid_Boss_Global;
-                    }
-                }
-                else
-                {
-                    statMod_global = StatModifier_Global;
-                    statMod_health = StatModifier_Health;
-                    statMod_mana = StatModifier_Mana;
-                    statMod_armor = StatModifier_Armor;
-                    statMod_damage = StatModifier_Damage;
-                    statMod_boss_global = StatModifier_Boss_Global;
+                        break;
+                    case 15:
+                        statMod_global = StatModifierRaid15M_Global;
+                        statMod_health = StatModifierRaid15M_Health;
+                        statMod_mana = StatModifierRaid15M_Mana;
+                        statMod_armor = StatModifierRaid15M_Armor;
+                        statMod_damage = StatModifierRaid15M_Damage;
+                        statMod_boss_global = StatModifierRaid15M_Boss_Global;
+                        break;
+                    case 20:
+                        statMod_global = StatModifierRaid20M_Global;
+                        statMod_health = StatModifierRaid20M_Health;
+                        statMod_mana = StatModifierRaid20M_Mana;
+                        statMod_armor = StatModifierRaid20M_Armor;
+                        statMod_damage = StatModifierRaid20M_Damage;
+                        statMod_boss_global = StatModifierRaid20M_Boss_Global;
+                        break;
+                    case 25:
+                        statMod_global = StatModifierRaid25M_Global;
+                        statMod_health = StatModifierRaid25M_Health;
+                        statMod_mana = StatModifierRaid25M_Mana;
+                        statMod_armor = StatModifierRaid25M_Armor;
+                        statMod_damage = StatModifierRaid25M_Damage;
+                        statMod_boss_global = StatModifierRaid25M_Boss_Global;
+                        break;
+                    case 40:
+                        statMod_global = StatModifierRaid40M_Global;
+                        statMod_health = StatModifierRaid40M_Health;
+                        statMod_mana = StatModifierRaid40M_Mana;
+                        statMod_armor = StatModifierRaid40M_Armor;
+                        statMod_damage = StatModifierRaid40M_Damage;
+                        statMod_boss_global = StatModifierRaid40M_Boss_Global;
+                        break;
+                    default:
+                        statMod_global = StatModifierRaid_Global;
+                        statMod_health = StatModifierRaid_Health;
+                        statMod_mana = StatModifierRaid_Mana;
+                        statMod_armor = StatModifierRaid_Armor;
+                        statMod_damage = StatModifierRaid_Damage;
+                        statMod_boss_global = StatModifierRaid_Boss_Global;
                 }
             }
+            else
+            {
+                statMod_global = StatModifier_Global;
+                statMod_health = StatModifier_Health;
+                statMod_mana = StatModifier_Mana;
+                statMod_armor = StatModifier_Armor;
+                statMod_damage = StatModifier_Damage;
+                statMod_boss_global = StatModifier_Boss_Global;
+            }
+        }
+
+        // Per map ID overrides replace the above settings, if set
+        if (hasStatModifierOverride(mapId))
+        {
+            AutoBalanceStatModifiers* myStatModifierOverrides = &statModifierOverrides[mapId];
+
+            if (myStatModifierOverrides->global > 0)      {statMod_global =      myStatModifierOverrides->global;     }
+            if (myStatModifierOverrides->health > 0)      {statMod_health =      myStatModifierOverrides->health;     }
+            if (myStatModifierOverrides->mana > 0)        {statMod_mana =        myStatModifierOverrides->mana;       }
+            if (myStatModifierOverrides->armor > 0)       {statMod_armor =       myStatModifierOverrides->armor;      }
+            if (myStatModifierOverrides->damage > 0)      {statMod_damage =      myStatModifierOverrides->damage;     }
+            if (myStatModifierOverrides->boss_global > 0) {statMod_boss_global = myStatModifierOverrides->boss_global;}
         }
 
         if (creatureABInfo->instancePlayerCount >= maxNumberOfPlayers)
