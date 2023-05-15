@@ -202,12 +202,12 @@ AutoBalance.PerDungeonBossScaling=""
 
 
 ### 5-player dungeons
-AutoBalance.StatModifier.Global=0.5
+AutoBalance.StatModifier.Global=1.0
 AutoBalance.StatModifier.Health=1.0
 AutoBalance.StatModifier.Mana=1.0
 AutoBalance.StatModifier.Armor=1.0
 AutoBalance.StatModifier.Damage=1.0
-AutoBalance.StatModifier.Boss.Global=1.5
+AutoBalance.StatModifier.Boss.Global=1.0
 
 ### 5-player heroic dungeons
 AutoBalance.StatModifierHeroic.Global=1.0
@@ -345,7 +345,7 @@ AutoBalance.ForcedID2=""
 #     AutoBalance.DisabledID
 #        Disable scaling on specific creatures
 #
-AutoBalance.DisabledID=""
+AutoBalance.DisabledID="6867"
 
 ##########################
 #
