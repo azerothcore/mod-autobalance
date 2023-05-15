@@ -43,6 +43,7 @@
 #include "AutoBalance.h"
 #include "ScriptMgrMacros.h"
 #include "Group.h"
+#include "Log.h"
 
 #if AC_COMPILER == AC_COMPILER_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -143,8 +144,9 @@ static std::map<uint32, float> bossOverrides;
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool enabled, LevelEndGameBoost, DungeonsOnly, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, DungeonScaleDownMoney;
-static float globalRate, healthMultiplier, manaMultiplier, armorMultiplier, damageMultiplier, MinHPModifier, MinManaModifier, MinDamageModifier;
+static float MinHPModifier, MinManaModifier, MinDamageModifier;
 
+// InflectionPoint*
 static float InflectionPoint, InflectionPointCurveFloor, InflectionPointCurveCeiling, InflectionPointBoss;
 static float InflectionPointHeroic, InflectionPointHeroicCurveFloor, InflectionPointHeroicCurveCeiling, InflectionPointHeroicBoss;
 static float InflectionPointRaid, InflectionPointRaidCurveFloor, InflectionPointRaidCurveCeiling, InflectionPointRaidBoss;
@@ -157,6 +159,22 @@ static float InflectionPointRaid20M, InflectionPointRaid20MCurveFloor, Inflectio
 static float InflectionPointRaid25M, InflectionPointRaid25MCurveFloor, InflectionPointRaid25MCurveCeiling, InflectionPointRaid25MBoss;
 static float InflectionPointRaid25MHeroic, InflectionPointRaid25MHeroicCurveFloor, InflectionPointRaid25MHeroicCurveCeiling, InflectionPointRaid25MHeroicBoss;
 static float InflectionPointRaid40M, InflectionPointRaid40MCurveFloor, InflectionPointRaid40MCurveCeiling, InflectionPointRaid40MBoss;
+
+// StatModifier*
+static float StatModifier_Global, StatModifier_Health, StatModifier_Mana, StatModifier_Armor, StatModifier_Damage, StatModifier_Boss_Global;
+static float StatModifierHeroic_Global, StatModifierHeroic_Health, StatModifierHeroic_Mana, StatModifierHeroic_Armor, StatModifierHeroic_Damage, StatModifierHeroic_Boss_Global;
+static float StatModifierRaid_Global, StatModifierRaid_Health, StatModifierRaid_Mana, StatModifierRaid_Armor, StatModifierRaid_Damage, StatModifierRaid_Boss_Global;
+static float StatModifierRaidHeroic_Global, StatModifierRaidHeroic_Health, StatModifierRaidHeroic_Mana, StatModifierRaidHeroic_Armor, StatModifierRaidHeroic_Damage, StatModifierRaidHeroic_Boss_Global;
+
+static float StatModifierRaid10M_Global, StatModifierRaid10M_Health, StatModifierRaid10M_Mana, StatModifierRaid10M_Armor, StatModifierRaid10M_Damage, StatModifierRaid10M_Boss_Global;
+static float StatModifierRaid10MHeroic_Global, StatModifierRaid10MHeroic_Health, StatModifierRaid10MHeroic_Mana, StatModifierRaid10MHeroic_Armor, StatModifierRaid10MHeroic_Damage, StatModifierRaid10MHeroic_Boss_Global;
+static float StatModifierRaid15M_Global, StatModifierRaid15M_Health, StatModifierRaid15M_Mana, StatModifierRaid15M_Armor, StatModifierRaid15M_Damage, StatModifierRaid15M_Boss_Global;
+static float StatModifierRaid20M_Global, StatModifierRaid20M_Health, StatModifierRaid20M_Mana, StatModifierRaid20M_Armor, StatModifierRaid20M_Damage, StatModifierRaid20M_Boss_Global;
+static float StatModifierRaid25M_Global, StatModifierRaid25M_Health, StatModifierRaid25M_Mana, StatModifierRaid25M_Armor, StatModifierRaid25M_Damage, StatModifierRaid25M_Boss_Global;
+static float StatModifierRaid25MHeroic_Global, StatModifierRaid25MHeroic_Health, StatModifierRaid25MHeroic_Mana, StatModifierRaid25MHeroic_Armor, StatModifierRaid25MHeroic_Damage, StatModifierRaid25MHeroic_Boss_Global;
+static float StatModifierRaid40M_Global, StatModifierRaid40M_Health, StatModifierRaid40M_Mana, StatModifierRaid40M_Armor, StatModifierRaid40M_Damage, StatModifierRaid40M_Boss_Global;
+
+
 
 
 int GetValidDebugLevel()
@@ -334,66 +352,157 @@ class AutoBalance_WorldScript : public WorldScript
         rewardDungeon = sConfigMgr->GetOption<uint32>("AutoBalance.reward.dungeonToken", 47241);
         MinPlayerReward = sConfigMgr->GetOption<float>("AutoBalance.reward.MinPlayerReward", 1);
 
-        InflectionPoint = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint", 0.5f);
-        InflectionPointCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveFloor", 0.0f);
-        InflectionPointCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveCeiling", 1.0f);
-        InflectionPointBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+        // AutoBalance.InflectionPoint*
+        // warn the console if deprecated values are detected
+        if (sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.BossInflectionMult` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
 
-        InflectionPointHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic", 0.5f);
-        InflectionPointHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveFloor", 0.0f);
-        InflectionPointHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveCeiling", 1.0f);
-        InflectionPointHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+        InflectionPoint =                           sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint", 0.5f);
+        InflectionPointCurveFloor =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveFloor", 0.0f);
+        InflectionPointCurveCeiling =               sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveCeiling", 1.0f);
+        InflectionPointBoss =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwards compatibility
 
-        InflectionPointRaid = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid", 0.5f);
-        InflectionPointRaidCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveFloor", 0.0f);
-        InflectionPointRaidCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveCeiling", 1.0f);
-        InflectionPointRaidBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+        InflectionPointHeroic =                     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic", 0.5f);
+        InflectionPointHeroicCurveFloor =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveFloor", 0.0f);
+        InflectionPointHeroicCurveCeiling =         sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveCeiling", 1.0f);
+        InflectionPointHeroicBoss =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwards compatibility
 
-        InflectionPointRaidHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic", 0.5f);
-        InflectionPointRaidHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveFloor", 0.0f);
-        InflectionPointRaidHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveCeiling", 1.0f);
-        InflectionPointRaidHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwads compatibility
+        InflectionPointRaid =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid", 0.5f);
+        InflectionPointRaidCurveFloor =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveFloor", 0.0f);
+        InflectionPointRaidCurveCeiling =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveCeiling", 1.0f);
+        InflectionPointRaidBoss =                   sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwards compatibility
 
-        InflectionPointRaid10M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M", InflectionPointRaid, false);
-        InflectionPointRaid10MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveFloor", InflectionPointRaidCurveFloor, false);
-        InflectionPointRaid10MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
-        InflectionPointRaid10MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.BossModifier", InflectionPointRaidBoss, false);
+        InflectionPointRaidHeroic =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic", 0.5f);
+        InflectionPointRaidHeroicCurveFloor =       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveFloor", 0.0f);
+        InflectionPointRaidHeroicCurveCeiling =     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveCeiling", 1.0f);
+        InflectionPointRaidHeroicBoss =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.BossModifier", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false)); // `AutoBalance.BossInflectionMult` for backwards compatibility
 
-        InflectionPointRaid10MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic", InflectionPointRaidHeroic, false);
-        InflectionPointRaid10MHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveFloor", InflectionPointRaidHeroicCurveFloor, false);
-        InflectionPointRaid10MHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling", InflectionPointRaidHeroicCurveCeiling, false);
-        InflectionPointRaid10MHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.BossModifier", InflectionPointRaidHeroicBoss, false);
+        InflectionPointRaid10M =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M", InflectionPointRaid, false);
+        InflectionPointRaid10MCurveFloor =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid10MCurveCeiling =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid10MBoss =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.BossModifier", InflectionPointRaidBoss, false);
 
-        InflectionPointRaid15M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M", InflectionPointRaid, false);
-        InflectionPointRaid15MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveFloor", InflectionPointRaidCurveFloor, false);
-        InflectionPointRaid15MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
-        InflectionPointRaid15MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.BossModifier", InflectionPointRaidBoss, false);
+        InflectionPointRaid10MHeroic =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic", InflectionPointRaidHeroic, false);
+        InflectionPointRaid10MHeroicCurveFloor =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveFloor", InflectionPointRaidHeroicCurveFloor, false);
+        InflectionPointRaid10MHeroicCurveCeiling =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling", InflectionPointRaidHeroicCurveCeiling, false);
+        InflectionPointRaid10MHeroicBoss =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.BossModifier", InflectionPointRaidHeroicBoss, false);
 
-        InflectionPointRaid20M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M", InflectionPointRaid, false);
-        InflectionPointRaid20MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveFloor", InflectionPointRaidCurveFloor, false);
-        InflectionPointRaid20MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
-        InflectionPointRaid20MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.BossModifier", InflectionPointRaidBoss, false);
+        InflectionPointRaid15M =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M", InflectionPointRaid, false);
+        InflectionPointRaid15MCurveFloor =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid15MCurveCeiling =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid15MBoss =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.BossModifier", InflectionPointRaidBoss, false);
 
-        InflectionPointRaid25M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M", InflectionPointRaid, false);
-        InflectionPointRaid25MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveFloor", InflectionPointRaidCurveFloor, false);
-        InflectionPointRaid25MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
-        InflectionPointRaid25MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.BossModifier", InflectionPointRaidBoss, false);
+        InflectionPointRaid20M =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M", InflectionPointRaid, false);
+        InflectionPointRaid20MCurveFloor =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid20MCurveCeiling =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid20MBoss =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.BossModifier", InflectionPointRaidBoss, false);
 
-        InflectionPointRaid25MHeroic = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaidHeroic, false);
-        InflectionPointRaid25MHeroicCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveFloor", InflectionPointRaidHeroicCurveFloor, false);
-        InflectionPointRaid25MHeroicCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling", InflectionPointRaidHeroicCurveCeiling, false);
-        InflectionPointRaid25MHeroicBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.BossModifier", InflectionPointRaidHeroicBoss, false);
+        InflectionPointRaid25M =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M", InflectionPointRaid, false);
+        InflectionPointRaid25MCurveFloor =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid25MCurveCeiling =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid25MBoss =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.BossModifier", InflectionPointRaidBoss, false);
 
-        InflectionPointRaid40M = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M", InflectionPointRaid, false);
-        InflectionPointRaid40MCurveFloor = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveFloor", InflectionPointRaidCurveFloor, false);
-        InflectionPointRaid40MCurveCeiling = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
-        InflectionPointRaid40MBoss = sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.BossModifier", InflectionPointRaidBoss, false);
+        InflectionPointRaid25MHeroic =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic", InflectionPointRaidHeroic, false);
+        InflectionPointRaid25MHeroicCurveFloor =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveFloor", InflectionPointRaidHeroicCurveFloor, false);
+        InflectionPointRaid25MHeroicCurveCeiling =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling", InflectionPointRaidHeroicCurveCeiling, false);
+        InflectionPointRaid25MHeroicBoss =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.BossModifier", InflectionPointRaidHeroicBoss, false);
 
-        globalRate = sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f);
-        healthMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f);
-        manaMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f);
-        armorMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f);
-        damageMultiplier = sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f);
+        InflectionPointRaid40M =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M", InflectionPointRaid, false);
+        InflectionPointRaid40MCurveFloor =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveFloor", InflectionPointRaidCurveFloor, false);
+        InflectionPointRaid40MCurveCeiling =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveCeiling", InflectionPointRaidCurveCeiling, false);
+        InflectionPointRaid40MBoss =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.BossModifier", InflectionPointRaidBoss, false);
+
+        // AutoBalance.StatModifier*
+        // warn the console if deprecated values are detected
+        if (sConfigMgr->GetOption<float>("AutoBalance.rate.global", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.rate.global` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+        if (sConfigMgr->GetOption<float>("AutoBalance.rate.health", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.rate.health` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+        if (sConfigMgr->GetOption<float>("AutoBalance.rate.mana", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.rate.mana` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+        if (sConfigMgr->GetOption<float>("AutoBalance.rate.armor", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.rate.armor` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+        if (sConfigMgr->GetOption<float>("AutoBalance.rate.damage", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.rate.damage` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+
+        StatModifier_Global =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_Health =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_Mana =                         sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_Armor =                        sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_Damage =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifier_Boss_Global =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.Global", 1.0f);
+
+        StatModifierHeroic_Global =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_Health =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_Mana =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_Armor =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_Damage =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierHeroic_Boss_Global =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.Global", 1.0f);
+
+        StatModifierRaid_Global =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_Health =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_Mana =                     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_Armor =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_Damage =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaid_Boss_Global =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.Global", 1.0f);
+
+        StatModifierRaidHeroic_Global =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_Health =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_Mana =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_Armor =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_Damage =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaidHeroic_Boss_Global =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.Global", 1.0f);
+
+        StatModifierRaid10M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Global", 1.0f, false);
+        StatModifierRaid10M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Health", 1.0f, false);
+        StatModifierRaid10M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Mana", 1.0f, false);
+        StatModifierRaid10M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Armor", 1.0f, false);
+        StatModifierRaid10M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Damage", 1.0f, false);
+        StatModifierRaid10M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.Global", 1.0f, false);
+
+        StatModifierRaid10MHeroic_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Global", 1.0f, false);
+        StatModifierRaid10MHeroic_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Health", 1.0f, false);
+        StatModifierRaid10MHeroic_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Mana", 1.0f, false);
+        StatModifierRaid10MHeroic_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Armor", 1.0f, false);
+        StatModifierRaid10MHeroic_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Damage", 1.0f, false);
+        StatModifierRaid10MHeroic_Boss_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.Global", 1.0f, false);
+
+        StatModifierRaid15M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Global", 1.0f, false);
+        StatModifierRaid15M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Health", 1.0f, false);
+        StatModifierRaid15M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Mana", 1.0f, false);
+        StatModifierRaid15M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Armor", 1.0f, false);
+        StatModifierRaid15M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Damage", 1.0f, false);
+        StatModifierRaid15M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.Global", 1.0f, false);
+
+        StatModifierRaid20M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Global", 1.0f, false);
+        StatModifierRaid20M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Health", 1.0f, false);
+        StatModifierRaid20M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Mana", 1.0f, false);
+        StatModifierRaid20M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Armor", 1.0f, false);
+        StatModifierRaid20M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Damage", 1.0f, false);
+        StatModifierRaid20M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.Global", 1.0f, false);
+
+        StatModifierRaid25M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Global", 1.0f, false);
+        StatModifierRaid25M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Health", 1.0f, false);
+        StatModifierRaid25M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Mana", 1.0f, false);
+        StatModifierRaid25M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Armor", 1.0f, false);
+        StatModifierRaid25M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Damage", 1.0f, false);
+        StatModifierRaid25M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.Global", 1.0f, false);
+
+        StatModifierRaid25MHeroic_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Global", 1.0f, false);
+        StatModifierRaid25MHeroic_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Health", 1.0f, false);
+        StatModifierRaid25MHeroic_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Mana", 1.0f, false);
+        StatModifierRaid25MHeroic_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Armor", 1.0f, false);
+        StatModifierRaid25MHeroic_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Damage", 1.0f, false);
+        StatModifierRaid25MHeroic_Boss_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.Global", 1.0f, false);
+
+        StatModifierRaid40M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Global", 1.0f, false);
+        StatModifierRaid40M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Health", 1.0f, false);
+        StatModifierRaid40M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Mana", 1.0f, false);
+        StatModifierRaid40M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Armor", 1.0f, false);
+        StatModifierRaid40M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Damage", 1.0f, false);
+        StatModifierRaid40M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Global", 1.0f, false);
+
+        // Modifier Minimums
         MinHPModifier = sConfigMgr->GetOption<float>("AutoBalance.MinHPModifier", 0.1f);
         MinManaModifier = sConfigMgr->GetOption<float>("AutoBalance.MinManaModifier", 0.01f);
         MinDamageModifier = sConfigMgr->GetOption<float>("AutoBalance.MinDamageModifier", 0.01f);
@@ -810,10 +919,17 @@ public:
         //       curveFloor and curveCeiling squishes the curve by adjusting the curve start and end points.
         //       This allows for better control over high and low player count scaling.
 
-        float defaultMultiplier = 1.0f;
-        float curveFloor = 0.0f;
-        float curveCeiling = 1.0f;
-        float bossMultiplier = 1.0f;
+        float defaultMultiplier =        1.0f;
+        float curveFloor =               0.0f;
+        float curveCeiling =             1.0f;
+        float bossInflectionMultiplier = 1.0f;
+
+        float statMod_global =      1.0f;
+        float statMod_health =      1.0f;
+        float statMod_mana =        1.0f;
+        float statMod_armor =       1.0f;
+        float statMod_damage =      1.0f;
+        float statMod_boss_global = 1.0f;
 
         float inflectionValue  = (float)maxNumberOfPlayers;
         if (hasDungeonOverride(mapId))
@@ -832,19 +948,42 @@ public:
                             inflectionValue *= InflectionPointRaid10MHeroic;
                             curveFloor = InflectionPointRaid10MHeroicCurveFloor;
                             curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
-                            bossMultiplier = InflectionPointRaid10MHeroicBoss;
+                            bossInflectionMultiplier = InflectionPointRaid10MHeroicBoss;
+
+                            statMod_global = StatModifierRaid10MHeroic_Global;
+                            statMod_health = StatModifierRaid10MHeroic_Health;
+                            statMod_mana = StatModifierRaid10MHeroic_Mana;
+                            statMod_armor = StatModifierRaid10MHeroic_Armor;
+                            statMod_damage = StatModifierRaid10MHeroic_Damage;
+                            statMod_boss_global = StatModifierRaid10MHeroic_Boss_Global;
+
                             break;
                         case 25:
                             inflectionValue *= InflectionPointRaid25MHeroic;
                             curveFloor = InflectionPointRaid25MHeroicCurveFloor;
                             curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
-                            bossMultiplier = InflectionPointRaid25MHeroicBoss;
+                            bossInflectionMultiplier = InflectionPointRaid25MHeroicBoss;
+
+                            statMod_global = StatModifierRaid25MHeroic_Global;
+                            statMod_health = StatModifierRaid25MHeroic_Health;
+                            statMod_mana = StatModifierRaid25MHeroic_Mana;
+                            statMod_armor = StatModifierRaid25MHeroic_Armor;
+                            statMod_damage = StatModifierRaid25MHeroic_Damage;
+                            statMod_boss_global = StatModifierRaid25MHeroic_Boss_Global;
+
                             break;
                         default:
                             inflectionValue *= InflectionPointRaidHeroic;
                             curveFloor = InflectionPointRaidHeroicCurveFloor;
                             curveCeiling = InflectionPointRaidHeroicCurveCeiling;
-                            bossMultiplier = InflectionPointRaidHeroicBoss;
+                            bossInflectionMultiplier = InflectionPointRaidHeroicBoss;
+
+                            statMod_global = StatModifierRaidHeroic_Global;
+                            statMod_health = StatModifierRaidHeroic_Health;
+                            statMod_mana = StatModifierRaidHeroic_Mana;
+                            statMod_armor = StatModifierRaidHeroic_Armor;
+                            statMod_damage = StatModifierRaidHeroic_Damage;
+                            statMod_boss_global = StatModifierRaidHeroic_Boss_Global;
                     }
                 }
                 else
@@ -852,7 +991,14 @@ public:
                     inflectionValue *= InflectionPointHeroic;
                     curveFloor = InflectionPointHeroicCurveFloor;
                     curveCeiling = InflectionPointHeroicCurveCeiling;
-                    bossMultiplier = InflectionPointHeroicBoss;
+                    bossInflectionMultiplier = InflectionPointHeroicBoss;
+
+                    statMod_global = StatModifierHeroic_Global;
+                    statMod_health = StatModifierHeroic_Health;
+                    statMod_mana = StatModifierHeroic_Mana;
+                    statMod_armor = StatModifierHeroic_Armor;
+                    statMod_damage = StatModifierHeroic_Damage;
+                    statMod_boss_global = StatModifierHeroic_Boss_Global;
                 }
             }
             else
@@ -865,37 +1011,84 @@ public:
                             inflectionValue *= InflectionPointRaid10M;
                             curveFloor = InflectionPointRaid10MCurveFloor;
                             curveCeiling = InflectionPointRaid10MCurveCeiling;
-                            bossMultiplier = InflectionPointRaid10MBoss;
+                            bossInflectionMultiplier = InflectionPointRaid10MBoss;
+
+                            statMod_global = StatModifierRaid10M_Global;
+                            statMod_health = StatModifierRaid10M_Health;
+                            statMod_mana = StatModifierRaid10M_Mana;
+                            statMod_armor = StatModifierRaid10M_Armor;
+                            statMod_damage = StatModifierRaid10M_Damage;
+                            statMod_boss_global = StatModifierRaid10M_Boss_Global;
+
                             break;
                         case 15:
                             inflectionValue *= InflectionPointRaid15M;
                             curveFloor = InflectionPointRaid15MCurveFloor;
                             curveCeiling = InflectionPointRaid15MCurveCeiling;
-                            bossMultiplier = InflectionPointRaid15MBoss;
+                            bossInflectionMultiplier = InflectionPointRaid15MBoss;
+
+                            statMod_global = StatModifierRaid15M_Global;
+                            statMod_health = StatModifierRaid15M_Health;
+                            statMod_mana = StatModifierRaid15M_Mana;
+                            statMod_armor = StatModifierRaid15M_Armor;
+                            statMod_damage = StatModifierRaid15M_Damage;
+                            statMod_boss_global = StatModifierRaid15M_Boss_Global;
+
                             break;
                         case 20:
                             inflectionValue *= InflectionPointRaid20M;
                             curveFloor = InflectionPointRaid20MCurveFloor;
                             curveCeiling = InflectionPointRaid20MCurveCeiling;
-                            bossMultiplier = InflectionPointRaid20MBoss;
+                            bossInflectionMultiplier = InflectionPointRaid20MBoss;
+
+                            statMod_global = StatModifierRaid20M_Global;
+                            statMod_health = StatModifierRaid20M_Health;
+                            statMod_mana = StatModifierRaid20M_Mana;
+                            statMod_armor = StatModifierRaid20M_Armor;
+                            statMod_damage = StatModifierRaid20M_Damage;
+                            statMod_boss_global = StatModifierRaid20M_Boss_Global;
+
                             break;
                         case 25:
                             inflectionValue *= InflectionPointRaid25M;
                             curveFloor = InflectionPointRaid25MCurveFloor;
                             curveCeiling = InflectionPointRaid25MCurveCeiling;
-                            bossMultiplier = InflectionPointRaid25MBoss;
+                            bossInflectionMultiplier = InflectionPointRaid25MBoss;
+
+                            statMod_global = StatModifierRaid25M_Global;
+                            statMod_health = StatModifierRaid25M_Health;
+                            statMod_mana = StatModifierRaid25M_Mana;
+                            statMod_armor = StatModifierRaid25M_Armor;
+                            statMod_damage = StatModifierRaid25M_Damage;
+                            statMod_boss_global = StatModifierRaid25M_Boss_Global;
+
                             break;
                         case 40:
                             inflectionValue *= InflectionPointRaid40M;
                             curveFloor = InflectionPointRaid40MCurveFloor;
                             curveCeiling = InflectionPointRaid40MCurveCeiling;
-                            bossMultiplier = InflectionPointRaid40MBoss;
+                            bossInflectionMultiplier = InflectionPointRaid40MBoss;
+
+                            statMod_global = StatModifierRaid40M_Global;
+                            statMod_health = StatModifierRaid40M_Health;
+                            statMod_mana = StatModifierRaid40M_Mana;
+                            statMod_armor = StatModifierRaid40M_Armor;
+                            statMod_damage = StatModifierRaid40M_Damage;
+                            statMod_boss_global = StatModifierRaid40M_Boss_Global;
+
                             break;
                         default:
                             inflectionValue *= InflectionPointRaid;
                             curveFloor = InflectionPointRaidCurveFloor;
                             curveCeiling = InflectionPointRaidCurveCeiling;
-                            bossMultiplier = InflectionPointRaidBoss;
+                            bossInflectionMultiplier = InflectionPointRaidBoss;
+
+                            statMod_global = StatModifierRaid_Global;
+                            statMod_health = StatModifierRaid_Health;
+                            statMod_mana = StatModifierRaid_Mana;
+                            statMod_armor = StatModifierRaid_Armor;
+                            statMod_damage = StatModifierRaid_Damage;
+                            statMod_boss_global = StatModifierRaid_Boss_Global;
                     }
                 }
                 else
@@ -903,7 +1096,14 @@ public:
                     inflectionValue *= InflectionPoint;
                     curveFloor = InflectionPointCurveFloor;
                     curveCeiling = InflectionPointCurveCeiling;
-                    bossMultiplier = InflectionPointBoss;
+                    bossInflectionMultiplier = InflectionPointBoss;
+
+                    statMod_global = StatModifier_Global;
+                    statMod_health = StatModifier_Health;
+                    statMod_mana = StatModifier_Mana;
+                    statMod_armor = StatModifier_Armor;
+                    statMod_damage = StatModifier_Damage;
+                    statMod_boss_global = StatModifier_Boss_Global;
                 }
             }
         }
@@ -916,6 +1116,7 @@ public:
         else
         // Less than full instance, adjust accordingly
         {
+            // If this is a boss, adjust the inflection value accordingly
             if (creature->IsDungeonBoss()) {
                 if (hasBossOverride(mapId))
                 {
@@ -923,7 +1124,7 @@ public:
                 }
                 else
                 {
-                    inflectionValue *= bossMultiplier;
+                    inflectionValue *= bossInflectionMultiplier;
                 }
             }
 
@@ -937,7 +1138,15 @@ public:
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
 
-        creatureABInfo->HealthMultiplier =   healthMultiplier * defaultMultiplier * globalRate;
+        // If this is a boss, adjust the statMod global rate accordingly
+        if (creature->IsDungeonBoss())
+            statMod_global *= statMod_boss_global;
+
+        //
+        //  Health Scaling
+        //
+
+        creatureABInfo->HealthMultiplier = defaultMultiplier * statMod_global * statMod_health;
 
         if (creatureABInfo->HealthMultiplier <= MinHPModifier)
         {
@@ -979,13 +1188,16 @@ public:
         //Getting the list of Classes in this group - this will be used later on to determine what additional scaling will be required based on the ratio of tank/dps/healer
         //GetPlayerClassList(creature, playerClassList); // Update playerClassList with the list of all the participating Classes
 
+        //
+        //  Mana Scaling
+        //
         float manaStatsRate  = 1.0f;
         if (!useDefStats && LevelScaling && !skipLevel) {
             float newMana =  creatureStats->GenerateMana(creatureTemplate);
             manaStatsRate = newMana/float(baseMana);
         }
 
-        creatureABInfo->ManaMultiplier =  manaStatsRate * manaMultiplier * defaultMultiplier * globalRate;
+        creatureABInfo->ManaMultiplier =  defaultMultiplier * manaStatsRate * statMod_global * statMod_mana;
 
         if (creatureABInfo->ManaMultiplier <= MinManaModifier)
         {
@@ -994,7 +1206,16 @@ public:
 
         scaledMana = round(baseMana * creatureABInfo->ManaMultiplier);
 
-        float damageMul = defaultMultiplier * globalRate * damageMultiplier;
+        //
+        //  Armor Scaling
+        //
+        creatureABInfo->ArmorMultiplier = defaultMultiplier * statMod_global * statMod_armor;
+        uint32 newBaseArmor= round(creatureABInfo->ArmorMultiplier * (useDefStats || !LevelScaling || skipLevel ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)));
+
+        //
+        //  Damage Scaling
+        //
+        float damageMul = defaultMultiplier * statMod_global * statMod_damage;
 
         // Can not be less then Min_D_Mod
         if (damageMul <= MinDamageModifier)
@@ -1020,9 +1241,9 @@ public:
             damageMul *= newDmgBase/origDmgBase;
         }
 
-        creatureABInfo->ArmorMultiplier = defaultMultiplier * globalRate * armorMultiplier;
-        uint32 newBaseArmor= round(creatureABInfo->ArmorMultiplier * (useDefStats || !LevelScaling || skipLevel ? origCreatureStats->GenerateArmor(creatureTemplate) : creatureStats->GenerateArmor(creatureTemplate)));
-
+        //
+        //  Apply New Values
+        //
         if (!sABScriptMgr->OnBeforeUpdateStats(creature, scaledHealth, scaledMana, damageMul, newBaseArmor))
             return;
 

@@ -168,23 +168,131 @@ AutoBalance.PerDungeonScaling=""
 #        To disable, leave empty. This is the default setting.
 AutoBalance.PerDungeonBossScaling=""
 
-#     AutoBalance.rate.*
-#        Rate that is applied just before the multiplier is used on enemies. Allows you to linearly shift the curve up or
-#        down to increase or decrease a particualar stat.
+#     AutoBalance.StatModifier* series
+#        The difficulty curve (as defined by the InflectionPoint settings) determines the base multiplier. The base
+#        multiplier is then adjusted (multiplied) by the appropriate StatModifier setting. This allows you to control
+#        the balance of how scaling affects the four adjustable stats: health, mana, armor, and damage.
 #
-#        Note that global rate will increase all other rates. If global=2.0 and damage=1.5, damage will be multiplied by 3.0.
+#        To see this in action, change the `StatModifier` value on the spreadsheet:
+#        https://docs.google.com/spreadsheets/d/100cmKIJIjCZ-ncWd0K9ykO8KUgwFTcwg4h2nfE_UeCc/copy
 #
-#        Example: With AutoBalance.rate.health=1.0, an enemy has 1000 health after scaling.
-#                 With AutoBalance.rate.health=1.5, an enemy has 1500 health after scaling and rate adjustment.
+#        To use it, copy the sheet to your own Google Drive and edit the values on the left with the yellow background.
+#        The "Final Multiplier" value is the actual multiplier that will be applied to enemies in a given dungeon.
 #
-#        Consult the interactive spreadsheet for more examples.
+#        Global
+#           Multiply the other four settings by this value. Allows you to increase all the stats (health, mana, armor, 
+#           damage) with a single adjustment. Both the global value and the stat-specific value are used at the same time.
 #
-#        Default:     1.0
-AutoBalance.rate.global = 1.0
-AutoBalance.rate.health = 1.0
-AutoBalance.rate.mana   = 1.0
-AutoBalance.rate.armor  = 1.0
-AutoBalance.rate.damage = 1.0
+#           Example: If "Global" is 0.5, and "Health" is 1.5, the health of the creature will be multiplied by 0.75 of 
+#                    its value (after adjusting for the number of players).
+#
+#           Default: 1.0
+#
+#        Health | Mana | Armor | Damage
+#           Adjusts the StatModifier for the appropriate stat. Affected by the Global StatModifier above.
+#
+#           Default: 1.0
+#
+#        Boss.Global
+#           Further adjusts the multiplier of bosses for all stats. Only applies to creatures considered dungeon bosses (from dungeons or raids).
+#
+#           To better understand this effect, see the interactive spreadsheet.
+#
+#           Default: 1.0
+
+
+### 5-player dungeons
+AutoBalance.StatModifier.Global=0.5
+AutoBalance.StatModifier.Health=1.0
+AutoBalance.StatModifier.Mana=1.0
+AutoBalance.StatModifier.Armor=1.0
+AutoBalance.StatModifier.Damage=1.0
+AutoBalance.StatModifier.Boss.Global=1.5
+
+### 5-player heroic dungeons
+AutoBalance.StatModifierHeroic.Global=1.0
+AutoBalance.StatModifierHeroic.Health=1.0
+AutoBalance.StatModifierHeroic.Mana=1.0
+AutoBalance.StatModifierHeroic.Armor=1.0
+AutoBalance.StatModifierHeroic.Damage=1.0
+AutoBalance.StatModifierHeroic.Boss.Global=1.0
+
+### Default for all raids
+AutoBalance.StatModifierRaid.Global=1.0
+AutoBalance.StatModifierRaid.Health=1.0
+AutoBalance.StatModifierRaid.Mana=1.0
+AutoBalance.StatModifierRaid.Armor=1.0
+AutoBalance.StatModifierRaid.Damage=1.0
+AutoBalance.StatModifierRaid.Boss.Global=1.0
+
+### Default for all heroic raids
+AutoBalance.StatModifierRaidHeroic.Global=1.0
+AutoBalance.StatModifierRaidHeroic.Health=1.0
+AutoBalance.StatModifierRaidHeroic.Mana=1.0
+AutoBalance.StatModifierRaidHeroic.Armor=1.0
+AutoBalance.StatModifierRaidHeroic.Damage=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
+
+###
+### By default, all instances use the settings configured above. To customize settings for a particular instance size,
+### uncomment the appropriate configuration lines below and adjust values to your liking.
+###
+
+### 10-player raids
+AutoBalance.StatModifierRaid10M.Global=1.0
+AutoBalance.StatModifierRaid10M.Health=1.0
+AutoBalance.StatModifierRaid10M.Mana=1.0
+AutoBalance.StatModifierRaid10M.Armor=1.0
+AutoBalance.StatModifierRaid10M.Damage=1.0
+AutoBalance.StatModifierRaid10M.Boss.Global=1.0
+
+### 10-player heroic raids
+AutoBalance.StatModifierRaid10MHeroic.Global=1.0
+AutoBalance.StatModifierRaid10MHeroic.Health=1.0
+AutoBalance.StatModifierRaid10MHeroic.Mana=1.0
+AutoBalance.StatModifierRaid10MHeroic.Armor=1.0
+AutoBalance.StatModifierRaid10MHeroic.Damage=1.0
+AutoBalance.StatModifierRaid10MHeroic.Boss.Global=1.0
+
+### 15-player raids
+AutoBalance.StatModifierRaid15M.Global=1.0
+AutoBalance.StatModifierRaid15M.Health=1.0
+AutoBalance.StatModifierRaid15M.Mana=1.0
+AutoBalance.StatModifierRaid15M.Armor=1.0
+AutoBalance.StatModifierRaid15M.Damage=1.0
+AutoBalance.StatModifierRaid15M.Boss.Global=1.0
+
+### 20-player raids
+AutoBalance.StatModifierRaid20M.Global=1.0
+AutoBalance.StatModifierRaid20M.Health=1.0
+AutoBalance.StatModifierRaid20M.Mana=1.0
+AutoBalance.StatModifierRaid20M.Armor=1.0
+AutoBalance.StatModifierRaid20M.Damage=1.0
+AutoBalance.StatModifierRaid20M.Boss.Global=1.0
+
+### 25-player raids
+AutoBalance.StatModifierRaid25M.Global=1.0
+AutoBalance.StatModifierRaid25M.Health=1.0
+AutoBalance.StatModifierRaid25M.Mana=1.0
+AutoBalance.StatModifierRaid25M.Armor=1.0
+AutoBalance.StatModifierRaid25M.Damage=1.0
+AutoBalance.StatModifierRaid25M.Boss.Global=1.0
+
+### 25-player heroic raids
+AutoBalance.StatModifierRaid25MHeroic.Global=1.0
+AutoBalance.StatModifierRaid25MHeroic.Health=1.0
+AutoBalance.StatModifierRaid25MHeroic.Mana=1.0
+AutoBalance.StatModifierRaid25MHeroic.Armor=1.0
+AutoBalance.StatModifierRaid25MHeroic.Damage=1.0
+AutoBalance.StatModifierRaid25MHeroic.Boss.Global=1.0
+
+### 40-player raids
+AutoBalance.StatModifierRaid40M.Global=1.0
+AutoBalance.StatModifierRaid40M.Health=1.0
+AutoBalance.StatModifierRaid40M.Mana=1.0
+AutoBalance.StatModifierRaid40M.Armor=1.0
+AutoBalance.StatModifierRaid40M.Damage=1.0
+AutoBalance.StatModifierRaid40M.Boss.Global=1.0
 
 #
 #     AutoBalance.MinHPModifier
@@ -373,3 +481,13 @@ AutoBalance.reward.dungeonToken = 47241
 #       Default:     1
 AutoBalance.reward.MinPlayerReward = 1
 
+# The following variables are deprecated and should not be used in new deployments.
+# They will still be applied to support backwards compatability, but will be removed entirely in a future release.
+# Their entire functionality (and more) has been moved to new settings referenced in this config file.
+#
+#   AutoBalance.BossInflectionMult
+#   AutoBalance.rate.global
+#   AutoBalance.rate.health
+#   AutoBalance.rate.mana
+#   AutoBalance.rate.armor
+#   AutoBalance.rate.damage
