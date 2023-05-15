@@ -65,7 +65,9 @@ AutoBalance.enable=1
 #           Default: 1.0
 #
 #       BossModifier
-#           Further adjusts the inflection point of bosses. Only applies to creatures considered dungeon bosses (from dungeons or raids).
+#           InflectionPoint is multiplied by this value for creatures considered dungeon bosses (from dungeons or raids). 
+#           It is a multiplier, not a new Inflection Point. Values higher than 1.0 will make enemies easier at lower player
+#           counts while lower than 1.0 will make enemies easier at lower player counts.
 #
 #           To better understand this effect, see the interactive spreadsheet explained below.
 #
@@ -151,22 +153,41 @@ AutoBalance.InflectionPointRaidHeroic.BossModifier=1.0
 #AutoBalance.InflectionPointRaid40M.BossModifier=1.0
 
 #
-#     AutoBalance.PerDungeonScaling
-#        Allows setting a per-dungeon or per-raid scaling inflection value
-#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
-#        Example: AutoBalance.PerDungeonScaling="229 0.15, 309 0.3"
-#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
-#        To disable, leave empty. This is the default setting.
-AutoBalance.PerDungeonScaling=""
+#     AutoBalance.InflectionPoint.PerInstance
+#        Sets Inflection Point settings for specific `InstanceID`s.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Specifying a value of `-1` will skip overriding of that value. For instances not listed, the default inflection value for the instance's 
+#        difficulty and size will be used. You may omit entries from the end of the string if desired. Only one set of values should be specified per InstanceID.
+#
+#        Format: "[InstanceID] [InflectionPoint] [CurveFloor] [CurveCeiling], [InstanceID] [InflectionPoint] [CurveFloor] [CurveCeiling], ..."
+#
+#        Example: AutoBalance.InflectionPoint.PerInstance="229 0.4 0.0 1.5, 309 -1 0.0 1.1, 48 0.3"
+#
+#        Default: ""
+#
+AutoBalance.InflectionPoint.PerInstance=""
 
 #
-#     AutoBalance.PerDungeonBossScaling
-#        Allows setting a per-dungeon scaling inflection value for bosses
-#        Formatted as "[dungeonId] [inflectionValue], [dungeonId] [inflectionValue], [dungeonId] [inflectionValue], ..."
-#        Example: AutoBalance.PerDungeonBossScaling="229 0.5, 309 1.2, 409 1, 249 1.5"
-#        For dungeons not listed, the default inflection value provided above for the dungeon's difficulty will be used.
-#        To disable, leave empty. This is the default setting.
-AutoBalance.PerDungeonBossScaling=""
+#     AutoBalance.InflectionPoint.Boss.PerInstance
+#        Sets Inflection Point settings for all bosses in specific `InstanceID`s. Note that the first value is "InflectionPointMultiplier", which behaves
+#        identically to the BossModifier setting. The "normal" inflection point is multiplied by this value for bosses. To better understand this effect, 
+#        see the interactive spreadsheet.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        For instances not listed, the default inflection value for the instance's difficulty and size will be used. Only one set of values should be specified
+#        per InstanceID.
+#
+#        Format: "[InstanceID] [InflectionPointMultiplier], [InstanceID] [InflectionPointMultiplier], ..."
+#
+#        Example: AutoBalance.InflectionPoint.Boss.PerInstance="229 1.2, 309 1.5, 48 1.25"
+#
+#        Default: ""
+#
+AutoBalance.InflectionPoint.Boss.PerInstance=""
+
 
 #     AutoBalance.StatModifier* series
 #        The difficulty curve (as defined by the InflectionPoint settings) determines the base multiplier. The base
@@ -177,7 +198,7 @@ AutoBalance.PerDungeonBossScaling=""
 #        https://docs.google.com/spreadsheets/d/100cmKIJIjCZ-ncWd0K9ykO8KUgwFTcwg4h2nfE_UeCc/copy
 #
 #        To use it, copy the sheet to your own Google Drive and edit the values on the left with the yellow background.
-#        The "Final Multiplier" value is the actual multiplier that will be applied to enemies in a given dungeon.
+#        The "Final Multiplier" value is the actual multiplier that will be applied to enemies in a given instance.
 #
 #        Global
 #           Multiply the other four settings by this value. Allows you to increase all the stats (health, mana, armor, 
@@ -194,12 +215,11 @@ AutoBalance.PerDungeonBossScaling=""
 #           Default: 1.0
 #
 #        Boss.Global
-#           Further adjusts the multiplier of bosses for all stats. Only applies to creatures considered dungeon bosses (from dungeons or raids).
+#           Further adjusts the multiplier of bosses for all stats. Only applies to creatures considered instance bosses (from dungeons or raids).
 #
 #           To better understand this effect, see the interactive spreadsheet.
 #
 #           Default: 1.0
-
 
 ### 5-player dungeons
 AutoBalance.StatModifier.Global=1.0
@@ -295,16 +315,16 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid40M.Boss.Global=1.0
 
 #
-#     AutoBalance.StatModifierPerDungeon
-#        Allows setting a per-dungeon stat modifier value. Specifying a value of `-1` will use the instance-level settings for that value.
-#        You may omit entries from the end of the string if desired. Only one set of values should be specified per dungeonId.
+#     AutoBalance.StatModifier.PerInstance
+#        Allows setting a per-instance stat modifier value. Specifying a value of `-1` will skip overriding of that value.
+#        You may omit entries from the end of the string if desired. Only one set of values should be specified per InstanceID.
 #
-#        Format: "[dungeonId] [global] [health] [mana] [armor] [damage] [boss.global], [dungeonId] [global] [health] [mana] [armor] [damage] [boss.global], ..."
+#        Format: "[InstanceID] [Global] [Health] [Mana] [Armor] [Damage] [Boss.Global], [InstanceID] [Global] [Health] [Mana] [Armor] [Damage] [Boss.Global], ..."
 #
-#        Example: AutoBalance.ModifierPerDungeon="409 1.0 0.8 0.8 1.0 1.2 1.1, 568 -1 -1 -1 -1 -1 1.5, 43 -1 1.2 1.2"
+#        Example: AutoBalance.StatModifier.PerInstance="409 1.0 0.8 0.8 1.0 1.2 1.1, 568 -1 -1 -1 -1 -1 1.5, 43 -1 1.2 1.2"
 #
 #        Default: Empty string, which disables the feature.
-AutoBalance.StatModifierPerDungeon=""
+AutoBalance.StatModifier.PerInstance=""
 
 #
 #     AutoBalance.MinHPModifier
@@ -332,11 +352,11 @@ AutoBalance.playerCountDifficultyOffset=0
 
 #
 #     AutoBalance.PerDungeonPlayerCounts
-#        Allows setting a per-dungeon setting for minimum number of players to scale. For example, dungeons could remain at 5 players, but raids could be chosen to scale down to 5 players as well.
-#        Formatted as "[dungeonId] [playerCount], [dungeonId] [playerCount], [dungeonId] [playerCount], ..."
+#        Allows setting a per-instance setting for minimum number of players to scale. For example, dungeons could remain at 5 players, but raids could be chosen to scale down to 5 players as well.
+#        Formatted as "[InstanceID] [playerCount], [InstanceID] [playerCount], [InstanceID] [playerCount], ..."
 #        Example: AutoBalance.PerDungeonPlayerCounts="33 1,34 1,36 1,43 1,47 1,48 1,70 1,90 1,109 1,129 1,189 1,209 1,349 1,389 1, 289 2, 329 2, 230 2, 429 2, 309 5, 409 5"
-#        For dungeons not listed, the dungeon's original player count (5, 10, 20, 25, or 40) is used as the minimum, meaning no scaling will take place.
-#        To disable, leave empty; all dungeons will then scale down to 1 player minimum. This is the default setting.
+#        For instances not listed, the instance's original player count (5, 10, 20, 25, or 40) is used as the minimum, meaning no scaling will take place.
+#        To disable, leave empty; all instances will then scale down to 1 player minimum. This is the default setting.
 #        Default: ""
 #
 AutoBalance.PerDungeonPlayerCounts=""
@@ -450,7 +470,7 @@ AutoBalance.DungeonsOnly=1
 AutoBalance.DebugLevel=2
 
 #
-#     .AutoBalance.PlayerChangeNotify
+#     AutoBalance.PlayerChangeNotify
 #        Set Auto Notifications to all players in Instance that player count has changed.
 #        Default:     1 (1 = ON, 0 = OFF)
 AutoBalance.PlayerChangeNotify=1
@@ -494,9 +514,11 @@ AutoBalance.reward.dungeonToken = 47241
 AutoBalance.reward.MinPlayerReward = 1
 
 # The following variables are deprecated and should not be used in new deployments.
-# They will still be applied to support backwards compatability, but will be removed entirely in a future release.
+# They are still applied to support backwards compatability, but will be removed entirely in a future release.
 # Their entire functionality (and more) has been moved to new settings referenced in this config file.
 #
+#   AutoBalance.PerDungeonScaling
+#   AutoBalance.PerDungeonBossScaling
 #   AutoBalance.BossInflectionMult
 #   AutoBalance.rate.global
 #   AutoBalance.rate.health

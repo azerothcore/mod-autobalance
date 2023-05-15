@@ -148,11 +148,22 @@ public:
     float boss_global;
 };
 
+class AutoBalanceInflectionPointSettings : public DataMap::Base
+{
+public:
+    AutoBalanceInflectionPointSettings() {}
+    AutoBalanceInflectionPointSettings(float value, float curveFloor, float curveCeiling) :
+        value(value), curveFloor(curveFloor), curveCeiling(curveCeiling) {}
+    float value;
+    float curveFloor;
+    float curveCeiling;
+};
+
 // The map values correspond with the .AutoBalance.XX.Name entries in the configuration file.
 static std::map<int, int> forcedCreatureIds;
 static std::map<uint32, uint8> enabledDungeonIds;
-static std::map<uint32, float> dungeonOverrides;
-static std::map<uint32, float> bossOverrides;
+static std::map<uint32, AutoBalanceInflectionPointSettings> dungeonOverrides;
+static std::map<uint32, AutoBalanceInflectionPointSettings> bossOverrides;
 static std::map<uint32, AutoBalanceStatModifiers> statModifierOverrides;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
@@ -190,8 +201,6 @@ static float StatModifierRaid25MHeroic_Global, StatModifierRaid25MHeroic_Health,
 static float StatModifierRaid40M_Global, StatModifierRaid40M_Health, StatModifierRaid40M_Mana, StatModifierRaid40M_Armor, StatModifierRaid40M_Damage, StatModifierRaid40M_Boss_Global;
 
 
-
-
 int GetValidDebugLevel()
 {
     int debugLevel = sConfigMgr->GetOption<uint32>("AutoBalance.DebugLevel", 2);
@@ -220,44 +229,43 @@ void LoadEnabledDungeons(std::string dungeonIdString) // Used for reading the st
     }
 }
 
-void LoadDungeonOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for selecting dungeons to override
+std::map<uint32, AutoBalanceInflectionPointSettings> LoadInflectionPointOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for selecting dungeons to override
 {
     std::string delimitedValue;
     std::stringstream dungeonIdStream;
+    std::map<uint32, AutoBalanceInflectionPointSettings> overrideMap;
 
     dungeonIdStream.str(dungeonIdString);
     while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
     {
-        std::string pairOne, pairTwo;
+        std::string val1, val2, val3, val4;
         std::stringstream dungeonPairStream(delimitedValue);
-        dungeonPairStream>>pairOne>>pairTwo;
-        auto dungeonMapId = atoi(pairOne.c_str());
-        auto dungeonInflection = atof(pairTwo.c_str());
-        dungeonOverrides[dungeonMapId] = dungeonInflection;
+        dungeonPairStream >> val1 >> val2 >> val3 >> val4;
+
+        auto dungeonMapId = atoi(val1.c_str());
+
+        // Replace any missing values with -1
+        if (val2.empty()) { val2 = "-1"; }
+        if (val3.empty()) { val3 = "-1"; }
+        if (val4.empty()) { val4 = "-1"; }
+
+        AutoBalanceInflectionPointSettings ipSettings = AutoBalanceInflectionPointSettings(
+            atof(val2.c_str()),
+            atof(val3.c_str()),
+            atof(val4.c_str())
+        );
+
+        overrideMap[dungeonMapId] = ipSettings;
     }
+
+    return overrideMap;
 }
 
-void LoadBossOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for selecting dungeons to override boss inflection
+std::map<uint32, AutoBalanceStatModifiers> LoadStatModifierOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for per-dungeon stat modifiers
 {
     std::string delimitedValue;
     std::stringstream dungeonIdStream;
-
-    dungeonIdStream.str(dungeonIdString);
-    while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
-    {
-        std::string pairOne, pairTwo;
-        std::stringstream dungeonPairStream(delimitedValue);
-        dungeonPairStream>>pairOne>>pairTwo;
-        auto dungeonMapId = atoi(pairOne.c_str());
-        auto bossInflection = atof(pairTwo.c_str());
-        bossOverrides[dungeonMapId] = bossInflection;
-    }
-}
-
-void LoadStatModifierOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for per-dungeon stat modifiers
-{
-    std::string delimitedValue;
-    std::stringstream dungeonIdStream;
+    std::map<uint32, AutoBalanceStatModifiers> overrideMap;
 
     dungeonIdStream.str(dungeonIdString);
     while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
@@ -267,7 +275,16 @@ void LoadStatModifierOverrides(std::string dungeonIdString) // Used for reading 
         dungeonStream >> val1 >> val2 >> val3 >> val4 >> val5 >> val6 >> val7;
 
         auto dungeonMapId = atoi(val1.c_str());
-        AutoBalanceStatModifiers statModifiers = AutoBalanceStatModifiers(
+
+        // Replace any missing values with -1
+        if (val2.empty()) { val2 = "-1"; }
+        if (val3.empty()) { val3 = "-1"; }
+        if (val4.empty()) { val4 = "-1"; }
+        if (val5.empty()) { val5 = "-1"; }
+        if (val6.empty()) { val6 = "-1"; }
+        if (val7.empty()) { val7 = "-1"; }
+
+        AutoBalanceStatModifiers statSettings = AutoBalanceStatModifiers(
             atof(val2.c_str()),
             atof(val3.c_str()),
             atof(val4.c_str()),
@@ -275,8 +292,12 @@ void LoadStatModifierOverrides(std::string dungeonIdString) // Used for reading 
             atof(val6.c_str()),
             atof(val7.c_str())
         );
-        statModifierOverrides[dungeonMapId] = statModifiers;
+
+        overrideMap[dungeonMapId] = statSettings;
+        LOG_ERROR("AutoBalance", "StatModifier overrides for map `{}` are {} {} {} {} {} {}", val1, val2, val3, val4, val5, val6, val7);
     }
+
+    return overrideMap;
 }
 
 
@@ -378,9 +399,23 @@ class AutoBalance_WorldScript : public WorldScript
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID2", ""), 2);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.DisabledID", ""), 0);
         LoadEnabledDungeons(sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonPlayerCounts", ""));
-        LoadDungeonOverrides(sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonScaling", ""));
-        LoadBossOverrides(sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonBossScaling", ""));
-        LoadStatModifierOverrides(sConfigMgr->GetOption<std::string>("AutoBalance.StatModifierPerDungeon", ""));
+
+        // Overrides
+        if (sConfigMgr->GetOption<float>("AutoBalance.PerDungeonScaling", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.PerDungeonScaling` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+        dungeonOverrides = LoadInflectionPointOverrides(
+            sConfigMgr->GetOption<std::string>("AutoBalance.InflectionPoint.PerInstance",sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonScaling", "", false), false)
+        ); // `AutoBalance.PerDungeonScaling` for backwards compatibility
+
+        if (sConfigMgr->GetOption<float>("AutoBalance.PerDungeonBossScaling", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.PerDungeonBossScaling` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+        bossOverrides = LoadInflectionPointOverrides(
+            sConfigMgr->GetOption<std::string>("AutoBalance.InflectionPoint.Boss.PerInstance", sConfigMgr->GetOption<std::string>("AutoBalance.PerDungeonBossScaling", "", false), false)
+        ); // `AutoBalance.PerDungeonBossScaling` for backwards compatibility
+
+        statModifierOverrides = LoadStatModifierOverrides(
+            sConfigMgr->GetOption<std::string>("AutoBalance.StatModifier.PerInstance", "", false)
+        );
 
         enabled = sConfigMgr->GetOption<bool>("AutoBalance.enable", 1);
         LevelEndGameBoost = sConfigMgr->GetOption<bool>("AutoBalance.LevelEndGameBoost", 1);
@@ -966,19 +1001,115 @@ public:
         //       curveFloor and curveCeiling squishes the curve by adjusting the curve start and end points.
         //       This allows for better control over high and low player count scaling.
 
-        float defaultMultiplier =        1.0f;
-        float curveFloor =               0.0f;
-        float curveCeiling =             1.0f;
+        float defaultMultiplier;
+        float curveFloor;
+        float curveCeiling;
 
-        // Calculate the Inflection Point
+        //
+        // Inflection Point
+        //
         float inflectionValue  = (float)maxNumberOfPlayers;
 
+        if (instanceMap->IsHeroic())
+        {
+            if (instanceMap->IsRaid())
+            {
+                switch (instanceMap->GetMaxPlayers())
+                {
+                    case 10:
+                        inflectionValue *= InflectionPointRaid10MHeroic;
+                        curveFloor = InflectionPointRaid10MHeroicCurveFloor;
+                        curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
+                        break;
+                    case 25:
+                        inflectionValue *= InflectionPointRaid25MHeroic;
+                        curveFloor = InflectionPointRaid25MHeroicCurveFloor;
+                        curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
+                        break;
+                    default:
+                        inflectionValue *= InflectionPointRaidHeroic;
+                        curveFloor = InflectionPointRaidHeroicCurveFloor;
+                        curveCeiling = InflectionPointRaidHeroicCurveCeiling;;
+                }
+            }
+            else
+            {
+                inflectionValue *= InflectionPointHeroic;
+                curveFloor = InflectionPointHeroicCurveFloor;
+                curveCeiling = InflectionPointHeroicCurveCeiling;
+            }
+        }
+        else
+        {
+            if (instanceMap->IsRaid())
+            {
+                switch (instanceMap->GetMaxPlayers())
+                {
+                    case 10:
+                        inflectionValue *= InflectionPointRaid10M;
+                        curveFloor = InflectionPointRaid10MCurveFloor;
+                        curveCeiling = InflectionPointRaid10MCurveCeiling;
+
+                        break;
+                    case 15:
+                        inflectionValue *= InflectionPointRaid15M;
+                        curveFloor = InflectionPointRaid15MCurveFloor;
+                        curveCeiling = InflectionPointRaid15MCurveCeiling;
+
+                        break;
+                    case 20:
+                        inflectionValue *= InflectionPointRaid20M;
+                        curveFloor = InflectionPointRaid20MCurveFloor;
+                        curveCeiling = InflectionPointRaid20MCurveCeiling;
+                        break;
+                    case 25:
+                        inflectionValue *= InflectionPointRaid25M;
+                        curveFloor = InflectionPointRaid25MCurveFloor;
+                        curveCeiling = InflectionPointRaid25MCurveCeiling;
+                        break;
+                    case 40:
+                        inflectionValue *= InflectionPointRaid40M;
+                        curveFloor = InflectionPointRaid40MCurveFloor;
+                        curveCeiling = InflectionPointRaid40MCurveCeiling;
+                        break;
+                    default:
+                        inflectionValue *= InflectionPointRaid;
+                        curveFloor = InflectionPointRaidCurveFloor;
+                        curveCeiling = InflectionPointRaidCurveCeiling;
+                }
+            }
+            else
+            {
+                inflectionValue *= InflectionPoint;
+                curveFloor = InflectionPointCurveFloor;
+                curveCeiling = InflectionPointCurveCeiling;
+            }
+        }
+
+        // Per map ID overrides alter the above settings, if set
         if (hasDungeonOverride(mapId))
         {
-            inflectionValue *= dungeonOverrides[mapId];
+            AutoBalanceInflectionPointSettings* myInflectionPointOverrides = &dungeonOverrides[mapId];
+
+            // Alter the inflectionValue according to the override, if set
+            if (myInflectionPointOverrides->value != -1)
+            {
+                inflectionValue  = (float)maxNumberOfPlayers; // Starting over
+                inflectionValue *= myInflectionPointOverrides->value;
+            }
+
+            if (myInflectionPointOverrides->curveFloor != -1)   { curveFloor =    myInflectionPointOverrides->curveFloor;   }
+            if (myInflectionPointOverrides->curveCeiling != -1) { curveCeiling =  myInflectionPointOverrides->curveCeiling; }
         }
-        else
-        {
+
+        //
+        // Boss Inflection Point
+        //
+        if (creature->IsDungeonBoss()) {
+
+            float bossInflectionPointMultiplier;
+
+            // Determine the correct boss inflection multiplier
             if (instanceMap->IsHeroic())
             {
                 if (instanceMap->IsRaid())
@@ -986,26 +1117,18 @@ public:
                     switch (instanceMap->GetMaxPlayers())
                     {
                         case 10:
-                            inflectionValue *= InflectionPointRaid10MHeroic;
-                            curveFloor = InflectionPointRaid10MHeroicCurveFloor;
-                            curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
+                            bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss;
                             break;
                         case 25:
-                            inflectionValue *= InflectionPointRaid25MHeroic;
-                            curveFloor = InflectionPointRaid25MHeroicCurveFloor;
-                            curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
+                            bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss;
                             break;
                         default:
-                            inflectionValue *= InflectionPointRaidHeroic;
-                            curveFloor = InflectionPointRaidHeroicCurveFloor;
-                            curveCeiling = InflectionPointRaidHeroicCurveCeiling;;
+                            bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss;
                     }
                 }
                 else
                 {
-                    inflectionValue *= InflectionPointHeroic;
-                    curveFloor = InflectionPointHeroicCurveFloor;
-                    curveCeiling = InflectionPointHeroicCurveCeiling;
+                    bossInflectionPointMultiplier = InflectionPointHeroicBoss;
                 }
             }
             else
@@ -1015,108 +1138,56 @@ public:
                     switch (instanceMap->GetMaxPlayers())
                     {
                         case 10:
-                            inflectionValue *= InflectionPointRaid10M;
-                            curveFloor = InflectionPointRaid10MCurveFloor;
-                            curveCeiling = InflectionPointRaid10MCurveCeiling;
-
+                            bossInflectionPointMultiplier = InflectionPointRaid10MBoss;
                             break;
                         case 15:
-                            inflectionValue *= InflectionPointRaid15M;
-                            curveFloor = InflectionPointRaid15MCurveFloor;
-                            curveCeiling = InflectionPointRaid15MCurveCeiling;
-
+                            bossInflectionPointMultiplier = InflectionPointRaid15MBoss;
                             break;
                         case 20:
-                            inflectionValue *= InflectionPointRaid20M;
-                            curveFloor = InflectionPointRaid20MCurveFloor;
-                            curveCeiling = InflectionPointRaid20MCurveCeiling;
+                            bossInflectionPointMultiplier = InflectionPointRaid20MBoss;
                             break;
                         case 25:
-                            inflectionValue *= InflectionPointRaid25M;
-                            curveFloor = InflectionPointRaid25MCurveFloor;
-                            curveCeiling = InflectionPointRaid25MCurveCeiling;
+                            bossInflectionPointMultiplier = InflectionPointRaid25MBoss;
                             break;
                         case 40:
-                            inflectionValue *= InflectionPointRaid40M;
-                            curveFloor = InflectionPointRaid40MCurveFloor;
-                            curveCeiling = InflectionPointRaid40MCurveCeiling;
+                            bossInflectionPointMultiplier = InflectionPointRaid40MBoss;
                             break;
                         default:
-                            inflectionValue *= InflectionPointRaid;
-                            curveFloor = InflectionPointRaidCurveFloor;
-                            curveCeiling = InflectionPointRaidCurveCeiling;
+                            bossInflectionPointMultiplier = InflectionPointRaidBoss;
                     }
                 }
                 else
                 {
-                    inflectionValue *= InflectionPoint;
-                    curveFloor = InflectionPointCurveFloor;
-                    curveCeiling = InflectionPointCurveCeiling;
+                    bossInflectionPointMultiplier = InflectionPointBoss;
                 }
             }
-        }
 
-        // Calculate the Boss Inflection Point
-        if (creature->IsDungeonBoss()) {
+            // Per map ID overrides alter the above settings, if set
             if (hasBossOverride(mapId))
             {
-                inflectionValue *= bossOverrides[mapId];
-            }
-        }
-        else
-        {
-            if (instanceMap->IsHeroic())
-            {
-                if (instanceMap->IsRaid())
+                AutoBalanceInflectionPointSettings* myBossOverrides = &bossOverrides[mapId];
+
+                // If set, alter the inflectionValue according to the override
+                if (myBossOverrides->value != -1)
                 {
-                    switch (instanceMap->GetMaxPlayers())
-                    {
-                        case 10:
-                            inflectionValue *= InflectionPointRaid10MHeroicBoss;
-                            break;
-                        case 25:
-                            inflectionValue *= InflectionPointRaid25MHeroicBoss;
-                            break;
-                        default:
-                            inflectionValue *= InflectionPointRaidHeroicBoss;
-                    }
+                    inflectionValue *= myBossOverrides->value;
                 }
+                // Otherwise, calculate using the value determined by instance type
                 else
                 {
-                    inflectionValue *= InflectionPointHeroicBoss;
+                    inflectionValue *= bossInflectionPointMultiplier;
                 }
             }
+            // No override, use the value determined by the instance type
             else
             {
-                if (instanceMap->IsRaid())
-                {
-                    switch (instanceMap->GetMaxPlayers())
-                    {
-                        case 10:
-                            inflectionValue *= InflectionPointRaid10MBoss;
-                            break;
-                        case 15:
-                            inflectionValue *= InflectionPointRaid15MBoss;
-                            break;
-                        case 20:
-                            inflectionValue *= InflectionPointRaid20MBoss;
-                            break;
-                        case 25:
-                            inflectionValue *= InflectionPointRaid25MBoss;
-                            break;
-                        case 40:
-                            inflectionValue *= InflectionPointRaid40MBoss;
-                            break;
-                        default:
-                            inflectionValue *= InflectionPointRaidBoss;
-                    }
-                }
-                else
-                {
-                    inflectionValue *= InflectionPointBoss;
-                }
+                inflectionValue *= bossInflectionPointMultiplier;
             }
         }
+
+        //
+        // Stat Modifiers
+        //
 
         // Calculate stat modifiers
         float statMod_global =      1.0f;
@@ -1242,13 +1313,14 @@ public:
         {
             AutoBalanceStatModifiers* myStatModifierOverrides = &statModifierOverrides[mapId];
 
-            if (myStatModifierOverrides->global > 0)      {statMod_global =      myStatModifierOverrides->global;     }
-            if (myStatModifierOverrides->health > 0)      {statMod_health =      myStatModifierOverrides->health;     }
-            if (myStatModifierOverrides->mana > 0)        {statMod_mana =        myStatModifierOverrides->mana;       }
-            if (myStatModifierOverrides->armor > 0)       {statMod_armor =       myStatModifierOverrides->armor;      }
-            if (myStatModifierOverrides->damage > 0)      {statMod_damage =      myStatModifierOverrides->damage;     }
-            if (myStatModifierOverrides->boss_global > 0) {statMod_boss_global = myStatModifierOverrides->boss_global;}
+            if (myStatModifierOverrides->global != -1)      { statMod_global =      myStatModifierOverrides->global;      }
+            if (myStatModifierOverrides->health != -1)      { statMod_health =      myStatModifierOverrides->health;      }
+            if (myStatModifierOverrides->mana != -1)        { statMod_mana =        myStatModifierOverrides->mana;        }
+            if (myStatModifierOverrides->armor != -1)       { statMod_armor =       myStatModifierOverrides->armor;       }
+            if (myStatModifierOverrides->damage != -1)      { statMod_damage =      myStatModifierOverrides->damage;      }
+            if (myStatModifierOverrides->boss_global != -1) { statMod_boss_global = myStatModifierOverrides->boss_global; }
         }
+
 
         if (creatureABInfo->instancePlayerCount >= maxNumberOfPlayers)
         // We've maxed out the number of players, engage maximum difficulty!
@@ -1537,10 +1609,10 @@ public:
 
         handler->PSendSysMessage("Instance player Count: %u", creatureABInfo->instancePlayerCount);
         handler->PSendSysMessage("Selected level: %u", creatureABInfo->selectedLevel);
-        handler->PSendSysMessage("Damage multiplier: %.6f", creatureABInfo->DamageMultiplier);
         handler->PSendSysMessage("Health multiplier: %.6f", creatureABInfo->HealthMultiplier);
         handler->PSendSysMessage("Mana multiplier: %.6f", creatureABInfo->ManaMultiplier);
         handler->PSendSysMessage("Armor multiplier: %.6f", creatureABInfo->ArmorMultiplier);
+        handler->PSendSysMessage("Damage multiplier: %.6f", creatureABInfo->DamageMultiplier);
 
         return true;
 
