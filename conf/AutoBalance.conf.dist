@@ -295,6 +295,17 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid40M.Boss.Global=1.0
 
 #
+#     AutoBalance.StatModifierPerDungeon
+#        Allows setting a per-dungeon stat modifier value. If you specify a dungeonID, you MUST specify all the values.
+#
+#        Format: "[dungeonId] [global] [health] [mana] [armor] [damage] [boss], [dungeonId] [global] [health] [mana] [armor] [damage] [boss], ..."
+#
+#        Example: AutoBalance.ModifierPerDungeon="409 1.0 0.8 0.8 1.0 1.2 1.1, 568 1.1 1.0 1.0 1.5 0.8 1.5"
+#
+#        Default: Empty string, which disables the feature.
+AutoBalance.StatModifierPerDungeon=""
+
+#
 #     AutoBalance.MinHPModifier
 #        Minimum Modifier setting for Health Modification. An enemy's health will not be multiplied by a value smaller than this.
 #        Default:     0.01
