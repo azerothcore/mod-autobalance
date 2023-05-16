@@ -35,7 +35,7 @@ AutoBalance.enable=1
 #           https://i.imgur.com/x42UnUR.png
 #
 #           Example: If InflectionPointRaid is 0.5, an enemy in a 40-player raid will have half its life with 20 players in the instance
-#                    If InflectionPointRaid is 0.8, an enemy in a 40-player raid will have half its life with 12 players in the instance
+#                    If InflectionPointRaid is 0.8, an enemy in a 40-player raid will have half its life with 31 players in the instance
 #
 #           Default: 0.5
 #
