@@ -1321,21 +1321,18 @@ public:
             if (myStatModifierOverrides->boss_global != -1) { statMod_boss_global = myStatModifierOverrides->boss_global; }
         }
 
+        // Calculate our starting multiplier before adjustments
+        float diff = ((float)maxNumberOfPlayers/5)*1.5f;
+        defaultMultiplier = (tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
 
-        if (creatureABInfo->instancePlayerCount >= maxNumberOfPlayers)
-        // We've maxed out the number of players, engage maximum difficulty!
-        {
-            defaultMultiplier = curveCeiling;
-        }
-        else
-        // Less than full instance, adjust accordingly
-        {
-            float diff = ((float)maxNumberOfPlayers/5)*1.5f;
-            defaultMultiplier = (tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
+        // For math reasons that I do not understand, curveCeiling needs to be adjusted to bring the actual multiplier
+        // closer to the curveCeiling setting. Create an adjustment based on how much the ceiling should be changed at
+        // the max players multiplier.
+        float curveCeilingAdjustment = curveCeiling / ((tanh(((float)maxNumberOfPlayers - inflectionValue) / diff) + 1.0f) / 2.0f);
 
-            // Adjust the multiplier based on the configured floor and ceiling values
-            defaultMultiplier = (defaultMultiplier * (curveCeiling - curveFloor) + curveFloor);
-        }
+        // Adjust the multiplier based on the configured floor and ceiling values
+        defaultMultiplier = (defaultMultiplier * (curveCeiling * curveCeilingAdjustment - curveFloor) + curveFloor);
+
 
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
