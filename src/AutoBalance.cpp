@@ -138,14 +138,13 @@ class AutoBalanceStatModifiers : public DataMap::Base
 {
 public:
     AutoBalanceStatModifiers() {}
-    AutoBalanceStatModifiers(float global, float health, float mana, float armor, float damage, float boss_global) :
-        global(global), health(health), mana(mana), armor(armor), damage(damage), boss_global(boss_global) {}
+    AutoBalanceStatModifiers(float global, float health, float mana, float armor, float damage) :
+        global(global), health(health), mana(mana), armor(armor), damage(damage) {}
     float global;
     float health;
     float mana;
     float armor;
     float damage;
-    float boss_global;
 };
 
 class AutoBalanceInflectionPointSettings : public DataMap::Base
@@ -165,6 +164,8 @@ static std::map<uint32, uint8> enabledDungeonIds;
 static std::map<uint32, AutoBalanceInflectionPointSettings> dungeonOverrides;
 static std::map<uint32, AutoBalanceInflectionPointSettings> bossOverrides;
 static std::map<uint32, AutoBalanceStatModifiers> statModifierOverrides;
+static std::map<uint32, AutoBalanceStatModifiers> statModifierBossOverrides;
+static std::map<uint32, AutoBalanceStatModifiers> statModifierCreatureOverrides;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
@@ -187,19 +188,32 @@ static float InflectionPointRaid25MHeroic, InflectionPointRaid25MHeroicCurveFloo
 static float InflectionPointRaid40M, InflectionPointRaid40MCurveFloor, InflectionPointRaid40MCurveCeiling, InflectionPointRaid40MBoss;
 
 // StatModifier*
-static float StatModifier_Global, StatModifier_Health, StatModifier_Mana, StatModifier_Armor, StatModifier_Damage, StatModifier_Boss_Global;
-static float StatModifierHeroic_Global, StatModifierHeroic_Health, StatModifierHeroic_Mana, StatModifierHeroic_Armor, StatModifierHeroic_Damage, StatModifierHeroic_Boss_Global;
-static float StatModifierRaid_Global, StatModifierRaid_Health, StatModifierRaid_Mana, StatModifierRaid_Armor, StatModifierRaid_Damage, StatModifierRaid_Boss_Global;
-static float StatModifierRaidHeroic_Global, StatModifierRaidHeroic_Health, StatModifierRaidHeroic_Mana, StatModifierRaidHeroic_Armor, StatModifierRaidHeroic_Damage, StatModifierRaidHeroic_Boss_Global;
+static float StatModifier_Global, StatModifier_Health, StatModifier_Mana, StatModifier_Armor, StatModifier_Damage;
+static float StatModifierHeroic_Global, StatModifierHeroic_Health, StatModifierHeroic_Mana, StatModifierHeroic_Armor, StatModifierHeroic_Damage;
+static float StatModifierRaid_Global, StatModifierRaid_Health, StatModifierRaid_Mana, StatModifierRaid_Armor, StatModifierRaid_Damage;
+static float StatModifierRaidHeroic_Global, StatModifierRaidHeroic_Health, StatModifierRaidHeroic_Mana, StatModifierRaidHeroic_Armor, StatModifierRaidHeroic_Damage;
 
-static float StatModifierRaid10M_Global, StatModifierRaid10M_Health, StatModifierRaid10M_Mana, StatModifierRaid10M_Armor, StatModifierRaid10M_Damage, StatModifierRaid10M_Boss_Global;
-static float StatModifierRaid10MHeroic_Global, StatModifierRaid10MHeroic_Health, StatModifierRaid10MHeroic_Mana, StatModifierRaid10MHeroic_Armor, StatModifierRaid10MHeroic_Damage, StatModifierRaid10MHeroic_Boss_Global;
-static float StatModifierRaid15M_Global, StatModifierRaid15M_Health, StatModifierRaid15M_Mana, StatModifierRaid15M_Armor, StatModifierRaid15M_Damage, StatModifierRaid15M_Boss_Global;
-static float StatModifierRaid20M_Global, StatModifierRaid20M_Health, StatModifierRaid20M_Mana, StatModifierRaid20M_Armor, StatModifierRaid20M_Damage, StatModifierRaid20M_Boss_Global;
-static float StatModifierRaid25M_Global, StatModifierRaid25M_Health, StatModifierRaid25M_Mana, StatModifierRaid25M_Armor, StatModifierRaid25M_Damage, StatModifierRaid25M_Boss_Global;
-static float StatModifierRaid25MHeroic_Global, StatModifierRaid25MHeroic_Health, StatModifierRaid25MHeroic_Mana, StatModifierRaid25MHeroic_Armor, StatModifierRaid25MHeroic_Damage, StatModifierRaid25MHeroic_Boss_Global;
-static float StatModifierRaid40M_Global, StatModifierRaid40M_Health, StatModifierRaid40M_Mana, StatModifierRaid40M_Armor, StatModifierRaid40M_Damage, StatModifierRaid40M_Boss_Global;
+static float StatModifierRaid10M_Global, StatModifierRaid10M_Health, StatModifierRaid10M_Mana, StatModifierRaid10M_Armor, StatModifierRaid10M_Damage;
+static float StatModifierRaid10MHeroic_Global, StatModifierRaid10MHeroic_Health, StatModifierRaid10MHeroic_Mana, StatModifierRaid10MHeroic_Armor, StatModifierRaid10MHeroic_Damage;
+static float StatModifierRaid15M_Global, StatModifierRaid15M_Health, StatModifierRaid15M_Mana, StatModifierRaid15M_Armor, StatModifierRaid15M_Damage;
+static float StatModifierRaid20M_Global, StatModifierRaid20M_Health, StatModifierRaid20M_Mana, StatModifierRaid20M_Armor, StatModifierRaid20M_Damage;
+static float StatModifierRaid25M_Global, StatModifierRaid25M_Health, StatModifierRaid25M_Mana, StatModifierRaid25M_Armor, StatModifierRaid25M_Damage;
+static float StatModifierRaid25MHeroic_Global, StatModifierRaid25MHeroic_Health, StatModifierRaid25MHeroic_Mana, StatModifierRaid25MHeroic_Armor, StatModifierRaid25MHeroic_Damage;
+static float StatModifierRaid40M_Global, StatModifierRaid40M_Health, StatModifierRaid40M_Mana, StatModifierRaid40M_Armor, StatModifierRaid40M_Damage;
 
+// StatModifier* (Boss)
+static float StatModifier_Boss_Global, StatModifier_Boss_Health, StatModifier_Boss_Mana, StatModifier_Boss_Armor, StatModifier_Boss_Damage;
+static float StatModifierHeroic_Boss_Global, StatModifierHeroic_Boss_Health, StatModifierHeroic_Boss_Mana, StatModifierHeroic_Boss_Armor, StatModifierHeroic_Boss_Damage;
+static float StatModifierRaid_Boss_Global, StatModifierRaid_Boss_Health, StatModifierRaid_Boss_Mana, StatModifierRaid_Boss_Armor, StatModifierRaid_Boss_Damage;
+static float StatModifierRaidHeroic_Boss_Global, StatModifierRaidHeroic_Boss_Health, StatModifierRaidHeroic_Boss_Mana, StatModifierRaidHeroic_Boss_Armor, StatModifierRaidHeroic_Boss_Damage;
+
+static float StatModifierRaid10M_Boss_Global, StatModifierRaid10M_Boss_Health, StatModifierRaid10M_Boss_Mana, StatModifierRaid10M_Boss_Armor, StatModifierRaid10M_Boss_Damage;
+static float StatModifierRaid10MHeroic_Boss_Global, StatModifierRaid10MHeroic_Boss_Health, StatModifierRaid10MHeroic_Boss_Mana, StatModifierRaid10MHeroic_Boss_Armor, StatModifierRaid10MHeroic_Boss_Damage;
+static float StatModifierRaid15M_Boss_Global, StatModifierRaid15M_Boss_Health, StatModifierRaid15M_Boss_Mana, StatModifierRaid15M_Boss_Armor, StatModifierRaid15M_Boss_Damage;
+static float StatModifierRaid20M_Boss_Global, StatModifierRaid20M_Boss_Health, StatModifierRaid20M_Boss_Mana, StatModifierRaid20M_Boss_Armor, StatModifierRaid20M_Boss_Damage;
+static float StatModifierRaid25M_Boss_Global, StatModifierRaid25M_Boss_Health, StatModifierRaid25M_Boss_Mana, StatModifierRaid25M_Boss_Armor, StatModifierRaid25M_Boss_Damage;
+static float StatModifierRaid25MHeroic_Boss_Global, StatModifierRaid25MHeroic_Boss_Health, StatModifierRaid25MHeroic_Boss_Mana, StatModifierRaid25MHeroic_Boss_Armor, StatModifierRaid25MHeroic_Boss_Damage;
+static float StatModifierRaid40M_Boss_Global, StatModifierRaid40M_Boss_Health, StatModifierRaid40M_Boss_Mana, StatModifierRaid40M_Boss_Armor, StatModifierRaid40M_Boss_Damage;
 
 int GetValidDebugLevel()
 {
@@ -282,19 +296,16 @@ std::map<uint32, AutoBalanceStatModifiers> LoadStatModifierOverrides(std::string
         if (val4.empty()) { val4 = "-1"; }
         if (val5.empty()) { val5 = "-1"; }
         if (val6.empty()) { val6 = "-1"; }
-        if (val7.empty()) { val7 = "-1"; }
 
         AutoBalanceStatModifiers statSettings = AutoBalanceStatModifiers(
             atof(val2.c_str()),
             atof(val3.c_str()),
             atof(val4.c_str()),
             atof(val5.c_str()),
-            atof(val6.c_str()),
-            atof(val7.c_str())
+            atof(val6.c_str())
         );
 
         overrideMap[dungeonMapId] = statSettings;
-        LOG_ERROR("AutoBalance", "StatModifier overrides for map `{}` are {} {} {} {} {} {}", val1, val2, val3, val4, val5, val6, val7);
     }
 
     return overrideMap;
@@ -324,6 +335,16 @@ bool hasBossOverride(uint32 dungeonId)
 bool hasStatModifierOverride(uint32 dungeonId)
 {
     return (statModifierOverrides.find(dungeonId) != statModifierOverrides.end());
+}
+
+bool hasStatModifierBossOverride(uint32 dungeonId)
+{
+    return (statModifierBossOverrides.find(dungeonId) != statModifierBossOverrides.end());
+}
+
+bool hasStatModifierCreatureOverride(uint32 creatureId)
+{
+    return (statModifierCreatureOverrides.find(creatureId) != statModifierCreatureOverrides.end());
 }
 
 void LoadForcedCreatureIdsFromString(std::string creatureIds, int forcedPlayerCount) // Used for reading the string from the configuration file to for those creatures who need to be scaled for XX number of players.
@@ -392,6 +413,8 @@ class AutoBalance_WorldScript : public WorldScript
         dungeonOverrides.clear();
         bossOverrides.clear();
         statModifierOverrides.clear();
+        statModifierBossOverrides.clear();
+        statModifierCreatureOverrides.clear();
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID40", ""), 40);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID25", ""), 25);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID10", ""), 10);
@@ -415,6 +438,14 @@ class AutoBalance_WorldScript : public WorldScript
 
         statModifierOverrides = LoadStatModifierOverrides(
             sConfigMgr->GetOption<std::string>("AutoBalance.StatModifier.PerInstance", "", false)
+        );
+
+        statModifierBossOverrides = LoadStatModifierOverrides(
+            sConfigMgr->GetOption<std::string>("AutoBalance.StatModifier.Boss.PerInstance", "", false)
+        );
+
+        statModifierCreatureOverrides = LoadStatModifierOverrides(
+            sConfigMgr->GetOption<std::string>("AutoBalance.StatModifier.PerCreature", "", false)
         );
 
         enabled = sConfigMgr->GetOption<bool>("AutoBalance.enable", 1);
@@ -507,82 +538,148 @@ class AutoBalance_WorldScript : public WorldScript
         if (sConfigMgr->GetOption<float>("AutoBalance.rate.damage", false, false))
             LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.rate.damage` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
 
+        // 5-player dungeons
         StatModifier_Global =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
         StatModifier_Health =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
         StatModifier_Mana =                         sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
         StatModifier_Armor =                        sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
         StatModifier_Damage =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
-        StatModifier_Boss_Global =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.Global", 1.0f);
 
+        StatModifier_Boss_Global =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_Boss_Health =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_Boss_Mana =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_Boss_Armor =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_Boss_Damage =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
+
+        // 5-player heroic dungeons
         StatModifierHeroic_Global =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
         StatModifierHeroic_Health =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
         StatModifierHeroic_Mana =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
         StatModifierHeroic_Armor =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
         StatModifierHeroic_Damage =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
-        StatModifierHeroic_Boss_Global =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.Global", 1.0f);
 
+        StatModifierHeroic_Boss_Global =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_Boss_Health =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_Boss_Mana =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_Boss_Armor =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_Boss_Damage =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
+
+        // Default for all raids
         StatModifierRaid_Global =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
         StatModifierRaid_Health =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
         StatModifierRaid_Mana =                     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
         StatModifierRaid_Armor =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
         StatModifierRaid_Damage =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
-        StatModifierRaid_Boss_Global =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.Global", 1.0f);
 
+        StatModifierRaid_Boss_Global =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_Boss_Health =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_Boss_Mana =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_Boss_Armor =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_Boss_Damage =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
+
+        // Default for all heroic raids
         StatModifierRaidHeroic_Global =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
         StatModifierRaidHeroic_Health =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
         StatModifierRaidHeroic_Mana =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
         StatModifierRaidHeroic_Armor =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
         StatModifierRaidHeroic_Damage =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
-        StatModifierRaidHeroic_Boss_Global =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.Global", 1.0f);
 
-        StatModifierRaid10M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Global", 1.0f, false);
-        StatModifierRaid10M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Health", 1.0f, false);
-        StatModifierRaid10M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Mana", 1.0f, false);
-        StatModifierRaid10M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Armor", 1.0f, false);
-        StatModifierRaid10M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Damage", 1.0f, false);
-        StatModifierRaid10M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.Global", 1.0f, false);
+        StatModifierRaidHeroic_Boss_Global =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false)); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_Boss_Health =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false)); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_Boss_Mana =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false)); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_Boss_Armor =         sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_Boss_Damage =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false)); // `AutoBalance.rate.damage` for backwards compatibility
 
-        StatModifierRaid10MHeroic_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Global", 1.0f, false);
-        StatModifierRaid10MHeroic_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Health", 1.0f, false);
-        StatModifierRaid10MHeroic_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Mana", 1.0f, false);
-        StatModifierRaid10MHeroic_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Armor", 1.0f, false);
-        StatModifierRaid10MHeroic_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Damage", 1.0f, false);
-        StatModifierRaid10MHeroic_Boss_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.Global", 1.0f, false);
+        // 10-player raids
+        StatModifierRaid10M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Global", StatModifierRaid_Global, false);
+        StatModifierRaid10M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Health", StatModifierRaid_Health, false);
+        StatModifierRaid10M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Mana", StatModifierRaid_Mana, false);
+        StatModifierRaid10M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Armor", StatModifierRaid_Armor, false);
+        StatModifierRaid10M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Damage", StatModifierRaid_Damage, false);
 
-        StatModifierRaid15M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Global", 1.0f, false);
-        StatModifierRaid15M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Health", 1.0f, false);
-        StatModifierRaid15M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Mana", 1.0f, false);
-        StatModifierRaid15M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Armor", 1.0f, false);
-        StatModifierRaid15M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Damage", 1.0f, false);
-        StatModifierRaid15M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.Global", 1.0f, false);
+        StatModifierRaid10M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.Global", StatModifierRaid_Boss_Global, false);
+        StatModifierRaid10M_Boss_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.Health", StatModifierRaid_Boss_Health, false);
+        StatModifierRaid10M_Boss_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.Mana", StatModifierRaid_Boss_Mana, false);
+        StatModifierRaid10M_Boss_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.Armor", StatModifierRaid_Boss_Armor, false);
+        StatModifierRaid10M_Boss_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.Damage", StatModifierRaid_Boss_Damage, false);
 
-        StatModifierRaid20M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Global", 1.0f, false);
-        StatModifierRaid20M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Health", 1.0f, false);
-        StatModifierRaid20M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Mana", 1.0f, false);
-        StatModifierRaid20M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Armor", 1.0f, false);
-        StatModifierRaid20M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Damage", 1.0f, false);
-        StatModifierRaid20M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.Global", 1.0f, false);
+        // 10-player heroic raids
+        StatModifierRaid10MHeroic_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Global", StatModifierRaidHeroic_Global, false);
+        StatModifierRaid10MHeroic_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Health", StatModifierRaidHeroic_Health, false);
+        StatModifierRaid10MHeroic_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Mana", StatModifierRaidHeroic_Mana, false);
+        StatModifierRaid10MHeroic_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Armor", StatModifierRaidHeroic_Armor, false);
+        StatModifierRaid10MHeroic_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Damage", StatModifierRaidHeroic_Damage, false);
 
-        StatModifierRaid25M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Global", 1.0f, false);
-        StatModifierRaid25M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Health", 1.0f, false);
-        StatModifierRaid25M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Mana", 1.0f, false);
-        StatModifierRaid25M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Armor", 1.0f, false);
-        StatModifierRaid25M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Damage", 1.0f, false);
-        StatModifierRaid25M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.Global", 1.0f, false);
+        StatModifierRaid10MHeroic_Boss_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.Global", StatModifierRaidHeroic_Boss_Global, false);
+        StatModifierRaid10MHeroic_Boss_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.Health", StatModifierRaidHeroic_Boss_Health, false);
+        StatModifierRaid10MHeroic_Boss_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.Mana", StatModifierRaidHeroic_Boss_Mana, false);
+        StatModifierRaid10MHeroic_Boss_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.Armor", StatModifierRaidHeroic_Boss_Armor, false);
+        StatModifierRaid10MHeroic_Boss_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.Damage", StatModifierRaidHeroic_Boss_Damage, false);
 
-        StatModifierRaid25MHeroic_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Global", 1.0f, false);
-        StatModifierRaid25MHeroic_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Health", 1.0f, false);
-        StatModifierRaid25MHeroic_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Mana", 1.0f, false);
-        StatModifierRaid25MHeroic_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Armor", 1.0f, false);
-        StatModifierRaid25MHeroic_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Damage", 1.0f, false);
-        StatModifierRaid25MHeroic_Boss_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.Global", 1.0f, false);
+        // 15-player raids
+        StatModifierRaid15M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Global", StatModifierRaid_Global, false);
+        StatModifierRaid15M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Health", StatModifierRaid_Health, false);
+        StatModifierRaid15M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Mana", StatModifierRaid_Mana, false);
+        StatModifierRaid15M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Armor", StatModifierRaid_Armor, false);
+        StatModifierRaid15M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Damage", StatModifierRaid_Damage, false);
 
-        StatModifierRaid40M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Global", 1.0f, false);
-        StatModifierRaid40M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Health", 1.0f, false);
-        StatModifierRaid40M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Mana", 1.0f, false);
-        StatModifierRaid40M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Armor", 1.0f, false);
-        StatModifierRaid40M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Damage", 1.0f, false);
-        StatModifierRaid40M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Global", 1.0f, false);
+        StatModifierRaid15M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.Global", StatModifierRaid_Boss_Global, false);
+        StatModifierRaid15M_Boss_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.Health", StatModifierRaid_Boss_Health, false);
+        StatModifierRaid15M_Boss_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.Mana", StatModifierRaid_Boss_Mana, false);
+        StatModifierRaid15M_Boss_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.Armor", StatModifierRaid_Boss_Armor, false);
+        StatModifierRaid15M_Boss_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.Damage", StatModifierRaid_Boss_Damage, false);
+
+        // 20-player raids
+        StatModifierRaid20M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Global", StatModifierRaid_Global, false);
+        StatModifierRaid20M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Health", StatModifierRaid_Health, false);
+        StatModifierRaid20M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Mana", StatModifierRaid_Mana, false);
+        StatModifierRaid20M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Armor", StatModifierRaid_Armor, false);
+        StatModifierRaid20M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Damage", StatModifierRaid_Damage, false);
+
+        StatModifierRaid20M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.Global", StatModifierRaid_Boss_Global, false);
+        StatModifierRaid20M_Boss_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.Health", StatModifierRaid_Boss_Health, false);
+        StatModifierRaid20M_Boss_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.Mana", StatModifierRaid_Boss_Mana, false);
+        StatModifierRaid20M_Boss_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.Armor", StatModifierRaid_Boss_Armor, false);
+        StatModifierRaid20M_Boss_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.Damage", StatModifierRaid_Boss_Damage, false);
+
+        // 25-player raids
+        StatModifierRaid25M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Global", StatModifierRaid_Global, false);
+        StatModifierRaid25M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Health", StatModifierRaid_Health, false);
+        StatModifierRaid25M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Mana", StatModifierRaid_Mana, false);
+        StatModifierRaid25M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Armor", StatModifierRaid_Armor, false);
+        StatModifierRaid25M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Damage", StatModifierRaid_Damage, false);
+
+        StatModifierRaid25M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.Global", StatModifierRaid_Boss_Global, false);
+        StatModifierRaid25M_Boss_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.Health", StatModifierRaid_Boss_Health, false);
+        StatModifierRaid25M_Boss_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.Mana", StatModifierRaid_Boss_Mana, false);
+        StatModifierRaid25M_Boss_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.Armor", StatModifierRaid_Boss_Armor, false);
+        StatModifierRaid25M_Boss_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.Damage", StatModifierRaid_Boss_Damage, false);
+
+        // 25-player heroic raids
+        StatModifierRaid25MHeroic_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Global", StatModifierRaidHeroic_Global, false);
+        StatModifierRaid25MHeroic_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Health", StatModifierRaidHeroic_Health, false);
+        StatModifierRaid25MHeroic_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Mana", StatModifierRaidHeroic_Mana, false);
+        StatModifierRaid25MHeroic_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Armor", StatModifierRaidHeroic_Armor, false);
+        StatModifierRaid25MHeroic_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Damage", StatModifierRaidHeroic_Damage, false);
+
+        StatModifierRaid25MHeroic_Boss_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.Global", StatModifierRaidHeroic_Boss_Global, false);
+        StatModifierRaid25MHeroic_Boss_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.Health", StatModifierRaidHeroic_Boss_Health, false);
+        StatModifierRaid25MHeroic_Boss_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.Mana", StatModifierRaidHeroic_Boss_Mana, false);
+        StatModifierRaid25MHeroic_Boss_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.Armor", StatModifierRaidHeroic_Boss_Armor, false);
+        StatModifierRaid25MHeroic_Boss_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.Damage", StatModifierRaidHeroic_Boss_Damage, false);
+
+        // 40-player raids
+        StatModifierRaid40M_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Global", StatModifierRaid_Global, false);
+        StatModifierRaid40M_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Health", StatModifierRaid_Health, false);
+        StatModifierRaid40M_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Mana", StatModifierRaid_Mana, false);
+        StatModifierRaid40M_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Armor", StatModifierRaid_Armor, false);
+        StatModifierRaid40M_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Damage", StatModifierRaid_Damage, false);
+
+        StatModifierRaid40M_Boss_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Global", StatModifierRaid_Boss_Global, false);
+        StatModifierRaid40M_Boss_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Health", StatModifierRaid_Boss_Health, false);
+        StatModifierRaid40M_Boss_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Mana", StatModifierRaid_Boss_Mana, false);
+        StatModifierRaid40M_Boss_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Armor", StatModifierRaid_Boss_Armor, false);
+        StatModifierRaid40M_Boss_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Damage", StatModifierRaid_Boss_Damage, false);
 
         // Modifier Minimums
         MinHPModifier = sConfigMgr->GetOption<float>("AutoBalance.MinHPModifier", 0.1f);
@@ -871,6 +968,15 @@ public:
 
         ModifyCreatureAttributes(creature);
     }
+
+    void OnCreatureAddWorld(Creature* creature) override
+    {
+        if (!enabled)
+            return;
+
+        ModifyCreatureAttributes(creature, true);
+    }
+
 
     bool checkLevelOffset(uint8 selectedLevel, uint8 targetLevel) {
         return selectedLevel && ((targetLevel >= selectedLevel && targetLevel <= (selectedLevel + higherOffset) ) || (targetLevel <= selectedLevel && targetLevel >= (selectedLevel - lowerOffset)));
@@ -1196,6 +1302,10 @@ public:
         float statMod_armor =       1.0f;
         float statMod_damage =      1.0f;
         float statMod_boss_global = 1.0f;
+        float statMod_boss_health = 1.0f;
+        float statMod_boss_mana =   1.0f;
+        float statMod_boss_armor =  1.0f;
+        float statMod_boss_damage = 1.0f;
 
         // Apply the per-instance-type modifiers first
         if (instanceMap->IsHeroic())
@@ -1211,7 +1321,10 @@ public:
                         statMod_armor = StatModifierRaid10MHeroic_Armor;
                         statMod_damage = StatModifierRaid10MHeroic_Damage;
                         statMod_boss_global = StatModifierRaid10MHeroic_Boss_Global;
-
+                        statMod_boss_health = StatModifierRaid10MHeroic_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid10MHeroic_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid10MHeroic_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid10MHeroic_Boss_Damage;
                         break;
                     case 25:
                         statMod_global = StatModifierRaid25MHeroic_Global;
@@ -1220,7 +1333,10 @@ public:
                         statMod_armor = StatModifierRaid25MHeroic_Armor;
                         statMod_damage = StatModifierRaid25MHeroic_Damage;
                         statMod_boss_global = StatModifierRaid25MHeroic_Boss_Global;
-
+                        statMod_boss_health = StatModifierRaid25MHeroic_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid25MHeroic_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid25MHeroic_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid25MHeroic_Boss_Damage;
                         break;
                     default:
                         statMod_global = StatModifierRaidHeroic_Global;
@@ -1228,7 +1344,11 @@ public:
                         statMod_mana = StatModifierRaidHeroic_Mana;
                         statMod_armor = StatModifierRaidHeroic_Armor;
                         statMod_damage = StatModifierRaidHeroic_Damage;
-                        statMod_boss_global = StatModifierRaidHeroic_Boss_Global;
+                        statMod_boss_global = StatModifierRaidHeroic_Global;
+                        statMod_boss_health = StatModifierRaidHeroic_Health;
+                        statMod_boss_mana = StatModifierRaidHeroic_Mana;
+                        statMod_boss_armor = StatModifierRaidHeroic_Armor;
+                        statMod_boss_damage = StatModifierRaidHeroic_Damage;
                 }
             }
             else
@@ -1239,6 +1359,10 @@ public:
                 statMod_armor = StatModifierHeroic_Armor;
                 statMod_damage = StatModifierHeroic_Damage;
                 statMod_boss_global = StatModifierHeroic_Boss_Global;
+                statMod_boss_health = StatModifierHeroic_Boss_Health;
+                statMod_boss_mana = StatModifierHeroic_Boss_Mana;
+                statMod_boss_armor = StatModifierHeroic_Boss_Armor;
+                statMod_boss_damage = StatModifierHeroic_Boss_Damage;
             }
         }
         else
@@ -1254,7 +1378,10 @@ public:
                         statMod_armor = StatModifierRaid10M_Armor;
                         statMod_damage = StatModifierRaid10M_Damage;
                         statMod_boss_global = StatModifierRaid10M_Boss_Global;
-
+                        statMod_boss_health = StatModifierRaid10M_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid10M_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid10M_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid10M_Boss_Damage;
                         break;
                     case 15:
                         statMod_global = StatModifierRaid15M_Global;
@@ -1263,6 +1390,10 @@ public:
                         statMod_armor = StatModifierRaid15M_Armor;
                         statMod_damage = StatModifierRaid15M_Damage;
                         statMod_boss_global = StatModifierRaid15M_Boss_Global;
+                        statMod_boss_health = StatModifierRaid15M_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid15M_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid15M_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid15M_Boss_Damage;
                         break;
                     case 20:
                         statMod_global = StatModifierRaid20M_Global;
@@ -1271,6 +1402,10 @@ public:
                         statMod_armor = StatModifierRaid20M_Armor;
                         statMod_damage = StatModifierRaid20M_Damage;
                         statMod_boss_global = StatModifierRaid20M_Boss_Global;
+                        statMod_boss_health = StatModifierRaid20M_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid20M_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid20M_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid20M_Boss_Damage;
                         break;
                     case 25:
                         statMod_global = StatModifierRaid25M_Global;
@@ -1279,6 +1414,10 @@ public:
                         statMod_armor = StatModifierRaid25M_Armor;
                         statMod_damage = StatModifierRaid25M_Damage;
                         statMod_boss_global = StatModifierRaid25M_Boss_Global;
+                        statMod_boss_health = StatModifierRaid25M_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid25M_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid25M_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid25M_Boss_Damage;
                         break;
                     case 40:
                         statMod_global = StatModifierRaid40M_Global;
@@ -1287,6 +1426,10 @@ public:
                         statMod_armor = StatModifierRaid40M_Armor;
                         statMod_damage = StatModifierRaid40M_Damage;
                         statMod_boss_global = StatModifierRaid40M_Boss_Global;
+                        statMod_boss_health = StatModifierRaid40M_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid40M_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid40M_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid40M_Boss_Damage;
                         break;
                     default:
                         statMod_global = StatModifierRaid_Global;
@@ -1295,6 +1438,10 @@ public:
                         statMod_armor = StatModifierRaid_Armor;
                         statMod_damage = StatModifierRaid_Damage;
                         statMod_boss_global = StatModifierRaid_Boss_Global;
+                        statMod_boss_health = StatModifierRaid_Boss_Health;
+                        statMod_boss_mana = StatModifierRaid_Boss_Mana;
+                        statMod_boss_armor = StatModifierRaid_Boss_Armor;
+                        statMod_boss_damage = StatModifierRaid_Boss_Damage;
                 }
             }
             else
@@ -1305,41 +1452,83 @@ public:
                 statMod_armor = StatModifier_Armor;
                 statMod_damage = StatModifier_Damage;
                 statMod_boss_global = StatModifier_Boss_Global;
+                statMod_boss_health = StatModifier_Boss_Health;
+                statMod_boss_mana = StatModifier_Boss_Mana;
+                statMod_boss_armor = StatModifier_Boss_Armor;
+                statMod_boss_damage = StatModifier_Boss_Damage;
             }
         }
 
-        // Per map ID overrides replace the above settings, if set
-        if (hasStatModifierOverride(mapId))
+        // Boss modifiers
+        if (creature->IsDungeonBoss())
         {
-            AutoBalanceStatModifiers* myStatModifierOverrides = &statModifierOverrides[mapId];
+            // Start with the settings determined above
+            // AutoBalance.StatModifier*.Boss.<stat>
+            if (creature->IsDungeonBoss())
+            {
+                statMod_global = statMod_boss_global;
+                statMod_health = statMod_boss_health;
+                statMod_mana = statMod_boss_mana;
+                statMod_armor = statMod_boss_armor;
+                statMod_damage = statMod_boss_damage;
+            }
 
-            if (myStatModifierOverrides->global != -1)      { statMod_global =      myStatModifierOverrides->global;      }
-            if (myStatModifierOverrides->health != -1)      { statMod_health =      myStatModifierOverrides->health;      }
-            if (myStatModifierOverrides->mana != -1)        { statMod_mana =        myStatModifierOverrides->mana;        }
-            if (myStatModifierOverrides->armor != -1)       { statMod_armor =       myStatModifierOverrides->armor;       }
-            if (myStatModifierOverrides->damage != -1)      { statMod_damage =      myStatModifierOverrides->damage;      }
-            if (myStatModifierOverrides->boss_global != -1) { statMod_boss_global = myStatModifierOverrides->boss_global; }
+            // Per-instance boss overrides
+            // AutoBalance.StatModifier.Boss.PerInstance
+            if (creature->IsDungeonBoss() && hasStatModifierBossOverride(mapId))
+            {
+                AutoBalanceStatModifiers* myStatModifierBossOverrides = &statModifierBossOverrides[mapId];
+
+                if (myStatModifierBossOverrides->global != -1)      { statMod_global =      myStatModifierBossOverrides->global;      }
+                if (myStatModifierBossOverrides->health != -1)      { statMod_health =      myStatModifierBossOverrides->health;      }
+                if (myStatModifierBossOverrides->mana != -1)        { statMod_mana =        myStatModifierBossOverrides->mana;        }
+                if (myStatModifierBossOverrides->armor != -1)       { statMod_armor =       myStatModifierBossOverrides->armor;       }
+                if (myStatModifierBossOverrides->damage != -1)      { statMod_damage =      myStatModifierBossOverrides->damage;      }
+            }
+        }
+        // Non-boss modifiers
+        else
+        {
+            // Per-instance non-boss overrides
+            // AutoBalance.StatModifier.PerInstance
+            if (hasStatModifierOverride(mapId))
+            {
+                AutoBalanceStatModifiers* myStatModifierOverrides = &statModifierOverrides[mapId];
+
+                if (myStatModifierOverrides->global != -1)      { statMod_global =      myStatModifierOverrides->global;      }
+                if (myStatModifierOverrides->health != -1)      { statMod_health =      myStatModifierOverrides->health;      }
+                if (myStatModifierOverrides->mana != -1)        { statMod_mana =        myStatModifierOverrides->mana;        }
+                if (myStatModifierOverrides->armor != -1)       { statMod_armor =       myStatModifierOverrides->armor;       }
+                if (myStatModifierOverrides->damage != -1)      { statMod_damage =      myStatModifierOverrides->damage;      }
+            }
         }
 
-        // Calculate our starting multiplier before adjustments
+        // Per-creature modifiers applied last
+        // AutoBalance.StatModifier.PerCreature
+        if (hasStatModifierCreatureOverride(creatureTemplate->Entry))
+        {
+            AutoBalanceStatModifiers* myCreatureOverrides = &statModifierCreatureOverrides[creatureTemplate->Entry];
+
+            if (myCreatureOverrides->global != -1)      { statMod_global =      myCreatureOverrides->global;      }
+            if (myCreatureOverrides->health != -1)      { statMod_health =      myCreatureOverrides->health;      }
+            if (myCreatureOverrides->mana != -1)        { statMod_mana =        myCreatureOverrides->mana;        }
+            if (myCreatureOverrides->armor != -1)       { statMod_armor =       myCreatureOverrides->armor;       }
+            if (myCreatureOverrides->damage != -1)      { statMod_damage =      myCreatureOverrides->damage;      }
+        }
+
+        // #maththings 
         float diff = ((float)maxNumberOfPlayers/5)*1.5f;
-        defaultMultiplier = (tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f;
 
         // For math reasons that I do not understand, curveCeiling needs to be adjusted to bring the actual multiplier
         // closer to the curveCeiling setting. Create an adjustment based on how much the ceiling should be changed at
         // the max players multiplier.
-        float curveCeilingAdjustment = curveCeiling / ((tanh(((float)maxNumberOfPlayers - inflectionValue) / diff) + 1.0f) / 2.0f);
+        float curveCeilingAdjustment = curveCeiling / (((tanh(((float)maxNumberOfPlayers - inflectionValue) / diff) + 1.0f) / 2.0f) * (curveCeiling - curveFloor) + curveFloor);
 
-        // Adjust the multiplier based on the configured floor and ceiling values
-        defaultMultiplier = (defaultMultiplier * (curveCeiling * curveCeilingAdjustment - curveFloor) + curveFloor);
-
+        // Adjust the multiplier based on the configured floor and ceiling values, plus the ceiling adjustment we just calculated
+        defaultMultiplier = ((tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f) * (curveCeiling * curveCeilingAdjustment - curveFloor) + curveFloor;
 
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
-
-        // If this is a boss, adjust the statMod global rate accordingly
-        if (creature->IsDungeonBoss())
-            statMod_global *= statMod_boss_global;
 
         //
         //  Health Scaling

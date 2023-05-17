@@ -22,20 +22,20 @@ AutoBalance.enable=1
 
 ##########################
 #
-# Stat Scaling
+# Stat Scaling - Inflection Point
 #
 ##########################
 
 #     AutoBalance.InflectionPoint* series
 #        InflectionPoint
-#           Changes the inflection point of the Hyperbolic Tangent function that determines the enemy multiplier for a given player number.
+#           Changes the inflection point of the Hyperbolic Tangent function that determines the enemy multiplier for a given player count.
 #           This adjusts the shape of the overall curve. A lower value means that difficulty will increase faster as you add players.
 #
 #           This image provies a visual of several InflectionPoint settings and its affect on the enemy stat multipliers.
 #           https://i.imgur.com/x42UnUR.png
 #
-#           Example: If InflectionPointRaid is 0.5, an enemy in a 40-player raid will have half its life with 20 players in the instance
-#                    If InflectionPointRaid is 0.8, an enemy in a 40-player raid will have half its life with 31 players in the instance
+#           Example: If InflectionPointRaid is 0.5, an enemy in a 40-player instance will have half its life with 20 players in the instance
+#                    If InflectionPointRaid is 0.8, an enemy in a 40-player instance will have half its life with 12 players in the instance
 #
 #           Default: 0.5
 #
@@ -43,7 +43,9 @@ AutoBalance.enable=1
 #           When the curve to determine the enemy multiplier is calculated, start the curve at this value.
 #
 #           This allows you to make enemies have higher stats for lower player counts without adversely affecting the stats of 
-#           higher player counts. Applied before `AutoBalance.StatModifier.*` values.
+#           higher player counts. Applied before `AutoBalance.StatModifier*` values.
+#
+#           Value may be negative if needed to achieve your desired curve.
 #
 #           To understand how CurveFloor and CurveCeiling affect the multiplier, see this image:
 #           https://i.imgur.com/I8S4cwJ.png
@@ -54,7 +56,7 @@ AutoBalance.enable=1
 #           When the curve to determine the enemy multiplier is calculated, end the curve at this value.
 #
 #           This allows you to make enemies have lower stats for higher player counts without adversely affecting the stats of
-#           lower player counts. Applied before `AutoBalance.StatModifier.*` values.
+#           lower player counts. Applied before `AutoBalance.StatModifier*` values.
 #
 #           To understand how CurveFloor and CurveCeiling affect the multiplier, see this image:
 #           https://i.imgur.com/I8S4cwJ.png
@@ -188,11 +190,25 @@ AutoBalance.InflectionPoint.PerInstance=""
 #
 AutoBalance.InflectionPoint.Boss.PerInstance=""
 
+#
+#     AutoBalance.playerCountDifficultyOffset
+#        Offset of players inside an instance. Affects all instance types.
+#        Default:     0
+AutoBalance.playerCountDifficultyOffset=0
+
+##########################
+#
+# Stat Scaling - Stat Modifiers
+#
+##########################
 
 #     AutoBalance.StatModifier* series
 #        The difficulty curve (as defined by the InflectionPoint settings) determines the base multiplier. The base
 #        multiplier is then adjusted (multiplied) by the appropriate StatModifier setting. This allows you to control
 #        the balance of how scaling affects the four adjustable stats: health, mana, armor, and damage.
+#
+#        AutoBalance.StatModifier*.<Stat> -- only affects non-boss creatures
+#        AutoBalance.StatModifier*.Boss.<Stat> -- only affects bosses
 #
 #        To see this in action, change the `StatModifier` value on the spreadsheet:
 #        https://docs.google.com/spreadsheets/d/100cmKIJIjCZ-ncWd0K9ykO8KUgwFTcwg4h2nfE_UeCc/copy
@@ -214,12 +230,14 @@ AutoBalance.InflectionPoint.Boss.PerInstance=""
 #
 #           Default: 1.0
 #
-#        Boss.Global
-#           Further adjusts the multiplier of bosses for all stats. Only applies to creatures considered instance bosses (from dungeons or raids).
+#        Boss.Global | Boss.Health | Boss.Mana | Boss.Armor | Boss.Damage
+#           Sets a SEPARATE stat multiplier for bosses. Is NOT affected by the non-boss modifiers. Only applies to creatures 
+#           considered instance bosses (from dungeons or raids).
+#
+#           Default: If not set for a given instance size/type, defaults to the dungeon/raid default values.
 #
 #           To better understand this effect, see the interactive spreadsheet.
 #
-#           Default: 1.0
 
 ### 5-player dungeons
 AutoBalance.StatModifier.Global=1.0
@@ -227,7 +245,12 @@ AutoBalance.StatModifier.Health=1.0
 AutoBalance.StatModifier.Mana=1.0
 AutoBalance.StatModifier.Armor=1.0
 AutoBalance.StatModifier.Damage=1.0
+
 AutoBalance.StatModifier.Boss.Global=1.0
+AutoBalance.StatModifier.Boss.Health=1.0
+AutoBalance.StatModifier.Boss.Mana=1.0
+AutoBalance.StatModifier.Boss.Armor=1.0
+AutoBalance.StatModifier.Boss.Damage=1.0
 
 ### 5-player heroic dungeons
 AutoBalance.StatModifierHeroic.Global=1.0
@@ -235,7 +258,12 @@ AutoBalance.StatModifierHeroic.Health=1.0
 AutoBalance.StatModifierHeroic.Mana=1.0
 AutoBalance.StatModifierHeroic.Armor=1.0
 AutoBalance.StatModifierHeroic.Damage=1.0
+
 AutoBalance.StatModifierHeroic.Boss.Global=1.0
+AutoBalance.StatModifierHeroic.Boss.Health=1.0
+AutoBalance.StatModifierHeroic.Boss.Mana=1.0
+AutoBalance.StatModifierHeroic.Boss.Armor=1.0
+AutoBalance.StatModifierHeroic.Boss.Damage=1.0
 
 ### Default for all raids
 AutoBalance.StatModifierRaid.Global=1.0
@@ -243,7 +271,12 @@ AutoBalance.StatModifierRaid.Health=1.0
 AutoBalance.StatModifierRaid.Mana=1.0
 AutoBalance.StatModifierRaid.Armor=1.0
 AutoBalance.StatModifierRaid.Damage=1.0
+
 AutoBalance.StatModifierRaid.Boss.Global=1.0
+AutoBalance.StatModifierRaid.Boss.Health=1.0
+AutoBalance.StatModifierRaid.Boss.Mana=1.0
+AutoBalance.StatModifierRaid.Boss.Armor=1.0
+AutoBalance.StatModifierRaid.Boss.Damage=1.0
 
 ### Default for all heroic raids
 AutoBalance.StatModifierRaidHeroic.Global=1.0
@@ -251,7 +284,12 @@ AutoBalance.StatModifierRaidHeroic.Health=1.0
 AutoBalance.StatModifierRaidHeroic.Mana=1.0
 AutoBalance.StatModifierRaidHeroic.Armor=1.0
 AutoBalance.StatModifierRaidHeroic.Damage=1.0
+
 AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.Health=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.Mana=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.Armor=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.Damage=1.0
 
 ###
 ### By default, all instances use the settings configured above. To customize settings for a particular instance size,
@@ -264,7 +302,12 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid10M.Mana=1.0
 #AutoBalance.StatModifierRaid10M.Armor=1.0
 #AutoBalance.StatModifierRaid10M.Damage=1.0
+
 #AutoBalance.StatModifierRaid10M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid10M.Boss.Health=1.0
+#AutoBalance.StatModifierRaid10M.Boss.Mana=1.0
+#AutoBalance.StatModifierRaid10M.Boss.Armor=1.0
+#AutoBalance.StatModifierRaid10M.Boss.Damage=1.0
 
 ### 10-player heroic raids
 #AutoBalance.StatModifierRaid10MHeroic.Global=1.0
@@ -272,7 +315,12 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid10MHeroic.Mana=1.0
 #AutoBalance.StatModifierRaid10MHeroic.Armor=1.0
 #AutoBalance.StatModifierRaid10MHeroic.Damage=1.0
+
 #AutoBalance.StatModifierRaid10MHeroic.Boss.Global=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Boss.Health=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Boss.Mana=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Boss.Armor=1.0
+#AutoBalance.StatModifierRaid10MHeroic.Boss.Damage=1.0
 
 ### 15-player raids
 #AutoBalance.StatModifierRaid15M.Global=1.0
@@ -280,7 +328,12 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid15M.Mana=1.0
 #AutoBalance.StatModifierRaid15M.Armor=1.0
 #AutoBalance.StatModifierRaid15M.Damage=1.0
+
 #AutoBalance.StatModifierRaid15M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid15M.Boss.Health=1.0
+#AutoBalance.StatModifierRaid15M.Boss.Mana=1.0
+#AutoBalance.StatModifierRaid15M.Boss.Armor=1.0
+#AutoBalance.StatModifierRaid15M.Boss.Damage=1.0
 
 ### 20-player raids
 #AutoBalance.StatModifierRaid20M.Global=1.0
@@ -288,7 +341,12 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid20M.Mana=1.0
 #AutoBalance.StatModifierRaid20M.Armor=1.0
 #AutoBalance.StatModifierRaid20M.Damage=1.0
+
 #AutoBalance.StatModifierRaid20M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid20M.Boss.Health=1.0
+#AutoBalance.StatModifierRaid20M.Boss.Mana=1.0
+#AutoBalance.StatModifierRaid20M.Boss.Armor=1.0
+#AutoBalance.StatModifierRaid20M.Boss.Damage=1.0
 
 ### 25-player raids
 #AutoBalance.StatModifierRaid25M.Global=1.0
@@ -296,7 +354,12 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid25M.Mana=1.0
 #AutoBalance.StatModifierRaid25M.Armor=1.0
 #AutoBalance.StatModifierRaid25M.Damage=1.0
+
 #AutoBalance.StatModifierRaid25M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid25M.Boss.Health=1.0
+#AutoBalance.StatModifierRaid25M.Boss.Mana=1.0
+#AutoBalance.StatModifierRaid25M.Boss.Armor=1.0
+#AutoBalance.StatModifierRaid25M.Boss.Damage=1.0
 
 ### 25-player heroic raids
 #AutoBalance.StatModifierRaid25MHeroic.Global=1.0
@@ -304,7 +367,12 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid25MHeroic.Mana=1.0
 #AutoBalance.StatModifierRaid25MHeroic.Armor=1.0
 #AutoBalance.StatModifierRaid25MHeroic.Damage=1.0
+
 #AutoBalance.StatModifierRaid25MHeroic.Boss.Global=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Boss.Health=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Boss.Mana=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Boss.Armor=1.0
+#AutoBalance.StatModifierRaid25MHeroic.Boss.Damage=1.0
 
 ### 40-player raids
 #AutoBalance.StatModifierRaid40M.Global=1.0
@@ -312,19 +380,90 @@ AutoBalance.StatModifierRaidHeroic.Boss.Global=1.0
 #AutoBalance.StatModifierRaid40M.Mana=1.0
 #AutoBalance.StatModifierRaid40M.Armor=1.0
 #AutoBalance.StatModifierRaid40M.Damage=1.0
+
 #AutoBalance.StatModifierRaid40M.Boss.Global=1.0
+#AutoBalance.StatModifierRaid40M.Boss.Health=1.0
+#AutoBalance.StatModifierRaid40M.Boss.Mana=1.0
+#AutoBalance.StatModifierRaid40M.Boss.Armor=1.0
+#AutoBalance.StatModifierRaid40M.Boss.Damage=1.0
+
+##########################
+#
+# Stat Scaling - Stat Modifier Overrides
+#
+##########################
+# A note on how the stat modifier settings are prioritized. More specific values REPLACE less-specific values.
+# Bosses and non-boss creatures pull from different settings but work in a similar way.
+#
+# Boss example: High Priest Venoxis (boss, CreatureID 14507) in the Zul'Gurub 20-player raid (InstanceID 309):
+#
+#     StatModifierRaid.Boss.Global=     0.7
+#     StatModifierRaid20M.Boss.Global=  0.8
+#     StatModifier.Boss.PerInstance=    "309 0.9"
+#     StatModifier.PerCreature=         "14507 1.0"
+#
+# Settings are applied from top the bottom, with the bottom setting (1.0) being applied to all stats for the boss.
+# Omitting the "PerCreature" setting would cause the per-instance setting for Zul'Gurub bosses (0.9) to be applied instead, and so on.
+#
+# Non-boss example: Molten Giant (non-boss, CreatureID 11658) in the Molten Core 40-player raid (InstanceID 409):
+#
+#     StatModifierRaid.Damage =     2.1
+#     StatModifierRaid40M.Damage =  2.2
+#     StatModifier.PerInstance =    "409 -1 -1 -1 -1 2.3"
+#     StatModifier.PerCreature=     "11658 -1 -1 -1 -1 2.4"
+#
+# Settings are applied from top the bottom, with the bottom setting (2.4) being applied to the creature's damage multiplier.
+# Omitting the "PerCreature" setting would cause the per-instance setting for Molten Core non-boss damage (2.3) to be applied instead, and so on.
+#
+# Keep in mind that you may use "-1" for any specific override stat to allow less-specific settings to come through.
+#
+# In this way you can make your configs as simple or complicated as you like - if you only want to set some generic dungeon and raid modifiers, everything will
+# work as expected. If you want to tune specific creatures to your liking, you can do that too.
+#
 
 #
 #     AutoBalance.StatModifier.PerInstance
-#        Allows setting a per-instance stat modifier value. Specifying a value of `-1` will skip overriding of that value.
+#        Allows setting per-instance stat modifier values. Specifying a value of `-1` will skip overriding of that value.
 #        You may omit entries from the end of the string if desired. Only one set of values should be specified per InstanceID.
 #
-#        Format: "[InstanceID] [Global] [Health] [Mana] [Armor] [Damage] [Boss.Global], [InstanceID] [Global] [Health] [Mana] [Armor] [Damage] [Boss.Global], ..."
+#        ONLY AFFECTS NON-BOSS CREATURES.
 #
-#        Example: AutoBalance.StatModifier.PerInstance="409 1.0 0.8 0.8 1.0 1.2 1.1, 568 -1 -1 -1 -1 -1 1.5, 43 -1 1.2 1.2"
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID] [Global] [Health] [Mana] [Armor] [Damage], [InstanceID] [Global] [Health] [Mana] [Armor] [Damage], ..."
+#
+#        Example: AutoBalance.StatModifier.PerInstance="409 1.0 0.8 0.8 1.0 1.2, 568 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
 #
 #        Default: Empty string, which disables the feature.
 AutoBalance.StatModifier.PerInstance=""
+
+#
+#     AutoBalance.StatModifier.Boss.PerInstance
+#        Allows setting per-instance stat modifier values for bosses only. Specifying a value of `-1` will skip overriding of that value.
+#        You may omit entries from the end of the string if desired. Only one set of values should be specified per InstanceID.
+#
+#        ONLY AFFECTS BOSSES.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID] [Boss.Global] [Boss.Health] [Boss.Mana] [Boss.Armor] [Boss.Damage], [InstanceID] [Boss.Global] [Boss.Health] [Boss.Mana] [Boss.Armor] [Boss.Damage], ..."
+#
+#        Example: AutoBalance.StatModifier.Boss.PerInstance="409 1.0 0.8 0.8 1.0 1.2, 568 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
+#
+#        Default: Empty string, which disables the feature.
+AutoBalance.StatModifier.Boss.PerInstance=""
+
+#
+#     AutoBalance.StatModifier.Boss.PerCreature
+#        Allows setting per-creature stat modifier values. Specifying a value of `-1` will skip overriding of that value.
+#        You may omit entries from the end of the string if desired. Only one set of values should be specified per CreatureID.
+#
+#        Format: "[CreatureID] [Global] [Health] [Mana] [Armor] [Damage], [CreatureID] [Global] [Health] [Mana] [Armor] [Damage], ..."
+#
+#        Example: AutoBalance.StatModifier.Boss.PerInstance="14507 1.0 0.8 0.8 1.0 1.2, 11372 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
+#
+#        Default: Empty string, which disables the feature.
+AutoBalance.StatModifier.PerCreature=""
 
 #
 #     AutoBalance.MinHPModifier
@@ -344,12 +483,11 @@ AutoBalance.MinManaModifier=0.01
 #        Default:     0.01
 AutoBalance.MinDamageModifier=0.01
 
+##########################
 #
-#     AutoBalance.playerCountDifficultyOffset
-#        Offset of players inside an instance. Affects all instance types.
-#        Default:     0
-AutoBalance.playerCountDifficultyOffset=0
-
+# Misc Settings
+#
+##########################
 #
 #     AutoBalance.PerDungeonPlayerCounts
 #        Allows setting a per-instance setting for minimum number of players to scale. For example, dungeons could remain at 5 players, but raids could be chosen to scale down to 5 players as well.
@@ -514,7 +652,7 @@ AutoBalance.reward.dungeonToken = 47241
 AutoBalance.reward.MinPlayerReward = 1
 
 # The following variables are deprecated and should not be used in new deployments.
-# They are still applied to support backwards compatability, but will be removed entirely in a future release.
+# They will still be applied to support backwards compatability, but will be removed entirely in a future release.
 # Their entire functionality (and more) has been moved to new settings referenced in this config file.
 #
 #   AutoBalance.PerDungeonScaling
