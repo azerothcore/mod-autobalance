@@ -864,7 +864,11 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (Player* playerHandle = playerIteration->GetSource())
                             {
                                 ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s entered the Instance %s. Auto setting player count to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
+                                auto instanceMap = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()));
+
+                                std::string instanceDifficulty; if (instanceMap->IsHeroic()) instanceDifficulty = "Heroic"; else instanceDifficulty = "Normal";
+
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s enters %s (%u-player %s). Player count set to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), map->GetMapName(), instanceMap->GetMaxPlayers(), instanceDifficulty, mapABInfo->playerCount + PlayerCountDifficultyOffset, PlayerCountDifficultyOffset);
                             }
                         }
                     }
@@ -1118,77 +1122,67 @@ public:
 
         if (instanceMap->IsHeroic())
         {
-            if (instanceMap->IsRaid())
+            switch (maxNumberOfPlayers)
             {
-                switch (instanceMap->GetMaxPlayers())
-                {
-                    case 10:
-                        inflectionValue *= InflectionPointRaid10MHeroic;
-                        curveFloor = InflectionPointRaid10MHeroicCurveFloor;
-                        curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
-                        break;
-                    case 25:
-                        inflectionValue *= InflectionPointRaid25MHeroic;
-                        curveFloor = InflectionPointRaid25MHeroicCurveFloor;
-                        curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
-                        break;
-                    default:
-                        inflectionValue *= InflectionPointRaidHeroic;
-                        curveFloor = InflectionPointRaidHeroicCurveFloor;
-                        curveCeiling = InflectionPointRaidHeroicCurveCeiling;;
-                }
-            }
-            else
-            {
-                inflectionValue *= InflectionPointHeroic;
-                curveFloor = InflectionPointHeroicCurveFloor;
-                curveCeiling = InflectionPointHeroicCurveCeiling;
+                case 1 ... 5:
+                    inflectionValue *= InflectionPointHeroic;
+                    curveFloor = InflectionPointHeroicCurveFloor;
+                    curveCeiling = InflectionPointHeroicCurveCeiling;
+                    break;
+                case 10:
+                    inflectionValue *= InflectionPointRaid10MHeroic;
+                    curveFloor = InflectionPointRaid10MHeroicCurveFloor;
+                    curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
+                    break;
+                case 25:
+                    inflectionValue *= InflectionPointRaid25MHeroic;
+                    curveFloor = InflectionPointRaid25MHeroicCurveFloor;
+                    curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
+                    break;
+                default:
+                    inflectionValue *= InflectionPointRaidHeroic;
+                    curveFloor = InflectionPointRaidHeroicCurveFloor;
+                    curveCeiling = InflectionPointRaidHeroicCurveCeiling;
             }
         }
         else
         {
-            if (instanceMap->IsRaid())
+            switch (maxNumberOfPlayers)
             {
-                switch (instanceMap->GetMaxPlayers())
-                {
-                    case 10:
-                        inflectionValue *= InflectionPointRaid10M;
-                        curveFloor = InflectionPointRaid10MCurveFloor;
-                        curveCeiling = InflectionPointRaid10MCurveCeiling;
-
-                        break;
-                    case 15:
-                        inflectionValue *= InflectionPointRaid15M;
-                        curveFloor = InflectionPointRaid15MCurveFloor;
-                        curveCeiling = InflectionPointRaid15MCurveCeiling;
-
-                        break;
-                    case 20:
-                        inflectionValue *= InflectionPointRaid20M;
-                        curveFloor = InflectionPointRaid20MCurveFloor;
-                        curveCeiling = InflectionPointRaid20MCurveCeiling;
-                        break;
-                    case 25:
-                        inflectionValue *= InflectionPointRaid25M;
-                        curveFloor = InflectionPointRaid25MCurveFloor;
-                        curveCeiling = InflectionPointRaid25MCurveCeiling;
-                        break;
-                    case 40:
-                        inflectionValue *= InflectionPointRaid40M;
-                        curveFloor = InflectionPointRaid40MCurveFloor;
-                        curveCeiling = InflectionPointRaid40MCurveCeiling;
-                        break;
-                    default:
-                        inflectionValue *= InflectionPointRaid;
-                        curveFloor = InflectionPointRaidCurveFloor;
-                        curveCeiling = InflectionPointRaidCurveCeiling;
-                }
-            }
-            else
-            {
-                inflectionValue *= InflectionPoint;
-                curveFloor = InflectionPointCurveFloor;
-                curveCeiling = InflectionPointCurveCeiling;
+                case 1 ... 5:
+                    inflectionValue *= InflectionPoint;
+                    curveFloor = InflectionPointCurveFloor;
+                    curveCeiling = InflectionPointCurveCeiling;
+                    break;
+                case 10:
+                    inflectionValue *= InflectionPointRaid10M;
+                    curveFloor = InflectionPointRaid10MCurveFloor;
+                    curveCeiling = InflectionPointRaid10MCurveCeiling;
+                    break;
+                case 15:
+                    inflectionValue *= InflectionPointRaid15M;
+                    curveFloor = InflectionPointRaid15MCurveFloor;
+                    curveCeiling = InflectionPointRaid15MCurveCeiling;
+                    break;
+                case 20:
+                    inflectionValue *= InflectionPointRaid20M;
+                    curveFloor = InflectionPointRaid20MCurveFloor;
+                    curveCeiling = InflectionPointRaid20MCurveCeiling;
+                    break;
+                case 25:
+                    inflectionValue *= InflectionPointRaid25M;
+                    curveFloor = InflectionPointRaid25MCurveFloor;
+                    curveCeiling = InflectionPointRaid25MCurveCeiling;
+                    break;
+                case 40:
+                    inflectionValue *= InflectionPointRaid40M;
+                    curveFloor = InflectionPointRaid40MCurveFloor;
+                    curveCeiling = InflectionPointRaid40MCurveCeiling;
+                    break;
+                default:
+                    inflectionValue *= InflectionPointRaid;
+                    curveFloor = InflectionPointRaidCurveFloor;
+                    curveCeiling = InflectionPointRaidCurveCeiling;
             }
         }
 
@@ -1218,53 +1212,45 @@ public:
             // Determine the correct boss inflection multiplier
             if (instanceMap->IsHeroic())
             {
-                if (instanceMap->IsRaid())
+                switch (maxNumberOfPlayers)
                 {
-                    switch (instanceMap->GetMaxPlayers())
-                    {
-                        case 10:
-                            bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss;
-                            break;
-                        case 25:
-                            bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss;
-                            break;
-                        default:
-                            bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss;
-                    }
-                }
-                else
-                {
-                    bossInflectionPointMultiplier = InflectionPointHeroicBoss;
+                    case 1 ... 5:
+                        bossInflectionPointMultiplier = InflectionPointHeroicBoss;
+                        break;
+                    case 10:
+                        bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss;
+                        break;
+                    case 25:
+                        bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss;
+                        break;
+                    default:
+                        bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss;
                 }
             }
             else
             {
-                if (instanceMap->IsRaid())
+                switch (maxNumberOfPlayers)
                 {
-                    switch (instanceMap->GetMaxPlayers())
-                    {
-                        case 10:
-                            bossInflectionPointMultiplier = InflectionPointRaid10MBoss;
-                            break;
-                        case 15:
-                            bossInflectionPointMultiplier = InflectionPointRaid15MBoss;
-                            break;
-                        case 20:
-                            bossInflectionPointMultiplier = InflectionPointRaid20MBoss;
-                            break;
-                        case 25:
-                            bossInflectionPointMultiplier = InflectionPointRaid25MBoss;
-                            break;
-                        case 40:
-                            bossInflectionPointMultiplier = InflectionPointRaid40MBoss;
-                            break;
-                        default:
-                            bossInflectionPointMultiplier = InflectionPointRaidBoss;
-                    }
-                }
-                else
-                {
-                    bossInflectionPointMultiplier = InflectionPointBoss;
+                    case 1 ... 5:
+                        bossInflectionPointMultiplier = InflectionPointBoss;
+                        break;
+                    case 10:
+                        bossInflectionPointMultiplier = InflectionPointRaid10MBoss;
+                        break;
+                    case 15:
+                        bossInflectionPointMultiplier = InflectionPointRaid15MBoss;
+                        break;
+                    case 20:
+                        bossInflectionPointMultiplier = InflectionPointRaid20MBoss;
+                        break;
+                    case 25:
+                        bossInflectionPointMultiplier = InflectionPointRaid25MBoss;
+                        break;
+                    case 40:
+                        bossInflectionPointMultiplier = InflectionPointRaid40MBoss;
+                        break;
+                    default:
+                        bossInflectionPointMultiplier = InflectionPointRaidBoss;
                 }
             }
 
@@ -1296,168 +1282,152 @@ public:
         //
 
         // Calculate stat modifiers
-        float statMod_global =      1.0f;
-        float statMod_health =      1.0f;
-        float statMod_mana =        1.0f;
-        float statMod_armor =       1.0f;
-        float statMod_damage =      1.0f;
-        float statMod_boss_global = 1.0f;
-        float statMod_boss_health = 1.0f;
-        float statMod_boss_mana =   1.0f;
-        float statMod_boss_armor =  1.0f;
-        float statMod_boss_damage = 1.0f;
+        float statMod_global, statMod_health, statMod_mana, statMod_armor, statMod_damage;
+        float statMod_boss_global, statMod_boss_health, statMod_boss_mana, statMod_boss_armor, statMod_boss_damage;
 
         // Apply the per-instance-type modifiers first
-        if (instanceMap->IsHeroic())
-        {
-            if (instanceMap->IsRaid())
-            {
-                switch (instanceMap->GetMaxPlayers())
-                {
-                    case 10:
-                        statMod_global = StatModifierRaid10MHeroic_Global;
-                        statMod_health = StatModifierRaid10MHeroic_Health;
-                        statMod_mana = StatModifierRaid10MHeroic_Mana;
-                        statMod_armor = StatModifierRaid10MHeroic_Armor;
-                        statMod_damage = StatModifierRaid10MHeroic_Damage;
-                        statMod_boss_global = StatModifierRaid10MHeroic_Boss_Global;
-                        statMod_boss_health = StatModifierRaid10MHeroic_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid10MHeroic_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid10MHeroic_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid10MHeroic_Boss_Damage;
-                        break;
-                    case 25:
-                        statMod_global = StatModifierRaid25MHeroic_Global;
-                        statMod_health = StatModifierRaid25MHeroic_Health;
-                        statMod_mana = StatModifierRaid25MHeroic_Mana;
-                        statMod_armor = StatModifierRaid25MHeroic_Armor;
-                        statMod_damage = StatModifierRaid25MHeroic_Damage;
-                        statMod_boss_global = StatModifierRaid25MHeroic_Boss_Global;
-                        statMod_boss_health = StatModifierRaid25MHeroic_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid25MHeroic_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid25MHeroic_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid25MHeroic_Boss_Damage;
-                        break;
-                    default:
-                        statMod_global = StatModifierRaidHeroic_Global;
-                        statMod_health = StatModifierRaidHeroic_Health;
-                        statMod_mana = StatModifierRaidHeroic_Mana;
-                        statMod_armor = StatModifierRaidHeroic_Armor;
-                        statMod_damage = StatModifierRaidHeroic_Damage;
-                        statMod_boss_global = StatModifierRaidHeroic_Global;
-                        statMod_boss_health = StatModifierRaidHeroic_Health;
-                        statMod_boss_mana = StatModifierRaidHeroic_Mana;
-                        statMod_boss_armor = StatModifierRaidHeroic_Armor;
-                        statMod_boss_damage = StatModifierRaidHeroic_Damage;
-                }
-            }
-            else
-            {
-                statMod_global = StatModifierHeroic_Global;
-                statMod_health = StatModifierHeroic_Health;
-                statMod_mana = StatModifierHeroic_Mana;
-                statMod_armor = StatModifierHeroic_Armor;
-                statMod_damage = StatModifierHeroic_Damage;
-                statMod_boss_global = StatModifierHeroic_Boss_Global;
-                statMod_boss_health = StatModifierHeroic_Boss_Health;
-                statMod_boss_mana = StatModifierHeroic_Boss_Mana;
-                statMod_boss_armor = StatModifierHeroic_Boss_Armor;
-                statMod_boss_damage = StatModifierHeroic_Boss_Damage;
-            }
-        }
-        else
-        {
-            if (instanceMap->IsRaid())
-            {
-                switch (instanceMap->GetMaxPlayers())
-                {
-                    case 10:
-                        statMod_global = StatModifierRaid10M_Global;
-                        statMod_health = StatModifierRaid10M_Health;
-                        statMod_mana = StatModifierRaid10M_Mana;
-                        statMod_armor = StatModifierRaid10M_Armor;
-                        statMod_damage = StatModifierRaid10M_Damage;
-                        statMod_boss_global = StatModifierRaid10M_Boss_Global;
-                        statMod_boss_health = StatModifierRaid10M_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid10M_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid10M_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid10M_Boss_Damage;
-                        break;
-                    case 15:
-                        statMod_global = StatModifierRaid15M_Global;
-                        statMod_health = StatModifierRaid15M_Health;
-                        statMod_mana = StatModifierRaid15M_Mana;
-                        statMod_armor = StatModifierRaid15M_Armor;
-                        statMod_damage = StatModifierRaid15M_Damage;
-                        statMod_boss_global = StatModifierRaid15M_Boss_Global;
-                        statMod_boss_health = StatModifierRaid15M_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid15M_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid15M_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid15M_Boss_Damage;
-                        break;
-                    case 20:
-                        statMod_global = StatModifierRaid20M_Global;
-                        statMod_health = StatModifierRaid20M_Health;
-                        statMod_mana = StatModifierRaid20M_Mana;
-                        statMod_armor = StatModifierRaid20M_Armor;
-                        statMod_damage = StatModifierRaid20M_Damage;
-                        statMod_boss_global = StatModifierRaid20M_Boss_Global;
-                        statMod_boss_health = StatModifierRaid20M_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid20M_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid20M_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid20M_Boss_Damage;
-                        break;
-                    case 25:
-                        statMod_global = StatModifierRaid25M_Global;
-                        statMod_health = StatModifierRaid25M_Health;
-                        statMod_mana = StatModifierRaid25M_Mana;
-                        statMod_armor = StatModifierRaid25M_Armor;
-                        statMod_damage = StatModifierRaid25M_Damage;
-                        statMod_boss_global = StatModifierRaid25M_Boss_Global;
-                        statMod_boss_health = StatModifierRaid25M_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid25M_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid25M_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid25M_Boss_Damage;
-                        break;
-                    case 40:
-                        statMod_global = StatModifierRaid40M_Global;
-                        statMod_health = StatModifierRaid40M_Health;
-                        statMod_mana = StatModifierRaid40M_Mana;
-                        statMod_armor = StatModifierRaid40M_Armor;
-                        statMod_damage = StatModifierRaid40M_Damage;
-                        statMod_boss_global = StatModifierRaid40M_Boss_Global;
-                        statMod_boss_health = StatModifierRaid40M_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid40M_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid40M_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid40M_Boss_Damage;
-                        break;
-                    default:
-                        statMod_global = StatModifierRaid_Global;
-                        statMod_health = StatModifierRaid_Health;
-                        statMod_mana = StatModifierRaid_Mana;
-                        statMod_armor = StatModifierRaid_Armor;
-                        statMod_damage = StatModifierRaid_Damage;
-                        statMod_boss_global = StatModifierRaid_Boss_Global;
-                        statMod_boss_health = StatModifierRaid_Boss_Health;
-                        statMod_boss_mana = StatModifierRaid_Boss_Mana;
-                        statMod_boss_armor = StatModifierRaid_Boss_Armor;
-                        statMod_boss_damage = StatModifierRaid_Boss_Damage;
-                }
-            }
-            else
-            {
-                statMod_global = StatModifier_Global;
-                statMod_health = StatModifier_Health;
-                statMod_mana = StatModifier_Mana;
-                statMod_armor = StatModifier_Armor;
-                statMod_damage = StatModifier_Damage;
-                statMod_boss_global = StatModifier_Boss_Global;
-                statMod_boss_health = StatModifier_Boss_Health;
-                statMod_boss_mana = StatModifier_Boss_Mana;
-                statMod_boss_armor = StatModifier_Boss_Armor;
-                statMod_boss_damage = StatModifier_Boss_Damage;
-            }
-        }
+		if (instanceMap->IsHeroic())
+		{
+			switch (maxNumberOfPlayers)
+			{
+			    case 1 ... 5:
+			        statMod_global = StatModifierHeroic_Global;
+			        statMod_health = StatModifierHeroic_Health;
+			        statMod_mana = StatModifierHeroic_Mana;
+			        statMod_armor = StatModifierHeroic_Armor;
+			        statMod_damage = StatModifierHeroic_Damage;
+			        statMod_boss_global = StatModifierHeroic_Boss_Global;
+			        statMod_boss_health = StatModifierHeroic_Boss_Health;
+			        statMod_boss_mana = StatModifierHeroic_Boss_Mana;
+			        statMod_boss_armor = StatModifierHeroic_Boss_Armor;
+			        statMod_boss_damage = StatModifierHeroic_Boss_Damage;
+			        break;
+			    case 10:
+                    statMod_global = StatModifierRaid10MHeroic_Global;
+                    statMod_health = StatModifierRaid10MHeroic_Health;
+                    statMod_mana = StatModifierRaid10MHeroic_Mana;
+                    statMod_armor = StatModifierRaid10MHeroic_Armor;
+                    statMod_damage = StatModifierRaid10MHeroic_Damage;
+                    statMod_boss_global = StatModifierRaid10MHeroic_Boss_Global;
+                    statMod_boss_health = StatModifierRaid10MHeroic_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid10MHeroic_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid10MHeroic_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid10MHeroic_Boss_Damage;
+			        break;
+			    case 25:
+                    statMod_global = StatModifierRaid25MHeroic_Global;
+                    statMod_health = StatModifierRaid25MHeroic_Health;
+                    statMod_mana = StatModifierRaid25MHeroic_Mana;
+                    statMod_armor = StatModifierRaid25MHeroic_Armor;
+                    statMod_damage = StatModifierRaid25MHeroic_Damage;
+                    statMod_boss_global = StatModifierRaid25MHeroic_Boss_Global;
+                    statMod_boss_health = StatModifierRaid25MHeroic_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid25MHeroic_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid25MHeroic_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid25MHeroic_Boss_Damage;
+                    break;
+			    default:
+                    statMod_global = StatModifierRaidHeroic_Global;
+                    statMod_health = StatModifierRaidHeroic_Health;
+                    statMod_mana = StatModifierRaidHeroic_Mana;
+                    statMod_armor = StatModifierRaidHeroic_Armor;
+                    statMod_damage = StatModifierRaidHeroic_Damage;
+                    statMod_boss_global = StatModifierRaidHeroic_Global;
+                    statMod_boss_health = StatModifierRaidHeroic_Health;
+                    statMod_boss_mana = StatModifierRaidHeroic_Mana;
+                    statMod_boss_armor = StatModifierRaidHeroic_Armor;
+                    statMod_boss_damage = StatModifierRaidHeroic_Damage;
+			}
+		}
+		else
+		{
+			switch (maxNumberOfPlayers)
+			{
+			    case 1 ... 5:
+			        statMod_global = StatModifier_Global;
+			        statMod_health = StatModifier_Health;
+			        statMod_mana = StatModifier_Mana;
+			        statMod_armor = StatModifier_Armor;
+			        statMod_damage = StatModifier_Damage;
+			        statMod_boss_global = StatModifier_Boss_Global;
+			        statMod_boss_health = StatModifier_Boss_Health;
+			        statMod_boss_mana = StatModifier_Boss_Mana;
+			        statMod_boss_armor = StatModifier_Boss_Armor;
+			        statMod_boss_damage = StatModifier_Boss_Damage;
+			        break;
+			    case 10:
+                    statMod_global = StatModifierRaid10M_Global;
+                    statMod_health = StatModifierRaid10M_Health;
+                    statMod_mana = StatModifierRaid10M_Mana;
+                    statMod_armor = StatModifierRaid10M_Armor;
+                    statMod_damage = StatModifierRaid10M_Damage;
+                    statMod_boss_global = StatModifierRaid10M_Boss_Global;
+                    statMod_boss_health = StatModifierRaid10M_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid10M_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid10M_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid10M_Boss_Damage;
+                    break;
+			    case 15:
+                    statMod_global = StatModifierRaid15M_Global;
+                    statMod_health = StatModifierRaid15M_Health;
+                    statMod_mana = StatModifierRaid15M_Mana;
+                    statMod_armor = StatModifierRaid15M_Armor;
+                    statMod_damage = StatModifierRaid15M_Damage;
+                    statMod_boss_global = StatModifierRaid15M_Boss_Global;
+                    statMod_boss_health = StatModifierRaid15M_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid15M_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid15M_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid15M_Boss_Damage;
+                    break;
+			    case 20:
+                    statMod_global = StatModifierRaid20M_Global;
+                    statMod_health = StatModifierRaid20M_Health;
+                    statMod_mana = StatModifierRaid20M_Mana;
+                    statMod_armor = StatModifierRaid20M_Armor;
+                    statMod_damage = StatModifierRaid20M_Damage;
+                    statMod_boss_global = StatModifierRaid20M_Boss_Global;
+                    statMod_boss_health = StatModifierRaid20M_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid20M_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid20M_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid20M_Boss_Damage;
+                    break;
+			    case 25:
+                    statMod_global = StatModifierRaid25M_Global;
+                    statMod_health = StatModifierRaid25M_Health;
+                    statMod_mana = StatModifierRaid25M_Mana;
+                    statMod_armor = StatModifierRaid25M_Armor;
+                    statMod_damage = StatModifierRaid25M_Damage;
+                    statMod_boss_global = StatModifierRaid25M_Boss_Global;
+                    statMod_boss_health = StatModifierRaid25M_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid25M_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid25M_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid25M_Boss_Damage;
+                    break;
+			    case 40:
+                    statMod_global = StatModifierRaid40M_Global;
+                    statMod_health = StatModifierRaid40M_Health;
+                    statMod_mana = StatModifierRaid40M_Mana;
+                    statMod_armor = StatModifierRaid40M_Armor;
+                    statMod_damage = StatModifierRaid40M_Damage;
+                    statMod_boss_global = StatModifierRaid40M_Boss_Global;
+                    statMod_boss_health = StatModifierRaid40M_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid40M_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid40M_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid40M_Boss_Damage;
+                    break;
+			    default:
+                    statMod_global = StatModifierRaid_Global;
+                    statMod_health = StatModifierRaid_Health;
+                    statMod_mana = StatModifierRaid_Mana;
+                    statMod_armor = StatModifierRaid_Armor;
+                    statMod_damage = StatModifierRaid_Damage;
+                    statMod_boss_global = StatModifierRaid_Boss_Global;
+                    statMod_boss_health = StatModifierRaid_Boss_Health;
+                    statMod_boss_mana = StatModifierRaid_Boss_Mana;
+                    statMod_boss_armor = StatModifierRaid_Boss_Armor;
+                    statMod_boss_damage = StatModifierRaid_Boss_Damage;
+			}
+		}
 
         // Boss modifiers
         if (creature->IsDungeonBoss())
@@ -1621,7 +1591,7 @@ public:
             else {
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
-                if (LevelEndGameBoost && !creature->GetMap()->IsRaid()) {
+                if (LevelEndGameBoost && maxNumberOfPlayers <= 5) {
                     newDmgBase *= creatureABInfo->selectedLevel >= 75 && originalLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
                 }
             }
@@ -1835,7 +1805,7 @@ public:
         if (playerList.IsEmpty())
             return;
 
-        uint32 reward = map->IsRaid() ? rewardRaid : rewardDungeon;
+        uint32 reward = map->ToInstanceMap()->GetMaxPlayers() > 5 ? rewardRaid : rewardDungeon;
         if (!reward)
             return;
 
