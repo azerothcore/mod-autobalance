@@ -144,7 +144,7 @@ AutoBalance.InflectionPointRaid25M.CurveCeiling=
 AutoBalance.InflectionPointRaid25M.BossModifier=
 
 ### 25-player heroic raids
-AutoBalance.InflectionPointRaid25MHeroic=0.5
+AutoBalance.InflectionPointRaid25MHeroic=
 AutoBalance.InflectionPointRaid25MHeroic.CurveFloor=
 AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling=
 AutoBalance.InflectionPointRaid25MHeroic.BossModifier=
@@ -389,6 +389,98 @@ AutoBalance.StatModifierRaid40M.Boss.Mana=
 AutoBalance.StatModifierRaid40M.Boss.Armor=
 AutoBalance.StatModifierRaid40M.Boss.Damage=
 
+#     AutoBalance.StatModifier*.CCDuration series
+#        These StatModifier values affect the duration of CC effects used against the players. CC effects are auras with one
+#        or more of these effects:
+#
+#          - SPELL_AURA_MOD_CHARM
+#          - SPELL_AURA_MOD_CONFUSE
+#          - SPELL_AURA_MOD_DISARM
+#          - SPELL_AURA_MOD_FEAR
+#          - SPELL_AURA_MOD_PACIFY
+#          - SPELL_AURA_MOD_POSSESS
+#          - SPELL_AURA_MOD_SILENCE
+#          - SPELL_AURA_MOD_STUN
+#          - SPELL_AURA_MOD_SPEED_SLOW_ALL
+#
+#        CCDuration
+#           Adjusts the duration of CC effects. Not affected by any global settings.
+#
+#           After the InflectionPoint curve determines the base multiplier, it is multiplied by this value to determine the final
+#           CC duration multiplier.
+#
+#           CCDuration IS affected by the InflectionPoint curve!
+#           CCDuration IS NOT affected by StatModifier*.Global values!
+#           CCDuration IS affected by AutoBalance.MinCCDurationModifier and AutoBalance.MaxCCDurationModifier!
+#
+#           Example:
+#               Assume we are using the default InflectionPoint curve (0.5 with 0.0 floor and 1.0 ceiling), and there are 3 players in the instance.
+#               With 3 players, the base multiplier is '0.6843'. Let's say that CCDuration is set to '0.5'.
+#               The final CC Duration multiplier is 0.6843 * 0.5 = 0.34215
+#               For a CC with a programmed duration of 8 seconds, the CC will last 8 * 0.34215 = 2.7372 seconds.
+#
+#           Default: no value
+#               If no value is set for a given instance type and player count, and the generic values that apply to that instance
+#               are also blank, CC duration will be unchanged.
+#
+#        Boss.Global | Boss.Health | Boss.Mana | Boss.Armor | Boss.Damage
+#           Sets a SEPARATE stat multiplier for bosses. Is NOT affected by the non-boss modifiers. Only applies to creatures
+#           considered instance bosses (from dungeons or raids).
+#
+#           Default: If not set for a given instance size/type, defaults to the dungeon/raid default values.
+#
+#           To better understand this effect, see the interactive spreadsheet.
+#
+
+### 5-player dungeons
+AutoBalance.StatModifier.CCDuration=
+AutoBalance.StatModifier.Boss.CCDuration=
+
+### 5-player heroic dungeons
+AutoBalance.StatModifierHeroic.CCDuration=
+AutoBalance.StatModifierHeroic.Boss.CCDuration=
+
+### Default for all raids
+AutoBalance.StatModifierRaid.CCDuration=
+AutoBalance.StatModifierRaid.Boss.CCDuration=
+
+### Default for all heroic raids
+AutoBalance.StatModifierRaidHeroic.CCDuration=
+AutoBalance.StatModifierRaidHeroic.Boss.CCDuration=
+
+###
+### Configuring the CCDuration settings above this line will affect all dungeons and raids.
+### To customize settings for a particular instance size, add your value to the settings below.
+###
+
+### 10-player raids
+AutoBalance.StatModifierRaid10M.CCDuration=
+AutoBalance.StatModifierRaid10M.Boss.CCDuration=
+
+### 10-player heroic raids
+AutoBalance.StatModifierRaid10MHeroic.CCDuration=
+AutoBalance.StatModifierRaid10MHeroic.Boss.CCDuration=
+
+### 15-player raids
+AutoBalance.StatModifierRaid15M.CCDuration=
+AutoBalance.StatModifierRaid15M.Boss.CCDuration=
+
+### 20-player raids
+AutoBalance.StatModifierRaid20M.CCDuration=
+AutoBalance.StatModifierRaid20M.Boss.CCDuration=
+
+### 25-player raids
+AutoBalance.StatModifierRaid25M.CCDuration=
+AutoBalance.StatModifierRaid25M.Boss.CCDuration=
+
+### 25-player heroic raids
+AutoBalance.StatModifierRaid25MHeroic.CCDuration=
+AutoBalance.StatModifierRaid25MHeroic.Boss.CCDuration=
+
+### 40-player raids
+AutoBalance.StatModifierRaid40M.CCDuration=
+AutoBalance.StatModifierRaid40M.Boss.CCDuration=
+
 ##########################
 #
 # Stat Scaling - Stat Modifier Overrides
@@ -432,9 +524,9 @@ AutoBalance.StatModifierRaid40M.Boss.Damage=
 #
 #        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
 #
-#        Format: "[InstanceID] [Global] [Health] [Mana] [Armor] [Damage], [InstanceID] [Global] [Health] [Mana] [Armor] [Damage], ..."
+#        Format: "[InstanceID] [Global] [Health] [Mana] [Armor] [Damage] [CCDuration], [InstanceID] [Global] [Health] [Mana] [Armor] [Damage] [CCDuration], ..."
 #
-#        Example: AutoBalance.StatModifier.PerInstance="409 1.0 0.8 0.8 1.0 1.2, 568 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
+#        Example: AutoBalance.StatModifier.PerInstance="409 1.0 0.8 0.8 1.0 1.2 1.0, 568 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
 #
 #        Default: Empty string, which disables the feature.
 AutoBalance.StatModifier.PerInstance=""
@@ -448,9 +540,9 @@ AutoBalance.StatModifier.PerInstance=""
 #
 #        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
 #
-#        Format: "[InstanceID] [Boss.Global] [Boss.Health] [Boss.Mana] [Boss.Armor] [Boss.Damage], [InstanceID] [Boss.Global] [Boss.Health] [Boss.Mana] [Boss.Armor] [Boss.Damage], ..."
+#        Format: "[InstanceID] [Boss.Global] [Boss.Health] [Boss.Mana] [Boss.Armor] [Boss.Damage] [Boss.CCDuration], [InstanceID] [Boss.Global] [Boss.Health] [Boss.Mana] [Boss.Armor] [Boss.Damage] [Boss.CCDuration], ..."
 #
-#        Example: AutoBalance.StatModifier.Boss.PerInstance="409 1.0 0.8 0.8 1.0 1.2, 568 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
+#        Example: AutoBalance.StatModifier.Boss.PerInstance="409 1.0 0.8 0.8 1.0 1.2 0.8, 568 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
 #
 #        Default: Empty string, which disables the feature.
 AutoBalance.StatModifier.Boss.PerInstance=""
@@ -460,9 +552,9 @@ AutoBalance.StatModifier.Boss.PerInstance=""
 #        Allows setting per-creature stat modifier values. Specifying a value of `-1` will skip overriding of that value.
 #        You may omit entries from the end of the string if desired. Only one set of values should be specified per CreatureID.
 #
-#        Format: "[CreatureID] [Global] [Health] [Mana] [Armor] [Damage], [CreatureID] [Global] [Health] [Mana] [Armor] [Damage], ..."
+#        Format: "[CreatureID] [Global] [Health] [Mana] [Armor] [Damage] [CCDuration], [CreatureID] [Global] [Health] [Mana] [Armor] [Damage] [CCDuration], ..."
 #
-#        Example: AutoBalance.StatModifier.Boss.PerInstance="14507 1.0 0.8 0.8 1.0 1.2, 11372 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
+#        Example: AutoBalance.StatModifier.Boss.PerInstance="14507 1.0 0.8 0.8 1.0 1.2 0.5, 11372 -1 -1 -1 -1 1.35, 43 -1 1.2 1.2"
 #
 #        Default: Empty string, which disables the feature.
 AutoBalance.StatModifier.PerCreature=""
@@ -484,6 +576,18 @@ AutoBalance.MinManaModifier=0.01
 #        Minimum Modifier setting for Damage Modification. An enemy's damage will not be multiplied by a value smaller than this.
 #        Default:     0.01
 AutoBalance.MinDamageModifier=0.01
+
+#
+#     AutoBalance.MinCCDurationModifier
+#        Minimum Modifier setting for Crowd Control Duration. The duration of an enemy's CC will not be multiplied by a value smaller than this.
+#        Default:     0.25
+AutoBalance.MinCCDurationModifier=0.25
+
+#
+#     AutoBalance.MaxCCDurationModifier
+#        Maximum Modifier setting for Crowd Control Duration. The duration of an enemy's CC will not be multiplied by a value greater than this.
+#        Default:     1.0
+AutoBalance.MaxCCDurationModifier=1.0
 
 ##########################
 #
