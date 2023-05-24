@@ -813,9 +813,18 @@ class AutoBalance_UnitScript : public UnitScript
     }
 
     void OnAuraApply(Unit* unit, Aura* aura) override {
-        uint32 auraDuration = _Modifier_CCDuration(unit, aura->GetCaster(), aura);
-        aura->SetMaxDuration(auraDuration);
-        aura->SetDuration(auraDuration);
+        // Only if this aura has a duration
+        if (aura->GetDuration() > 0 || aura->GetMaxDuration() > 0)
+        {
+            uint32 auraDuration = _Modifier_CCDuration(unit, aura->GetCaster(), aura);
+
+            // only update if we decided to change it
+            if (auraDuration != (float)aura->GetDuration())
+            {
+                aura->SetMaxDuration(auraDuration);
+                aura->SetDuration(auraDuration);
+            }
+        }
     }
 
     uint32 _Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
@@ -859,6 +868,10 @@ class AutoBalance_UnitScript : public UnitScript
         if (!(!DungeonsOnly
                 || (target->GetMap()->IsDungeon() && caster->GetMap()->IsDungeon()) || (caster->GetMap()->IsBattleground()
                      && target->GetMap()->IsBattleground())))
+            return originalDuration;
+
+        // if the CCDurationMultiplier isn't set on this enemy
+        if (!((float)caster->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->CCDurationMultiplier > 0))
             return originalDuration;
 
         // if the aura was cast by a pet or summon, return the original duration
