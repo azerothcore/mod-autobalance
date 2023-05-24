@@ -546,7 +546,7 @@ class AutoBalance_WorldScript : public WorldScript
         StatModifier_Global =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
         StatModifier_Health =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
         StatModifier_Mana =                         sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
-        StatModifier_Armor =                        sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false)), false; // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_Armor =                        sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
         StatModifier_Damage =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
         StatModifier_CCDuration =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.CCDuration", -1.0f, false);
 
@@ -1201,7 +1201,11 @@ public:
         {
             switch (maxNumberOfPlayers)
             {
-                case 5:
+			    case 1:
+			    case 2:
+			    case 3:
+			    case 4:
+			    case 5:
                     inflectionValue *= InflectionPointHeroic;
                     curveFloor = InflectionPointHeroicCurveFloor;
                     curveCeiling = InflectionPointHeroicCurveCeiling;
@@ -1226,7 +1230,11 @@ public:
         {
             switch (maxNumberOfPlayers)
             {
-                case 5:
+			    case 1:
+			    case 2:
+			    case 3:
+			    case 4:
+			    case 5:
                     inflectionValue *= InflectionPoint;
                     curveFloor = InflectionPointCurveFloor;
                     curveCeiling = InflectionPointCurveCeiling;
@@ -1291,7 +1299,11 @@ public:
             {
                 switch (maxNumberOfPlayers)
                 {
-                    case 5:
+			        case 1:
+			        case 2:
+			        case 3:
+			        case 4:
+			        case 5:
                         bossInflectionPointMultiplier = InflectionPointHeroicBoss;
                         break;
                     case 10:
@@ -1308,7 +1320,11 @@ public:
             {
                 switch (maxNumberOfPlayers)
                 {
-                    case 5:
+			        case 1:
+			        case 2:
+			        case 3:
+			        case 4:
+			        case 5:
                         bossInflectionPointMultiplier = InflectionPointBoss;
                         break;
                     case 10:
@@ -1367,6 +1383,10 @@ public:
 		{
 			switch (maxNumberOfPlayers)
 			{
+			    case 1:
+			    case 2:
+			    case 3:
+			    case 4:
 			    case 5:
 			        statMod_global = StatModifierHeroic_Global;
 			        statMod_health = StatModifierHeroic_Health;
@@ -1432,6 +1452,10 @@ public:
 		{
 			switch (maxNumberOfPlayers)
 			{
+			    case 1:
+			    case 2:
+			    case 3:
+			    case 4:
 			    case 5:
 			        statMod_global = StatModifier_Global;
 			        statMod_health = StatModifier_Health;
