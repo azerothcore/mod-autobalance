@@ -1201,7 +1201,7 @@ public:
         {
             switch (maxNumberOfPlayers)
             {
-                case 1 ... 5:
+                case 5:
                     inflectionValue *= InflectionPointHeroic;
                     curveFloor = InflectionPointHeroicCurveFloor;
                     curveCeiling = InflectionPointHeroicCurveCeiling;
@@ -1226,7 +1226,7 @@ public:
         {
             switch (maxNumberOfPlayers)
             {
-                case 1 ... 5:
+                case 5:
                     inflectionValue *= InflectionPoint;
                     curveFloor = InflectionPointCurveFloor;
                     curveCeiling = InflectionPointCurveCeiling;
@@ -1291,7 +1291,7 @@ public:
             {
                 switch (maxNumberOfPlayers)
                 {
-                    case 1 ... 5:
+                    case 5:
                         bossInflectionPointMultiplier = InflectionPointHeroicBoss;
                         break;
                     case 10:
@@ -1308,7 +1308,7 @@ public:
             {
                 switch (maxNumberOfPlayers)
                 {
-                    case 1 ... 5:
+                    case 5:
                         bossInflectionPointMultiplier = InflectionPointBoss;
                         break;
                     case 10:
@@ -1367,7 +1367,7 @@ public:
 		{
 			switch (maxNumberOfPlayers)
 			{
-			    case 1 ... 5:
+			    case 5:
 			        statMod_global = StatModifierHeroic_Global;
 			        statMod_health = StatModifierHeroic_Health;
 			        statMod_mana = StatModifierHeroic_Mana;
@@ -1432,7 +1432,7 @@ public:
 		{
 			switch (maxNumberOfPlayers)
 			{
-			    case 1 ... 5:
+			    case 5:
 			        statMod_global = StatModifier_Global;
 			        statMod_health = StatModifier_Health;
 			        statMod_mana = StatModifier_Mana;
