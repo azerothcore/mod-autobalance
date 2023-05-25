@@ -433,13 +433,13 @@ AutoBalance.StatModifierRaid40M.Boss.Damage=
 #               If no value is set for a given instance type and player count, and the generic values that apply to that instance
 #               are also blank, CC duration will be unchanged.
 #
-#        Boss.Global | Boss.Health | Boss.Mana | Boss.Armor | Boss.Damage
-#           Sets a SEPARATE stat multiplier for bosses. Is NOT affected by the non-boss modifiers. Only applies to creatures
+#        Boss.CCDuration
+#           Sets a SEPARATE CCDuration multiplier for bosses. Is NOT affected by the non-boss modifiers. Only applies to creatures
 #           considered instance bosses (from dungeons or raids).
 #
-#           Default: If not set for a given instance size/type, defaults to the dungeon/raid default values.
-#
-#           To better understand this effect, see the interactive spreadsheet.
+#           Default: no value
+#               If no value is set for a given instance type and player count, and the generic values that apply to that instance
+#               are also blank, CC duration will be unchanged.
 #
 
 ### 5-player dungeons
@@ -728,7 +728,6 @@ AutoBalance.PlayerChangeNotify=1
 # REWARD SYSTEM (experimental)
 #
 ##########################
-
 
 #
 #   AutoBalance.reward.enable
