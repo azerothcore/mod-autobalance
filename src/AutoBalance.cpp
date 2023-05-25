@@ -1007,6 +1007,10 @@ class AutoBalance_UnitScript : public UnitScript
         if (ccDurationMultiplier == 1)
             return originalDuration;
 
+        // if the CCDurationMultiplier isn't set on this enemy
+        if (!((float)caster->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->CCDurationMultiplier > 0))
+            return originalDuration;
+
         // if the aura was cast by a pet or summon, return the original duration
         if ((caster->IsHunterPet() || caster->IsPet() || caster->IsSummon()) && caster->IsControlledByPlayer())
             return originalDuration;
