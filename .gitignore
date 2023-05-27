@@ -32,6 +32,7 @@ nbproject/
 *.kate-swp
 .idea
 cmake-build-debug
+.vscode
 
 #
 # Eclipse
