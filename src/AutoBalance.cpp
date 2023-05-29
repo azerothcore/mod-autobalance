@@ -987,7 +987,7 @@ class AutoBalance_UnitScript : public UnitScript
         if (!EnableGlobal)
             return originalDuration;
 
-	// ensure that both the target and the caster are defined
+	    // ensure that both the target and the caster are defined
         if (!target || !caster)
             return originalDuration;
 
