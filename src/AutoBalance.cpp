@@ -987,6 +987,14 @@ class AutoBalance_UnitScript : public UnitScript
         if (!EnableGlobal)
             return originalDuration;
 
+	// ensure that both the target and the caster are defined
+        if (!target || !caster)
+            return originalDuration;
+
+        // if the aura wasn't cast just now, don't change it
+        if (aura->GetDuration() != aura->GetMaxDuration())
+            return originalDuration;
+
         // if the target isn't a player or the caster is a player, return the original duration
         if (!target->IsPlayer() || caster->IsPlayer())
             return originalDuration;
