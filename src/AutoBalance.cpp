@@ -473,21 +473,46 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
 
     // store the creature's original level if this is the first time seeing it
     if (creatureABInfo->unmodifiedLevel == 0)
-        creatureABInfo->unmodifiedLevel = creature->GetLevel();
+    {
+        if (creature->IsSummon())
+        {
+            Creature* summoner = (creature->ToTempSummon()->GetSummoner())->ToCreature();
 
-    LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({})", creature->GetName(), creatureABInfo->unmodifiedLevel);
+            AutoBalanceCreatureInfo *summonerABInfo=summoner->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+            if (summonerABInfo->unmodifiedLevel > 0)
+            {
+                creatureABInfo->unmodifiedLevel = summonerABInfo->unmodifiedLevel;
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({}->{})", creature->GetName(), creatureABInfo->unmodifiedLevel, summoner->GetName(), summonerABInfo->unmodifiedLevel, summoner->GetLevel());
+            }
+            else
+            {
+                creatureABInfo->unmodifiedLevel = summoner->GetLevel();
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({})", creature->GetName(), creatureABInfo->unmodifiedLevel, summoner->GetName(), summoner->GetLevel());
+            }
+        }
+        else
+        {
+            creatureABInfo->unmodifiedLevel = creature->GetLevel();
+            LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({})", creature->GetName(), creatureABInfo->unmodifiedLevel);
+        }
+    }
 
     // if this is a creature controlled by the player, skip
     if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
     {
-        LOG_WARN("server.loading", "{} ({}) is controlled by the player - skip.", creature->GetName(), creatureABInfo->unmodifiedLevel);
+        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is controlled by the player - skip.", creature->GetName(), creatureABInfo->unmodifiedLevel);
         return;
     }
 
+    // if this is a pet or summon controlled by the player, make no changes
+    if ((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer())
+        return;
+
     // if this is a non-relevant creature, skip
-    if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger() || creature->IsSummon() || creature->m_isTempWorldObject)
+    if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
     {
-        LOG_WARN("server.loading", "{} ({}) is a critter, totem, summon, or trigger - skip.", creature->GetName(), creatureABInfo->unmodifiedLevel);
+        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a critter, totem, or trigger - skip.", creature->GetName(), creatureABInfo->unmodifiedLevel);
         return;
     }
 
@@ -495,15 +520,15 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     if (addToCreatureList)
     {
         // if the creature level is below the minimum LFG level, assume it's a flavor creature and shouldn't be tracked
-        if (creature->GetLevel() < mapABInfo->lfgMinLevel)
+        if (creature->GetLevel() < ((float)mapABInfo->lfgMinLevel * .75f))
         {
-            LOG_WARN("server.loading", "{} ({}) is below the LFG min level of {} and is NOT tracked.", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->lfgMinLevel);
+            LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is below the 75% of the LFG min level of {} and is NOT tracked.", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->lfgMinLevel);
             return;
         }
 
         mapABInfo->allMapCreatures.push_back(creature);
 
-        LOG_WARN("server.loading", "{} ({}) is creature #{} in the ALL list.", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->allMapCreatures.size());
+        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ALL list.", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->allMapCreatures.size());
     }
 
     // add the creature to the active creature list if in range of at least one player
@@ -521,7 +546,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
 
             if (playerHandle->IsWithinDist(creature, 500))
             {
-                LOG_WARN("server.loading", "{} ({}) is in range of player {} and is considered active.", creature->GetName(), creatureABInfo->unmodifiedLevel, playerHandle->GetName());
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is in range of player {} and is considered active.", creature->GetName(), creatureABInfo->unmodifiedLevel, playerHandle->GetName());
                 creatureIsInPlayerRange = true;
 
                 // update the highest and lowest creature levels
@@ -537,11 +562,11 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
 
                 mapABInfo->activeCreatures.push_back(creature);
 
-                LOG_WARN("server.loading", "{} ({}) is creature #{} in the ACTIVE list, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->activeCreatures.size(), newAvgCreatureLevel);
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ACTIVE list, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->activeCreatures.size(), newAvgCreatureLevel);
 
                 // reset the last config time so that the map data will get updated
                 lastConfigTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-                LOG_WARN("server.loading", "AddCreatureToMapData(): lastConfigTime reset to {}", lastConfigTime);
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): lastConfigTime reset to {}", lastConfigTime);
 
                 break;
             }
@@ -550,7 +575,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         // output logging if the creature isn't in player range
         if (!creatureIsInPlayerRange)
         {
-            LOG_WARN("server.loading", "{} ({}) is NOT in range of any player and is NOT considered active. There are {} active creatures.", creature->GetName(), creature->GetLevel(), mapABInfo->activeCreatures.size());
+            LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is NOT in range of any player and is NOT considered active. There are {} active creatures.", creature->GetName(), creature->GetLevel(), mapABInfo->activeCreatures.size());
         }
     }
 }
@@ -1154,6 +1179,14 @@ class AutoBalance_UnitScript : public UnitScript
         if (!EnableGlobal)
             return originalDuration;
 
+        // ensure that both the target and the caster are defined
+        if (!target || !caster)
+            return originalDuration;
+
+        // if the aura wasn't cast just now, don't change it
+        if (aura->GetDuration() != aura->GetMaxDuration())
+            return originalDuration;
+
         // if the target isn't a player or the caster is a player, return the original duration
         if (!target->IsPlayer() || caster->IsPlayer())
             return originalDuration;
@@ -1452,13 +1485,18 @@ public:
             return false;
 
         // if this is a pet or summon controlled by the player, make no changes
-        if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
-            return false;
+        if ((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()) {
+             //LOG_WARN("server.loading", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(): {} ({}) is a pet or summon controlled by the player - skip.", creature->GetName(), creature->GetLevel());
 
-        // if this is a non-relevant creature, make no changes
+             return false;
+        }
+
+        // if this is a non-relevant creature, skip
         if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
+        {
+            //LOG_WARN("server.loading", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(): {} ({}) is a critter, totem, or trigger - skip.", creature->GetName(), creature->GetLevel());
             return false;
-
+        }
         // get (or create) the creature's info
         AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
@@ -1555,8 +1593,8 @@ public:
         if (!mapABInfo->enabled)
             return;
 
-        // if this creature is below the minimum level for the map, make no changes
-        if (creatureABInfo->unmodifiedLevel < mapABInfo->lfgMinLevel)
+        // if this creature is below 75% of the minimum level for the map, make no changes
+        if (creatureABInfo->unmodifiedLevel < (float)mapABInfo->lfgMinLevel * .75f)
             return;
 
         // if the creature is dead, make no changes
