@@ -129,7 +129,10 @@ public:
     float ArmorMultiplier = 1.0f;
     float CCDurationMultiplier = 1.0f;
 
-    uint8 unmodifiedLevel = 0;
+    float XPModifier = 1.0f;
+    float MoneyModifier = 1.0f;
+
+    uint8 UnmodifiedLevel = 0;
 };
 
 class AutoBalanceMapInfo : public DataMap::Base
@@ -199,8 +202,13 @@ static std::map<uint32, AutoBalanceStatModifiers> statModifierCreatureOverrides;
 static int8 PlayerCountDifficultyOffset, LevelScaling, higherOffset, lowerOffset;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool Announcement;
-static bool LevelEndGameBoost, PlayerChangeNotify, LevelUseDb, rewardEnabled, DungeonScaleDownXP, DungeonScaleDownMoney;
+static bool LevelEndGameBoost, PlayerChangeNotify, LevelUseDb, rewardEnabled;
 static float MinHPModifier, MinManaModifier, MinDamageModifier, MinCCDurationModifier, MaxCCDurationModifier;
+
+// RewardScaling.*
+static std::string RewardScalingMethod;
+static bool RewardScalingXP, RewardScalingMoney;
+static float RewardScalingXPModifier, RewardScalingMoneyModifier;
 
 // Track the last time the config was reloaded
 static uint64_t lastConfigTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -252,17 +260,6 @@ static float StatModifierRaid20M_Boss_Global, StatModifierRaid20M_Boss_Health, S
 static float StatModifierRaid25M_Boss_Global, StatModifierRaid25M_Boss_Health, StatModifierRaid25M_Boss_Mana, StatModifierRaid25M_Boss_Armor, StatModifierRaid25M_Boss_Damage, StatModifierRaid25M_Boss_CCDuration;
 static float StatModifierRaid25MHeroic_Boss_Global, StatModifierRaid25MHeroic_Boss_Health, StatModifierRaid25MHeroic_Boss_Mana, StatModifierRaid25MHeroic_Boss_Armor, StatModifierRaid25MHeroic_Boss_Damage, StatModifierRaid25MHeroic_Boss_CCDuration;
 static float StatModifierRaid40M_Boss_Global, StatModifierRaid40M_Boss_Health, StatModifierRaid40M_Boss_Mana, StatModifierRaid40M_Boss_Armor, StatModifierRaid40M_Boss_Damage, StatModifierRaid40M_Boss_CCDuration;
-
-int GetValidDebugLevel()
-{
-    int debugLevel = sConfigMgr->GetOption<uint32>("AutoBalance.DebugLevel", 2);
-
-    if ((debugLevel < 0) || (debugLevel > 3))
-        {
-        return 1;
-        }
-    return debugLevel;
-}
 
 void LoadEnabledDungeons(std::string dungeonIdString) // Used for reading the string from the configuration file for selecting dungeons to scale
 {
@@ -472,7 +469,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
     // store the creature's original level if this is the first time seeing it
-    if (creatureABInfo->unmodifiedLevel == 0)
+    if (creatureABInfo->UnmodifiedLevel == 0)
     {
         if (creature->IsSummon())
         {
@@ -480,28 +477,28 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
 
             AutoBalanceCreatureInfo *summonerABInfo=summoner->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-            if (summonerABInfo->unmodifiedLevel > 0)
+            if (summonerABInfo->UnmodifiedLevel > 0)
             {
-                creatureABInfo->unmodifiedLevel = summonerABInfo->unmodifiedLevel;
-                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({}->{})", creature->GetName(), creatureABInfo->unmodifiedLevel, summoner->GetName(), summonerABInfo->unmodifiedLevel, summoner->GetLevel());
+                creatureABInfo->UnmodifiedLevel = summonerABInfo->UnmodifiedLevel;
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({}->{})", creature->GetName(), creatureABInfo->UnmodifiedLevel, summoner->GetName(), summonerABInfo->UnmodifiedLevel, summoner->GetLevel());
             }
             else
             {
-                creatureABInfo->unmodifiedLevel = summoner->GetLevel();
-                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({})", creature->GetName(), creatureABInfo->unmodifiedLevel, summoner->GetName(), summoner->GetLevel());
+                creatureABInfo->UnmodifiedLevel = summoner->GetLevel();
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({})", creature->GetName(), creatureABInfo->UnmodifiedLevel, summoner->GetName(), summoner->GetLevel());
             }
         }
         else
         {
-            creatureABInfo->unmodifiedLevel = creature->GetLevel();
-            LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({})", creature->GetName(), creatureABInfo->unmodifiedLevel);
+            creatureABInfo->UnmodifiedLevel = creature->GetLevel();
+            LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({})", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         }
     }
 
     // if this is a creature controlled by the player, skip
     if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
     {
-        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is controlled by the player - skip.", creature->GetName(), creatureABInfo->unmodifiedLevel);
+        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is controlled by the player - skip.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
     }
 
@@ -512,7 +509,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     // if this is a non-relevant creature, skip
     if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
     {
-        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a critter, totem, or trigger - skip.", creature->GetName(), creatureABInfo->unmodifiedLevel);
+        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a critter, totem, or trigger - skip.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
     }
 
@@ -522,13 +519,13 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         // if the creature level is below the minimum LFG level, assume it's a flavor creature and shouldn't be tracked
         if (creature->GetLevel() < ((float)mapABInfo->lfgMinLevel * .75f))
         {
-            LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is below the 75% of the LFG min level of {} and is NOT tracked.", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->lfgMinLevel);
+            LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is below the 75% of the LFG min level of {} and is NOT tracked.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMinLevel);
             return;
         }
 
         mapABInfo->allMapCreatures.push_back(creature);
 
-        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ALL list.", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->allMapCreatures.size());
+        LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ALL list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
     }
 
     // add the creature to the active creature list if in range of at least one player
@@ -546,23 +543,23 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
 
             if (playerHandle->IsWithinDist(creature, 500))
             {
-                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is in range of player {} and is considered active.", creature->GetName(), creatureABInfo->unmodifiedLevel, playerHandle->GetName());
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is in range of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
                 creatureIsInPlayerRange = true;
 
                 // update the highest and lowest creature levels
-                if (creatureABInfo->unmodifiedLevel > mapABInfo->highestCreatureLevel || mapABInfo->highestCreatureLevel == 0)
-                    mapABInfo->highestCreatureLevel = creatureABInfo->unmodifiedLevel;
-                if (creatureABInfo->unmodifiedLevel < mapABInfo->lowestCreatureLevel || mapABInfo->lowestCreatureLevel == 0)
-                    mapABInfo->lowestCreatureLevel = creatureABInfo->unmodifiedLevel;
+                if (creatureABInfo->UnmodifiedLevel > mapABInfo->highestCreatureLevel || mapABInfo->highestCreatureLevel == 0)
+                    mapABInfo->highestCreatureLevel = creatureABInfo->UnmodifiedLevel;
+                if (creatureABInfo->UnmodifiedLevel < mapABInfo->lowestCreatureLevel || mapABInfo->lowestCreatureLevel == 0)
+                    mapABInfo->lowestCreatureLevel = creatureABInfo->UnmodifiedLevel;
 
                 // calculate the new average creature level
                 float activeCreatureCount = (float)mapABInfo->activeCreatures.size();
-                float newAvgCreatureLevel = (((float)mapABInfo->avgCreatureLevel * activeCreatureCount) + (float)creatureABInfo->unmodifiedLevel) / (activeCreatureCount + 1.0f);
+                float newAvgCreatureLevel = (((float)mapABInfo->avgCreatureLevel * activeCreatureCount) + (float)creatureABInfo->UnmodifiedLevel) / (activeCreatureCount + 1.0f);
                 mapABInfo->avgCreatureLevel = newAvgCreatureLevel;
 
                 mapABInfo->activeCreatures.push_back(creature);
 
-                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ACTIVE list, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->unmodifiedLevel, mapABInfo->activeCreatures.size(), newAvgCreatureLevel);
+                LOG_WARN("server.loading", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ACTIVE list, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->activeCreatures.size(), newAvgCreatureLevel);
 
                 // reset the last config time so that the map data will get updated
                 lastConfigTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -743,8 +740,7 @@ class AutoBalance_WorldScript : public WorldScript
         PlayerChangeNotify = sConfigMgr->GetOption<bool>("AutoBalance.PlayerChangeNotify", 1);
         LevelUseDb = sConfigMgr->GetOption<bool>("AutoBalance.levelUseDbValuesWhenExists", 1);
         rewardEnabled = sConfigMgr->GetOption<bool>("AutoBalance.reward.enable", 1);
-        DungeonScaleDownXP = sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", 0);
-        DungeonScaleDownMoney = sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownMoney", 0);
+
 
         LevelScaling = sConfigMgr->GetOption<uint32>("AutoBalance.levelScaling", 1);
         PlayerCountDifficultyOffset = sConfigMgr->GetOption<uint32>("AutoBalance.playerCountDifficultyOffset", 0);
@@ -999,6 +995,26 @@ class AutoBalance_WorldScript : public WorldScript
         MinCCDurationModifier = sConfigMgr->GetOption<float>("AutoBalance.MinCCDurationModifier", 0.25f);
         MaxCCDurationModifier = sConfigMgr->GetOption<float>("AutoBalance.MaxCCDurationModifier", 1.0f);
 
+        // RewardScaling.*
+        // warn the console if deprecated values are detected
+        if (sConfigMgr->GetOption<float>("AutoBalance.DungeonScaleDownXP", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.DungeonScaleDownXP` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+        if (sConfigMgr->GetOption<float>("AutoBalance.DungeonScaleDownMoney", false, false))
+            LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.DungeonScaleDownMoney` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
+
+        RewardScalingMethod = sConfigMgr->GetOption<std::string>("AutoBalance.RewardScaling.Method", "fixed", false);
+        if (RewardScalingMethod != "fixed" && RewardScalingMethod != "dynamic")
+        {
+            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.RewardScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `fixed`.", RewardScalingMethod);
+            RewardScalingMethod = "fixed";
+        }
+
+        RewardScalingXP = sConfigMgr->GetOption<bool>("AutoBalance.RewardScaling.XP", sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", false, false));
+        RewardScalingXPModifier = sConfigMgr->GetOption<float>("AutoBalance.RewardScaling.XP.Modifier", 1.0f, false);
+
+        RewardScalingMoney = sConfigMgr->GetOption<bool>("AutoBalance.RewardScaling.Money", sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownMoney", false, false));
+        RewardScalingMoneyModifier = sConfigMgr->GetOption<float>("AutoBalance.RewardScaling.Money.Modifier", 1.0f, false);
+
         // Announcement
         Announcement = sConfigMgr->GetOption<bool>("AutoBalanceAnnounce.enable", true);
 
@@ -1044,39 +1060,75 @@ class AutoBalance_PlayerScript : public PlayerScript
         {
             Map* map = player->GetMap();
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+            AutoBalanceCreatureInfo *creatureABInfo=victim->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-            if (victim && DungeonScaleDownXP && mapABInfo->enabled)
+            if (victim && RewardScalingXP && mapABInfo->enabled)
             {
                 Map* map = player->GetMap();
 
                 if (map->IsDungeon())
                 {
-                    // Ensure that the players always get the same XP, even when entering the dungeon alone
-                    auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
-                    auto currentPlayerCount = map->GetPlayersCountExceptGMs();
-                    amount *= (float)currentPlayerCount / maxPlayerCount;
+                    if (RewardScalingMethod == "fixed")
+                    {
+                        // Ensure that the players always get the same XP, even when entering the dungeon alone
+                        auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
+                        auto currentPlayerCount = map->GetPlayersCountExceptGMs();
+                        amount = amount * creatureABInfo->XPModifier * ((float)currentPlayerCount / maxPlayerCount);
+                    }
+                    else if (RewardScalingMethod == "dynamic")
+                    {
+                        amount = amount * creatureABInfo->XPModifier;
+                    }
+
                 }
             }
         }
 
         void OnBeforeLootMoney(Player* player, Loot* loot) override
         {
+            LOG_WARN("server.loading", "AutoBalance_PlayerScript::OnBeforeLootMoney()");
             Map* map = player->GetMap();
+
+            // If this isn't a dungeon, make no changes
+            if (!map->IsDungeon())
+                return;
+
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+            ObjectGuid sourceGuid = loot->sourceWorldObjectGUID;
 
-            if (DungeonScaleDownMoney && mapABInfo->enabled)
+            if (mapABInfo->enabled && RewardScalingMoney)
             {
-                Map* map = player->GetMap();
-
-                if (map->IsDungeon())
+                // if the loot source is a creature, honor the modifiers for that creature
+                if (sourceGuid.IsCreature())
                 {
-                    // Ensure that the players always get the same money, even when entering the dungeon alone
+                    Creature* sourceCreature = ObjectAccessor::GetCreature(*player, sourceGuid);
+                    AutoBalanceCreatureInfo *creatureABInfo=sourceCreature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+                    // Dynamic Mode
+                    if (RewardScalingMethod == "dynamic")
+                    {
+                        LOG_WARN("server.loading", "AutoBalance_PlayerScript::OnBeforeLootMoney(): Distributing money from '{}' in dynamic mode.", sourceCreature->GetName());
+                        loot->gold = uint32(loot->gold * creatureABInfo->MoneyModifier);
+                    }
+                    // Fixed Mode
+                    else
+                    {
+                        // Ensure that the players always get the same money, even when entering the dungeon alone
+                        auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
+                        auto currentPlayerCount = map->GetPlayersCountExceptGMs();
+                        LOG_WARN("server.loading", "AutoBalance_PlayerScript::OnBeforeLootMoney(): Distributing money from '{}' in fixed mode.", sourceCreature->GetName());
+                        loot->gold = uint32(loot->gold * creatureABInfo->MoneyModifier * ((float)currentPlayerCount / maxPlayerCount));
+                    }
+                }
+                // for all other loot sources, just distribute in Fixed mode as though the instance was full
+                else
+                {
+                    LOG_WARN("server.loading", "AutoBalance_PlayerScript::OnBeforeLootMoney(): Distributing money from a non-creature in fixed mode.");
                     auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
                     auto currentPlayerCount = map->GetPlayersCountExceptGMs();
-                    loot->gold = uint32(loot->gold * ((float)currentPlayerCount / (float)maxPlayerCount));
+                    loot->gold = uint32(loot->gold * ((float)currentPlayerCount / maxPlayerCount));
                 }
             }
-
         }
 };
 
@@ -1497,14 +1549,28 @@ public:
             //LOG_WARN("server.loading", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(): {} ({}) is a critter, totem, or trigger - skip.", creature->GetName(), creature->GetLevel());
             return false;
         }
+
         // get (or create) the creature's info
         AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+        // if creature is dead and configTime is 0, skip
+        if (creature->isDead() && creatureABInfo->configTime == 0)
+        {
+            return false;
+        }
+        // if the creature is dead but configTime is NOT 0, we set it to 0 so that it will be recalculated if revived
+        else if (creature->isDead())
+        {
+            LOG_WARN("server.loading", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(): {} ({}) is dead and configTime is not 0 - prime for reset if revived.", creature->GetName(), creature->GetLevel());
+            creatureABInfo->configTime = 0;
+            return false;
+        }
 
         // if the config is outdated, reset the creature
         if (creatureABInfo->configTime != lastConfigTime)
         {
-            // retain the unmodifiedLevel value
-            uint8 unmodifiedLevel = creatureABInfo->unmodifiedLevel;
+            // retain the UnmodifiedLevel value
+            uint8 unmodifiedLevel = creatureABInfo->UnmodifiedLevel;
 
             // reset AutoBalance modifiers
             creature->CustomData.Erase("AutoBalanceCreatureInfo");
@@ -1527,7 +1593,7 @@ public:
 
             // set the creature's level
             creature->SetLevel(unmodifiedLevel);
-            creatureABInfo->unmodifiedLevel = unmodifiedLevel;
+            creatureABInfo->UnmodifiedLevel = unmodifiedLevel;
 
             // get the creature's base stats
             CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(unmodifiedLevel, creatureTemplate->unit_class);
@@ -1594,7 +1660,7 @@ public:
             return;
 
         // if this creature is below 75% of the minimum level for the map, make no changes
-        if (creatureABInfo->unmodifiedLevel < (float)mapABInfo->lfgMinLevel * .75f)
+        if (creatureABInfo->UnmodifiedLevel < (float)mapABInfo->lfgMinLevel * .75f)
             return;
 
         // if the creature is dead, make no changes
@@ -1662,7 +1728,7 @@ public:
 
         if (LevelScaling)
         {
-            creatureABInfo->selectedLevel = ((int8)(creatureABInfo->unmodifiedLevel) - (int8)(mapABInfo->mapLevel)) + (int8)mapABInfo->highestPlayerLevel;
+            creatureABInfo->selectedLevel = ((int8)(creatureABInfo->UnmodifiedLevel) - (int8)(mapABInfo->mapLevel)) + (int8)mapABInfo->highestPlayerLevel;
             creature->SetLevel(creatureABInfo->selectedLevel);
         }
 
@@ -1672,7 +1738,7 @@ public:
         if (LevelUseDb && creature->getLevel() >= creatureTemplate->minlevel && creature->getLevel() <= creatureTemplate->maxlevel)
             useDefStats = true;
 
-        CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->unmodifiedLevel, creatureTemplate->unit_class);
+        CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->UnmodifiedLevel, creatureTemplate->unit_class);
         CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->selectedLevel, creatureTemplate->unit_class);
 
         uint32 baseHealth = origCreatureStats->GenerateHealth(creatureTemplate);
@@ -2166,7 +2232,7 @@ public:
                 newBaseHealth=creatureStats->BaseHealth[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost)
-                    newBaseHealth *= creatureABInfo->selectedLevel >= 75 && creatureABInfo->unmodifiedLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+                    newBaseHealth *= creatureABInfo->selectedLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
             }
 
             float newHealth =  newBaseHealth * creatureTemplate->ModHealth;
@@ -2236,7 +2302,7 @@ public:
                 newDmgBase=creatureStats->BaseDamage[2];
                 // special increasing for end-game contents
                 if (LevelEndGameBoost && maxNumberOfPlayers <= 5) {
-                    newDmgBase *= creatureABInfo->selectedLevel >= 75 && creatureABInfo->unmodifiedLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+                    newDmgBase *= creatureABInfo->selectedLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
                 }
             }
 
@@ -2301,6 +2367,34 @@ public:
             creature->SetPower(POWER_MANA, scaledCurPower);
         else
             creature->setPowerType(pType); // fix creatures with different power types
+
+        //
+        // Reward Scaling
+        //
+
+        // XP Scaling
+        if (RewardScalingXP)
+        {
+            if (RewardScalingMethod == "fixed"){
+                creatureABInfo->XPModifier = RewardScalingXPModifier;
+            }
+            else if (RewardScalingMethod == "dynamic")
+            {
+                creatureABInfo->XPModifier = defaultMultiplier * RewardScalingXPModifier;
+            }
+        }
+
+        // Money Scaling
+        if (RewardScalingMoney)
+        {
+            if (RewardScalingMethod == "fixed"){
+                creatureABInfo->MoneyModifier = RewardScalingMoneyModifier;
+            }
+            else if (RewardScalingMethod == "dynamic")
+            {
+                creatureABInfo->MoneyModifier = defaultMultiplier * RewardScalingMoneyModifier;
+            }
+        }
 
         creature->UpdateAllStats();
     }
@@ -2445,12 +2539,13 @@ public:
         AutoBalanceCreatureInfo *creatureABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
         handler->PSendSysMessage("Instance player Count: %u", creatureABInfo->instancePlayerCount);
-        handler->PSendSysMessage("Scaled level: %u  Original level: %u", creatureABInfo->selectedLevel, creatureABInfo->unmodifiedLevel);
-        handler->PSendSysMessage("Health multiplier: %.6f", creatureABInfo->HealthMultiplier);
-        handler->PSendSysMessage("Mana multiplier: %.6f", creatureABInfo->ManaMultiplier);
-        handler->PSendSysMessage("Armor multiplier: %.6f", creatureABInfo->ArmorMultiplier);
-        handler->PSendSysMessage("Damage multiplier: %.6f", creatureABInfo->DamageMultiplier);
-        handler->PSendSysMessage("CC Duration multiplier: %.6f", creatureABInfo->CCDurationMultiplier);
+        handler->PSendSysMessage("Scaled level: %u  Original level: %u", creatureABInfo->selectedLevel, creatureABInfo->UnmodifiedLevel);
+        handler->PSendSysMessage("Health multiplier: %.3f", creatureABInfo->HealthMultiplier);
+        handler->PSendSysMessage("Mana multiplier: %.3f", creatureABInfo->ManaMultiplier);
+        handler->PSendSysMessage("Armor multiplier: %.3f", creatureABInfo->ArmorMultiplier);
+        handler->PSendSysMessage("Damage multiplier: %.3f", creatureABInfo->DamageMultiplier);
+        handler->PSendSysMessage("CC Duration multiplier: %.3f", creatureABInfo->CCDurationMultiplier);
+        handler->PSendSysMessage("XP multiplier: %.3f  Money multiplier: %.3f", creatureABInfo->XPModifier, creatureABInfo->MoneyModifier);
 
         return true;
 

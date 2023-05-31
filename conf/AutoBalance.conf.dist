@@ -683,39 +683,66 @@ AutoBalance.LevelEndGameBoost = 1
 ##########################
 
 #
-#     AutoBalance.DungeonScaleDownXP
-#        Decrease individual player's amount of XP gained during a dungeon to match the
-#        amount of XP gained during a full group run. Example: In a 5-man group, you
-#        earn 1/5 of the total XP per kill, but if you solo the dungeon with
-#        AutoBalance.DungeonScaleDownXP = 0, you will earn 5/5 of the total XP.
-#        With the option enabled, you will earn 1/5.
-#        Default:     0 (1 = ON, 0 = OFF)
-AutoBalance.DungeonScaleDownXP = 0
+#     AutoBalance.RewardScaling.Method
+#        Sets which method should be used when scaling down XP and Money in an instance.
+#
+#           fixed:
+#               XP and Money will be divided by the maximum number of players in the group
+#               regardless of scaling settings. The calculated value will be evenly split between
+#               players in the group.
+#
+#           dynamic:
+#               XP and Money will be scaled based on the scaling curve settings configured for the creature.
+#               So if your settings cause a creature to have an calculated scaling value of, the creature
+#               will create 0.5 of its normal XP. That XP will be evenly split between players in the group.
+#
+#        Possible values: `fixed` or `dynamic`
+#
+#        Default: fixed (but `dynamic` is recommended)
+AutoBalance.RewardScaling.Method=fixed
 
 #
-#     AutoBalance.DungeonScaleDownMoney
-#        Decrease individual player's amount of money gained during a dungeon to match the
-#        amount of money gained during a full group run. Example: In a 5-man group, you
-#        earn 1/5 of the total money per kill, but if you solo the dungeon with
-#        AutoBalance.DungeonScaleDownMoney = 0, you will earn 5/5 of the total money.
-#        With the option enabled, you will earn 1/5.
-#        Default:     0 (1 = ON, 0 = OFF)
-AutoBalance.DungeonScaleDownMoney = 0
+#     AutoBalance.RewardScaling.XP
+#        Scale XP based on the `AutoBalance.RewardScaling.Method` selection.
+#
+#        Default: 0 (1 = ON, 0 = OFF)
+#
+#     AutoBalance.RewardScaling.XP.Modifier
+#        Apply a flat modifier to the amount of XP that is rewarded to players.
+#
+#        Only takes effect if `AutoBalance.RewardScaling.XP` is 1.
+#
+#        If `RewardScaling.XP.Modifier` is set to 1.5 and RewardScaling determines that 100xp should be 
+#        rewarded to each player, 150xp will be rewarded.
+#
+#        Default: 1.0 (no change)
+AutoBalance.RewardScaling.XP = 0
+AutoBalance.RewardScaling.XP.Modifier = 1.0
+
+#
+#     AutoBalance.RewardScaling.Money
+#        Scale Money drops based on the `AutoBalance.RewardScaling.Method` selection. If set to 0, the full
+#        amount will be rewarded.
+#
+#        Default: 0 (1 = ON, 0 = OFF)
+#
+#     AutoBalance.RewardScaling.Money.Modifier
+#        Apply a flat modifier to the amount of money that is rewarded to players.
+#
+#        Only takes effect if `AutoBalance.RewardScaling.Money` is 1.
+#
+#        If `RewardScaling.Money.Modifier` is set to 1.5 and RewardScaling determines that 1 gold should be 
+#        rewarded to each player, 1 gold 50 silver will be rewarded.
+#
+#        Default: 1.0 (no change)
+AutoBalance.RewardScaling.Money = 0
+AutoBalance.RewardScaling.Money.Modifier = 1.0
 
 ##########################
 #
 # Messages
 #
 ##########################
-
-#
-#     AutoBalance.DebugLevel
-#        0 = None
-#        1 = Errors Only
-#        2 = Errors and Basic Information
-#        3 = All  Info
-#        Default:     2
-AutoBalance.DebugLevel=2
 
 #
 #     AutoBalance.PlayerChangeNotify
@@ -791,6 +818,8 @@ AutoBalance.rate.health=
 AutoBalance.rate.mana=
 AutoBalance.rate.armor=
 AutoBalance.rate.damage=
+AutoBalance.DungeonScaleDownXP=
+AutoBalance.DungeonScaleDownMoney=
 
 # The following variables have been removed entirely and should not be used in a new or existing deployment.
 # Their values should be left blank.
