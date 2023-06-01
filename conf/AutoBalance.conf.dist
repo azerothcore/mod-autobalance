@@ -640,32 +640,73 @@ AutoBalance.DisabledID="6867"
 ##########################
 
 #
-#     AutoBalance.levelScaling
+#     AutoBalance.LevelScaling
 #        Check the max level of players in map and scale creature based on it.
 #        This triggers depending on the two options below AutoBalance.levelHigherOffset and AutoBalance.levelLowerOffset
 #        0 = Disabled
 #        1 = Enabled (only in dungeons/raids)
 #        Default:     1
-AutoBalance.levelScaling=1
+AutoBalance.LevelScaling=1
 
 #
-#     AutoBalance.levelHigherOffset
-#     AutoBalance.levelLowerOffset
-#        Level Offsets between creatures will not be scaled by level.
-#        You can even use it to disable scaling from lower to higher levelScaling
-#        setting levelLowerOffset to 80 (max wotlk level) for example.
-#        default: 3 (higher), 0 (lower)
-AutoBalance.levelHigherOffset = 3
-AutoBalance.levelLowerOffset  = 0
+#     AutoBalance.LevelScaling.Method
+#        Sets which method should be used when determining what level creature's should be scaled to.
+#
+#           fixed:
+#               Creatures will be scaled to the level of the highest-level player in the group.
+#
+#           dynamic:
+#               Creatures will be scaled to a level based on their original assignments compared to the 
+#               average creature level. This means that lower-level trash will still be lower-level than
+#               you, and higher-level bosses will still be higher-level than you.
+#
+#        Possible values: `fixed` or `dynamic`
+#
+#        Default: fixed (but `dynamic` is recommended)
+AutoBalance.LevelScaling.Method="fixed"
 
 #
-#     AutoBalance.levelUseDbValuesWhenExists
-#        When enabled with levelScaling, the creature will use its default database values
-#        instead of level scaling formula when player/party level has correspondance with
-#        creature_template minlevel/maxlevel.
+#     AutoBalance.LevelScaling.SkipHigherLevels
+#        If an instance's average creature level is no more than (SkipHigherLevels) levels 
+#        above the highest player level, do not scale down.
 #
-#        Default:     0 (1 = ON, 0 = OFF)
-AutoBalance.levelUseDbValuesWhenExists = 0
+#        To disable scaling instance levels DOWN, set this to the max level of your server (likely 80).
+#        To disable this feature entirely and scale all higher-level instances, set this to 0.
+#
+#        Default: 3
+#
+#     AutoBalance.LevelScaling.SkipLowerLevels
+#        If an instance's average creature level is no more than (SkipLowerLevels) levels 
+#        below of the Highest player level, do not scale up.
+#
+#        To disable scaling instance levels UP, set this to the max level of your server (likely 80).
+#        To disable this feature entirely and scale all lower-level instances, set this to 0.
+#
+#        Default: 5
+AutoBalance.LevelScaling.SkipHigherLevels = 3
+AutoBalance.LevelScaling.SkipLowerLevels = 5
+
+#
+#     AutoBalance.LevelScaling.DynamicLevelCeiling.*
+#        Sets the maximum number of levels creatures scaled in "dynamic" mode can be OVER your highest-level
+#        player. For instances with wide level spreads, ensures that the level differences stay reasonable.
+#
+#        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
+#
+#        Default: 2 (Dungeons), 3 (Raids)
+#
+#     AutoBalance.LevelScaling.DynamicLevelFloor.*
+#        Sets the maximum number of levels creatures scaled in "dynamic" mode can be UNDER your highest-level
+#        player. For instances with wide level spreads, ensures that the level differences stay reasonable.
+#
+#        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
+#
+#        Default: 5
+AutoBalance.LevelScaling.DynamicLevelCeiling.Dungeons = 2
+AutoBalance.LevelScaling.DynamicLevelFloor.Dungeons = 5
+
+AutoBalance.LevelScaling.DynamicLevelCeiling.Raids = 3
+AutoBalance.LevelScaling.DynamicLevelFloor.Raids = 5
 
 #
 #     AutoBalance.LevelEndGameBoost
@@ -674,7 +715,7 @@ AutoBalance.levelUseDbValuesWhenExists = 0
 #        to have stats as near possible to the official ones.
 #
 #        Default:     1 (1 = ON, 0 = OFF)
-AutoBalance.LevelEndGameBoost = 1
+AutoBalance.LevelScaling.EndGameBoost = 1
 
 ##########################
 #
@@ -692,14 +733,15 @@ AutoBalance.LevelEndGameBoost = 1
 #               players in the group.
 #
 #           dynamic:
-#               XP and Money will be scaled based on the scaling curve settings configured for the creature.
-#               So if your settings cause a creature to have an calculated scaling value of, the creature
-#               will create 0.5 of its normal XP. That XP will be evenly split between players in the group.
+#               XP and Money will be scaled based on the the average of the health, mana, armor, and damage
+#               modifiers that are applied to the creature (before level scaling). So if scaling determines
+#               that a creature should have an average multiplier of .65, the creature will create 65% of
+#               its normal XP and gold. The XP and gold is evenly split amongst all players in the instance.
 #
-#        Possible values: `fixed` or `dynamic`
+#        Possible values: "fixed" or "dynamic"
 #
 #        Default: fixed (but `dynamic` is recommended)
-AutoBalance.RewardScaling.Method=fixed
+AutoBalance.RewardScaling.Method="fixed"
 
 #
 #     AutoBalance.RewardScaling.XP
@@ -820,8 +862,11 @@ AutoBalance.rate.armor=
 AutoBalance.rate.damage=
 AutoBalance.DungeonScaleDownXP=
 AutoBalance.DungeonScaleDownMoney=
+AutoBalance.LevelHigherOffset=
+AutoBalance.LevelLowerOffset=
 
 # The following variables have been removed entirely and should not be used in a new or existing deployment.
 # Their values should be left blank.
 # Their entire functionality (and more) has been moved to new settings referenced in this config file.
 AutoBalance.DungeonsOnly=
+AutoBalance.levelUseDbValuesWhenExists=
