@@ -457,10 +457,6 @@ bool ShouldMapBeEnabled(Map* map)
 
 void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true)
 {
-    // make sure that we're enabled globally
-    if (!EnableGlobal)
-        return;
-
     // make sure we have a creature and that it's assigned to a map
     if (!creature || !creature->GetMap())
         return;
@@ -552,75 +548,77 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true)
     if (addToCreatureList)
     {
         mapABInfo->allMapCreatures.push_back(creature);
-
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ALL list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
     }
 
-    // add the creature to the active creature list if in range of at least one player
+    // add the creature to the active creature list if needed
+    bool isIncludedInMapStats = true;
+
     Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
     if (!playerList.IsEmpty())
     {
-        // if the creature is vendor, immune, not selectable, or non-attackable, skip
-        if (creature->IsVendor() ||
-            creature->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) ||
-            creature->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE) ||
-            creature->HasUnitFlag(UNIT_FLAG_NOT_ATTACKABLE_1) ||
-            creature->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE) ||
-            creature->HasUnitFlag(UNIT_FLAG_NON_ATTACKABLE_2)
-            )
-            {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a vendor, immune, not selectable, or non-attackable - skip.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
-                return;
-            }
-
-        /* bool creatureIsInPlayerRange = false; */
-        for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
-        {
-            Player* playerHandle = playerIteration->GetSource();
-
-            // if the creature is friendly
-            if (creature->IsFriendlyTo(playerHandle) ||
-                creature->IsVendor() ||
+        // if the creature is vendor, trainer, or has gossip, don't use it to update map stats
+        if  (creature->IsVendor() ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_GOSSIP) ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_QUESTGIVER) ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER) ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER_PROFESSION) ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_REPAIR)
-                )
+            )
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a vendor, immune, not selectable, or non-attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            isIncludedInMapStats = false;
+        }
+
+        // if the creature is friendly to a player, don't use it to update map stats
+        for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+        {
+            Player* playerHandle = playerIteration->GetSource();
+
+            // if the creature is friendly
+            if (creature->IsFriendlyTo(playerHandle))
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is friendly to {} - skip.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
-                continue;
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is friendly to {} - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
+                isIncludedInMapStats = false;
+                break;
             }
 
             //if (playerHandle->IsWithinDist(creature, 500))
             //if (true)
-            else
-            {
+            //{
                 // LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is in range of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
                 /* creatureIsInPlayerRange = true; */
 
-                // update the highest and lowest creature levels
-                if (creatureABInfo->UnmodifiedLevel > mapABInfo->highestCreatureLevel || mapABInfo->highestCreatureLevel == 0)
-                    mapABInfo->highestCreatureLevel = creatureABInfo->UnmodifiedLevel;
-                if (creatureABInfo->UnmodifiedLevel < mapABInfo->lowestCreatureLevel || mapABInfo->lowestCreatureLevel == 0)
-                    mapABInfo->lowestCreatureLevel = creatureABInfo->UnmodifiedLevel;
-
-                // calculate the new average creature level
-                float activeCreatureCount = (float)mapABInfo->activeCreatures.size();
-                float newAvgCreatureLevel = (((float)mapABInfo->avgCreatureLevel * activeCreatureCount) + (float)creatureABInfo->UnmodifiedLevel) / (activeCreatureCount + 1.0f);
-                mapABInfo->avgCreatureLevel = newAvgCreatureLevel;
-
-                mapABInfo->activeCreatures.push_back(creature);
-
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ACTIVE list, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->activeCreatures.size(), newAvgCreatureLevel);
-
-                // reset the last config time so that the map data will get updated
-                lastConfigTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): lastConfigTime reset to {}", lastConfigTime);
-
-                break;
-            }
         }
+
+        if (isIncludedInMapStats)
+        {
+            // update the highest and lowest creature levels
+            if (creatureABInfo->UnmodifiedLevel > mapABInfo->highestCreatureLevel || mapABInfo->highestCreatureLevel == 0)
+                mapABInfo->highestCreatureLevel = creatureABInfo->UnmodifiedLevel;
+            if (creatureABInfo->UnmodifiedLevel < mapABInfo->lowestCreatureLevel || mapABInfo->lowestCreatureLevel == 0)
+                mapABInfo->lowestCreatureLevel = creatureABInfo->UnmodifiedLevel;
+
+            // calculate the new average creature level
+            float activeCreatureCount = (float)mapABInfo->activeCreatures.size();
+            float newAvgCreatureLevel = (((float)mapABInfo->avgCreatureLevel * activeCreatureCount) + (float)creatureABInfo->UnmodifiedLevel) / (activeCreatureCount + 1.0f);
+            mapABInfo->avgCreatureLevel = newAvgCreatureLevel;
+
+            mapABInfo->activeCreatures.push_back(creature);
+
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ACTIVE list, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->activeCreatures.size(), newAvgCreatureLevel);
+        }
+        else
+        {
+            mapABInfo->activeCreatures.push_back(creature);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the ACTIVE list, map stats are unaffected.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->activeCreatures.size());
+        }
+
+        // reset the last config time so that the map data will get updated
+        lastConfigTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): lastConfigTime reset to {}", lastConfigTime);
+
+
 
         /* // output logging if the creature isn't in player range
         if (!creatureIsInPlayerRange)
@@ -1672,10 +1670,6 @@ public:
         RemoveCreatureFromMapData(creature);
     }
 
-    bool checkLevelOffset(uint8 selectedLevel, uint8 targetLevel) {
-        return selectedLevel && ((targetLevel >= selectedLevel && targetLevel <= (selectedLevel + LevelScalingSkipHigherLevels) ) || (targetLevel <= selectedLevel && targetLevel >= (selectedLevel - LevelScalingSkipLowerLevels)));
-    }
-
     // Reset the passed creature to stock if the config has changed
     bool ResetCreatureIfNeeded(Creature* creature)
     {
@@ -1798,24 +1792,6 @@ public:
         // if this creature is below 75% of the minimum level for the map, make no changes
         if (creatureABInfo->UnmodifiedLevel < (float)mapABInfo->lfgMinLevel * .75f)
             return;
-
-        // if the creature is friendly, a vendor, or non-interactable, make no changes
-        Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
-        for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
-        {
-            Player* playerHandle = playerIteration->GetSource();
-            if (creature->IsFriendlyTo(playerHandle) ||
-                creature->IsVendor() ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_GOSSIP) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_QUESTGIVER) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER_PROFESSION) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_REPAIR)
-                )
-            {
-                return;
-            }
-        }
 
         // if the creature is dead, make no changes
         if (!creature->IsAlive())
