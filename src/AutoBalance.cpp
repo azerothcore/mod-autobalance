@@ -133,6 +133,7 @@ public:
     uint8 UnmodifiedLevel = 0;
 
     bool isActive = false;
+    bool inCreatureList = false;
 };
 
 class AutoBalanceMapInfo : public DataMap::Base
@@ -598,13 +599,14 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true)
     }
 
     // add the creature to the map's creature list if configured to do so
-    if (addToCreatureList)
+    if (addToCreatureList && !creatureABInfo->inCreatureList)
     {
         mapABInfo->allMapCreatures.push_back(creature);
+        creatureABInfo->inCreatureList = true;
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the creature list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
     }
 
-    // add the creature to the active creature list if needed
+    // alter stats for the map if needed
     bool isIncludedInMapStats = true;
 
     Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
@@ -700,8 +702,12 @@ void RemoveCreatureFromMapData(Creature* creature)
         {
             if (*creatureIteration == creature)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::RemoveCreatureFromMapData(): {} ({}) is in the creature list and will be removed.", creature->GetName(), creature->GetLevel());
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::RemoveCreatureFromMapData(): {} ({}) is in the creature list and will be removed. There are {} creatures left.", creature->GetName(), creature->GetLevel(), mapABInfo->allMapCreatures.size() - 1);
                 mapABInfo->allMapCreatures.erase(creatureIteration);
+
+                // mark this creature as removed
+                AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+                creatureABInfo->inCreatureList = false;
                 break;
             }
         }
@@ -1748,15 +1754,12 @@ public:
             return false;
 
         // if this is a pet or summon controlled by the player, make no changes
-        if ((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()) {
-             return false;
-        }
+        if ((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer())
+            return false;
 
         // if this is a non-relevant creature, skip
         if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
-        {
             return false;
-        }
 
         // get (or create) the creature and map's info
         AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");

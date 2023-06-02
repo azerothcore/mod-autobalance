@@ -729,7 +729,7 @@ AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids = 5
 #        Default: Recommended adjustments
 #
 # 229 - Blackrock Spire
-AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 2 -1"
+AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 2"
 
 #
 #     AutoBalance.LevelEndGameBoost
