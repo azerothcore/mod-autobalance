@@ -693,7 +693,7 @@ AutoBalance.LevelScaling.SkipLowerLevels = 5
 #
 #        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
 #
-#        Default: 2 (Dungeons), 3 (Raids)
+#        Default: 1 (Dungeons), 2 (Heroic Dungeons), 3 (Raids), 3 (Heroic Raids)
 #
 #     AutoBalance.LevelScaling.DynamicLevelFloor.*
 #        Sets the maximum number of levels creatures scaled in "dynamic" mode can be UNDER your highest-level
@@ -702,11 +702,17 @@ AutoBalance.LevelScaling.SkipLowerLevels = 5
 #        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
 #
 #        Default: 5
-AutoBalance.LevelScaling.DynamicLevelCeiling.Dungeons = 2
+AutoBalance.LevelScaling.DynamicLevelCeiling.Dungeons = 1
 AutoBalance.LevelScaling.DynamicLevelFloor.Dungeons = 5
+
+AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicDungeons = 2
+AutoBalance.LevelScaling.DynamicLevelFloor.HeroicDungeons = 5
 
 AutoBalance.LevelScaling.DynamicLevelCeiling.Raids = 3
 AutoBalance.LevelScaling.DynamicLevelFloor.Raids = 5
+
+AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicRaids = 3
+AutoBalance.LevelScaling.DynamicLevelFloor.HeroicRaids = 5
 
 #
 #     AutoBalance.LevelEndGameBoost
