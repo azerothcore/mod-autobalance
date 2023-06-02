@@ -756,14 +756,20 @@ AutoBalance.LevelScaling.EndGameBoost = 1
 #               players in the group.
 #
 #           dynamic:
-#               XP and Money will be scaled based on the the average of the health, mana, armor, and damage
-#               modifiers that are applied to the creature (before level scaling). So if scaling determines
-#               that a creature should have an average multiplier of .65, the creature will create 65% of
-#               its normal XP and gold. The XP and gold is evenly split amongst all players in the instance.
+#               XP and Money will be scaled based on the the health and damage modifiers that are applied to 
+#               the creature. Level scaling is taken into account when determining the reward scaling.
+#
+#               If scaling determines that a creature should have an XP scaling multiplier of .65, the creature 
+#               will create 65% of the XP you would normally recieve from a creature at the scaled level.
+#
+#               If scaling determines that a creature should have a money scaling multiplier of 1.5, the creature
+#               will create 150% of the money it would have at its original level and scaling.
+#
+#               The XP and money is evenly split amongst all players in the instance.
 #
 #        Possible values: "fixed" or "dynamic"
 #
-#        Default: fixed (but `dynamic` is recommended)
+#        Default: "fixed" (but "dynamic" is recommended)
 AutoBalance.RewardScaling.Method="fixed"
 
 #
