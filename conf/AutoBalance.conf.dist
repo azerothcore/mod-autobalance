@@ -687,7 +687,7 @@ AutoBalance.LevelScaling.SkipHigherLevels = 3
 AutoBalance.LevelScaling.SkipLowerLevels = 5
 
 #
-#     AutoBalance.LevelScaling.DynamicLevelCeiling.*
+#     AutoBalance.LevelScaling.DynamicLevel.Ceiling.*
 #        Sets the maximum number of levels creatures scaled in "dynamic" mode can be OVER your highest-level
 #        player. For instances with wide level spreads, ensures that the level differences stay reasonable.
 #
@@ -695,24 +695,41 @@ AutoBalance.LevelScaling.SkipLowerLevels = 5
 #
 #        Default: 1 (Dungeons), 2 (Heroic Dungeons), 3 (Raids), 3 (Heroic Raids)
 #
-#     AutoBalance.LevelScaling.DynamicLevelFloor.*
+#     AutoBalance.LevelScaling.DynamicLevel.Floor.*
 #        Sets the maximum number of levels creatures scaled in "dynamic" mode can be UNDER your highest-level
 #        player. For instances with wide level spreads, ensures that the level differences stay reasonable.
 #
 #        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
 #
 #        Default: 5
-AutoBalance.LevelScaling.DynamicLevelCeiling.Dungeons = 1
-AutoBalance.LevelScaling.DynamicLevelFloor.Dungeons = 5
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.Dungeons = 1
+AutoBalance.LevelScaling.DynamicLevel.Floor.Dungeons = 5
 
-AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicDungeons = 2
-AutoBalance.LevelScaling.DynamicLevelFloor.HeroicDungeons = 5
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.HeroicDungeons = 2
+AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicDungeons = 5
 
-AutoBalance.LevelScaling.DynamicLevelCeiling.Raids = 3
-AutoBalance.LevelScaling.DynamicLevelFloor.Raids = 5
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.Raids = 3
+AutoBalance.LevelScaling.DynamicLevel.Floor.Raids = 5
 
-AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicRaids = 3
-AutoBalance.LevelScaling.DynamicLevelFloor.HeroicRaids = 5
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.HeroicRaids = 3
+AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids = 5
+
+#
+#     AutoBalance.LevelScaling.DynamicLevel.PerInstance
+#        Allows setting per-instance Dynamic Level options. Specifying a value of `-1` will skip overriding of that value.
+#        You may omit entries from the end of the string if desired. Only one set of values should be specified per InstanceID.
+#        Set to a value of "" to disable the feature.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID] [DynamicLevelCeiling] [DynamicLevelFloor], [InstanceID] [DynamicLevelCeiling] [DynamicLevelFloor], ..."
+#
+#        Example: AutoBalance.StatModifier.PerInstance="409 0 3, 568 3, 43 -1 8"
+#
+#        Default: Recommended adjustments
+#
+# 229 - Blackrock Spire
+AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 2 -1"
 
 #
 #     AutoBalance.LevelEndGameBoost

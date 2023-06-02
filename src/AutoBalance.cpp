@@ -114,8 +114,6 @@ class AutoBalanceCreatureInfo : public DataMap::Base
 {
 public:
     AutoBalanceCreatureInfo() {}
-    AutoBalanceCreatureInfo(uint32 count, float dmg, float hpRate, float manaRate, float armorRate, uint8 selLevel) :
-    instancePlayerCount(count),selectedLevel(selLevel), DamageMultiplier(dmg),HealthMultiplier(hpRate),ManaMultiplier(manaRate),ArmorMultiplier(armorRate) {}
 
     uint64_t configTime;
 
@@ -141,7 +139,6 @@ class AutoBalanceMapInfo : public DataMap::Base
 {
 public:
     AutoBalanceMapInfo() {}
-    AutoBalanceMapInfo(uint32 count, uint8 selLevel, bool enabled) : playerCount(count),mapLevel(selLevel),enabled(enabled) {}
 
     uint64_t configTime;
 
@@ -193,6 +190,16 @@ public:
     float curveCeiling;
 };
 
+class AutoBalanceLevelScalingDynamicLevelSettings: public DataMap::Base
+{
+public:
+    AutoBalanceLevelScalingDynamicLevelSettings() {}
+    AutoBalanceLevelScalingDynamicLevelSettings(int ceiling, int floor) :
+        ceiling(ceiling), floor(floor) {}
+    int ceiling;
+    int floor;
+};
+
 // The map values correspond with the .AutoBalance.XX.Name entries in the configuration file.
 static std::map<int, int> forcedCreatureIds;
 static std::map<uint32, uint8> enabledDungeonIds;
@@ -201,6 +208,7 @@ static std::map<uint32, AutoBalanceInflectionPointSettings> bossOverrides;
 static std::map<uint32, AutoBalanceStatModifiers> statModifierOverrides;
 static std::map<uint32, AutoBalanceStatModifiers> statModifierBossOverrides;
 static std::map<uint32, AutoBalanceStatModifiers> statModifierCreatureOverrides;
+static std::map<uint8, AutoBalanceLevelScalingDynamicLevelSettings> levelScalingDynamicLevelOverrides;
 // cheaphack for difficulty server-wide.
 // Another value TODO in player class for the party leader's value to determine dungeon difficulty.
 static int8 PlayerCountDifficultyOffset;
@@ -357,6 +365,36 @@ std::map<uint32, AutoBalanceStatModifiers> LoadStatModifierOverrides(std::string
     return overrideMap;
 }
 
+std::map<uint8, AutoBalanceLevelScalingDynamicLevelSettings> LoadDynamicLevelOverrides(std::string dungeonIdString) // Used for reading the string from the configuration file for per-dungeon dynamic level overrides
+{
+    std::string delimitedValue;
+    std::stringstream dungeonIdStream;
+    std::map<uint8, AutoBalanceLevelScalingDynamicLevelSettings> overrideMap;
+
+    dungeonIdStream.str(dungeonIdString);
+    while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
+    {
+        std::string val1, val2, val3;
+        std::stringstream dungeonStream(delimitedValue);
+        dungeonStream >> val1 >> val2 >> val3;
+
+        auto dungeonMapId = atoi(val1.c_str());
+
+        // Replace any missing values with -1
+        if (val2.empty()) { val2 = "-1"; }
+        if (val3.empty()) { val3 = "-1"; }
+
+        AutoBalanceLevelScalingDynamicLevelSettings dynamicLevelSettings = AutoBalanceLevelScalingDynamicLevelSettings(
+            atoi(val2.c_str()),
+            atoi(val3.c_str())
+        );
+
+        overrideMap[dungeonMapId] = dynamicLevelSettings;
+    }
+
+    return overrideMap;
+}
+
 
 bool isEnabledDungeon(uint32 dungeonId)
 {
@@ -391,6 +429,11 @@ bool hasStatModifierBossOverride(uint32 dungeonId)
 bool hasStatModifierCreatureOverride(uint32 creatureId)
 {
     return (statModifierCreatureOverrides.find(creatureId) != statModifierCreatureOverrides.end());
+}
+
+bool hasDynamicLevelOverride(uint32 dungeonId)
+{
+    return (levelScalingDynamicLevelOverrides.find(dungeonId) != levelScalingDynamicLevelOverrides.end());
 }
 
 bool ShouldMapBeEnabled(Map* map)
@@ -568,15 +611,18 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true)
     if (!playerList.IsEmpty())
     {
         // if the creature is vendor, trainer, or has gossip, don't use it to update map stats
-        if  (creature->IsVendor() ||
+        if  ((creature->IsVendor() ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_GOSSIP) ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_QUESTGIVER) ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER) ||
                 creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER_PROFESSION) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_REPAIR)
+                creature->HasNpcFlag(UNIT_NPC_FLAG_REPAIR) ||
+                creature->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) ||
+                creature->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE)) &&
+                (!creature->IsDungeonBoss())
             )
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a vendor, immune, not selectable, or non-attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             isIncludedInMapStats = false;
         }
         else
@@ -587,7 +633,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true)
                 Player* playerHandle = playerIteration->GetSource();
 
                 // if the creature is friendly
-                if (creature->IsFriendlyTo(playerHandle))
+                if (creature->IsFriendlyTo(playerHandle) && !creature->IsDungeonBoss())
                 {
                     LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is friendly to {} - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
                     isIncludedInMapStats = false;
@@ -654,7 +700,7 @@ void RemoveCreatureFromMapData(Creature* creature)
         {
             if (*creatureIteration == creature)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::RemoveCreatureFromMapData(): {} ({}) is in the creatre list and will be removed.", creature->GetName(), creature->GetLevel());
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::RemoveCreatureFromMapData(): {} ({}) is in the creature list and will be removed.", creature->GetName(), creature->GetLevel());
                 mapABInfo->allMapCreatures.erase(creatureIteration);
                 break;
             }
@@ -812,6 +858,7 @@ class AutoBalance_WorldScript : public WorldScript
         statModifierOverrides.clear();
         statModifierBossOverrides.clear();
         statModifierCreatureOverrides.clear();
+        levelScalingDynamicLevelOverrides.clear();
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID40", ""), 40);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID25", ""), 25);
         LoadForcedCreatureIdsFromString(sConfigMgr->GetOption<std::string>("AutoBalance.ForcedID10", ""), 10);
@@ -843,6 +890,10 @@ class AutoBalance_WorldScript : public WorldScript
 
         statModifierCreatureOverrides = LoadStatModifierOverrides(
             sConfigMgr->GetOption<std::string>("AutoBalance.StatModifier.PerCreature", "", false)
+        );
+
+        levelScalingDynamicLevelOverrides = LoadDynamicLevelOverrides(
+            sConfigMgr->GetOption<std::string>("AutoBalance.LevelScaling.DynamicLevel.PerInstance", "", false)
         );
 
         // AutoBalance.Enable.*
@@ -1145,14 +1196,14 @@ class AutoBalance_WorldScript : public WorldScript
             LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.LevelLowerOffset` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
         LevelScalingSkipLowerLevels = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.SkipLowerLevels", sConfigMgr->GetOption<uint32>("AutoBalance.LevelLowerOffset", 5, false), true);
 
-        LevelScalingDynamicLevelCeilingDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.Dungeons", 1);
-        LevelScalingDynamicLevelFloorDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.Dungeons", 5);
-        LevelScalingDynamicLevelCeilingHeroicDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicDungeons", 2);
-        LevelScalingDynamicLevelFloorHeroicDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicDungeons", 5);
-        LevelScalingDynamicLevelCeilingRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.Raids", 3);
-        LevelScalingDynamicLevelFloorRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.Raids", 5);
-        LevelScalingDynamicLevelCeilingHeroicRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicRaids", 3);
-        LevelScalingDynamicLevelFloorHeroicRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevelCeiling.HeroicRaids", 5);
+        LevelScalingDynamicLevelCeilingDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Ceiling.Dungeons", 1);
+        LevelScalingDynamicLevelFloorDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Floor.Dungeons", 5);
+        LevelScalingDynamicLevelCeilingHeroicDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Ceiling.HeroicDungeons", 2);
+        LevelScalingDynamicLevelFloorHeroicDungeons = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicDungeons", 5);
+        LevelScalingDynamicLevelCeilingRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Ceiling.Raids", 3);
+        LevelScalingDynamicLevelFloorRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Floor.Raids", 5);
+        LevelScalingDynamicLevelCeilingHeroicRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Ceiling.HeroicRaids", 3);
+        LevelScalingDynamicLevelFloorHeroicRaids = sConfigMgr->GetOption<uint8>("AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids", 5);
 
         if (sConfigMgr->GetOption<float>("AutoBalance.LevelEndGameBoost", false, false))
             LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.LevelEndGameBoost` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
@@ -1917,6 +1968,18 @@ public:
                     LevelScalingDynamicLevelCeiling = 3;
                 }
 
+                // apply per-instance overrides, if applicable
+                if (hasDynamicLevelOverride(mapId))
+                {
+                    AutoBalanceLevelScalingDynamicLevelSettings* myDynamicLevelSettings = &levelScalingDynamicLevelOverrides[mapId];
+
+                    // Alter the dynamic scaling floor and ceiling based on the instance's override settings, if set
+                    if (myDynamicLevelSettings->ceiling != -1) { LevelScalingDynamicLevelCeiling = myDynamicLevelSettings->ceiling; }
+                    if (myDynamicLevelSettings->floor != -1)   { LevelScalingDynamicLevelFloor =   myDynamicLevelSettings->floor;   }
+                }
+
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) dynamic scaling floor: {}, ceiling: {}.", creature->GetName(), creatureABInfo->UnmodifiedLevel, LevelScalingDynamicLevelFloor, LevelScalingDynamicLevelCeiling);
+
                 // calculate the creature's new level
                 selectedLevel = (mapABInfo->highestPlayerLevel + LevelScalingDynamicLevelCeiling) - (mapABInfo->highestCreatureLevel - creatureABInfo->UnmodifiedLevel);
 
@@ -2424,12 +2487,6 @@ public:
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
 
-        // store the average multiplier before level scaling is applied
-        float averageMultiplierBeforeLevelScaling = (
-                statMod_health +
-                statMod_damage
-                ) * statMod_global * defaultMultiplier / 2.0f;
-
         //
         //  Health Scaling
         //
@@ -2588,6 +2645,11 @@ public:
         // Reward Scaling
         //
 
+        // calculate the average multiplier after level scaling is applied
+        float averageMultiplierAfterLevelScaling;
+        // use health and damage to calculate the average multiplier
+        averageMultiplierAfterLevelScaling = (creatureABInfo->HealthMultiplier + creatureABInfo->DamageMultiplier) / 2.0f;
+
         // XP Scaling
         if (RewardScalingXP)
         {
@@ -2597,18 +2659,13 @@ public:
             }
             else if (RewardScalingMethod == "dynamic")
             {
-                creatureABInfo->XPModifier = averageMultiplierBeforeLevelScaling * RewardScalingXPModifier;
+                creatureABInfo->XPModifier = averageMultiplierAfterLevelScaling * RewardScalingXPModifier;
             }
         }
 
         // Money Scaling
         if (RewardScalingMoney)
         {
-            // calculate the average multiplier after level scaling is applied
-            float averageMultiplierAfterLevelScaling;
-            // use health and damage to calculate the average multiplier
-            averageMultiplierAfterLevelScaling = (creatureABInfo->HealthMultiplier + creatureABInfo->DamageMultiplier) / 2.0f;
-
             //LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) has an average post-level-scaling modifier of {}.", creature->GetName(), creature->GetLevel(), averageMultiplierAfterLevelScaling);
 
             if (RewardScalingMethod == "fixed")
@@ -2733,7 +2790,7 @@ public:
                                     mapABInfo->lowestPlayerLevel,
                                     mapABInfo->highestPlayerLevel
                                     );
-            handler->PSendSysMessage("Original Map Level: %u (%s)", mapABInfo->mapLevel, mapABInfo->isScalingEnabled ? "Level Scaling Enabled" : "Level Scaling Disabled");
+            handler->PSendSysMessage("Original Map Level: %u (%s)", (uint8)(mapABInfo->avgCreatureLevel+0.5f), mapABInfo->isScalingEnabled ? "Level Scaling Enabled" : "Level Scaling Disabled");
             handler->PSendSysMessage("LFG Range: Lvl %u - %u (Target: Lvl %u)", mapABInfo->lfgMinLevel, mapABInfo->lfgMaxLevel, mapABInfo->lfgTargetLevel);
             handler->PSendSysMessage("Active Creatures in map: %u (Lvl %u - %u | Avg Lvl %.2f)",
                                     mapABInfo->activeCreatureCount,
@@ -2768,10 +2825,11 @@ public:
         AutoBalanceCreatureInfo *creatureABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
         handler->PSendSysMessage("---");
-        handler->PSendSysMessage("%s (%u->%u), %s",
+        handler->PSendSysMessage("%s (%u->%u%s), %s",
                                   target->GetName(),
                                   creatureABInfo->UnmodifiedLevel,
                                   creatureABInfo->selectedLevel ? creatureABInfo->selectedLevel : creatureABInfo->UnmodifiedLevel,
+                                  target->IsDungeonBoss() ? " | Boss" : "",
                                   creatureABInfo->isActive ? "Active for Stats" : "Skipped for Stats");
         handler->PSendSysMessage("Health multiplier: %.3f", creatureABInfo->HealthMultiplier);
         handler->PSendSysMessage("Mana multiplier: %.3f", creatureABInfo->ManaMultiplier);
@@ -2789,7 +2847,7 @@ class AutoBalance_GlobalScript : public GlobalScript {
 public:
     AutoBalance_GlobalScript() : GlobalScript("AutoBalance_GlobalScript") { }
 
-    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* source, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated) override {
+    void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type,  uint32 /*creditEntry*/, Unit* /*source*/, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated) override {
         //if (!dungeonCompleted)
         //    return;
 
@@ -2802,7 +2860,7 @@ public:
         AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
         // skip if it's not a pre-wotlk dungeon/raid and if it's not scaled
-        if (!LevelScaling || LevelScalingSkipLowerLevels >= 10 || mapABInfo->mapLevel <= 70 || mapABInfo->lfgMinLevel > 70
+        if (!LevelScaling || mapABInfo->mapLevel <= 70 || mapABInfo->lfgMinLevel <= 70
             // skip when not in dungeon or not kill credit
             || type != ENCOUNTER_CREDIT_KILL_CREATURE || !map->IsDungeon())
             return;
