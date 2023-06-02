@@ -1643,6 +1643,34 @@ public:
     {
     }
 
+    void Creature_SelectLevel(const CreatureTemplate* /*creatureTemplate*/, Creature* creature) override
+    {
+        if (creature->GetMap()->IsDungeon())
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::Creature_SelectLevel(): {} ({})", creature->GetName(), creature->GetLevel());
+
+        // add the creature to the map's tracking list
+        AddCreatureToMapData(creature);
+
+        // do an initial modification of the creature
+        ModifyCreatureAttributes(creature);
+
+    }
+
+    void OnCreatureAddWorld(Creature* creature) override
+    {
+        if (creature->GetMap()->IsDungeon())
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld(): {} ({})", creature->GetName(), creature->GetLevel());
+    }
+
+    void OnCreatureRemoveWorld(Creature* creature) override
+    {
+        if (creature->GetMap()->IsDungeon())
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureRemoveWorld(): {} ({})", creature->GetName(), creature->GetLevel());
+
+        // remove the creature from the map's tracking list, if present
+        RemoveCreatureFromMapData(creature);
+    }
+
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
     {
         // If the config is out of date and the creature was reset, run modify against it
@@ -1655,24 +1683,6 @@ public:
 
             ModifyCreatureAttributes(creature);
         }
-    }
-
-    void OnCreatureAddWorld(Creature* creature) override
-    {
-        if (creature->GetMap()->IsDungeon())
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld(): {} ({})", creature->GetName(), creature->GetLevel());
-
-        // add the creature to the map's tracking list
-        AddCreatureToMapData(creature);
-    }
-
-    void OnCreatureRemoveWorld(Creature* creature) override
-    {
-        if (creature->GetMap()->IsDungeon())
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureRemoveWorld(): {} ({})", creature->GetName(), creature->GetLevel());
-
-        // remove the creature from the map's tracking list
-        RemoveCreatureFromMapData(creature);
     }
 
     // Reset the passed creature to stock if the config has changed
