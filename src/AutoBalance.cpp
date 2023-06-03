@@ -2567,18 +2567,53 @@ public:
             damageMul = MinDamageModifier;
         }
 
+        // Calculate the new base damage
         if (LevelScaling) {
             float origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
             float newDmgBase = 0;
-            if (creatureABInfo->selectedLevel  <= 60)
-                newDmgBase=creatureStats->BaseDamage[0];
-            else if(creatureABInfo->selectedLevel  <= 70)
-                newDmgBase=creatureStats->BaseDamage[1];
-            else {
-                newDmgBase=creatureStats->BaseDamage[2];
-                // special increasing for end-game contents
+
+            float vanillaDamage = creatureStats->BaseDamage[0];
+            float bcDamage = creatureStats->BaseDamage[1];
+            float wotlkDamage = creatureStats->BaseDamage[2];
+
+            // The database holds multiple values for base damage, one for each expansion
+            // This code will smooth transition between the different expansions based on the highest player level in the instance
+
+            // vanilla damage
+            if (mapABInfo->highestPlayerLevel <= 60)
+            {
+                newDmgBase=vanillaDamage;
+            }
+            // transition from vanilla to BC damage
+            else if (mapABInfo->highestPlayerLevel < 63)
+            {
+                float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0;
+                float bcMultiplier = 1.0f - vanillaMultiplier;
+
+                newDmgBase=(vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
+            }
+            // BC damage
+            else if (mapABInfo->highestPlayerLevel <= 70)
+            {
+                newDmgBase=bcDamage;
+            }
+            // transition from BC to WotLK damage
+            else if (mapABInfo->highestPlayerLevel < 73)
+            {
+                float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0;
+                float wotlkMultiplier = 1.0f - bcMultiplier;
+
+                newDmgBase=(bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
+            }
+            // WotLK damage
+            else
+            {
+                newDmgBase=wotlkDamage;
+
+                // special increase for end-game content
                 if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
-                    newDmgBase *= creatureABInfo->selectedLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+                    if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
+                        newDmgBase *= float(mapABInfo->highestPlayerLevel-70) * 0.3f;
                 }
             }
 
