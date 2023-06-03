@@ -2021,7 +2021,6 @@ public:
         CreatureBaseStats const* origCreatureStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->UnmodifiedLevel, creatureTemplate->unit_class);
         CreatureBaseStats const* creatureStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->selectedLevel, creatureTemplate->unit_class);
 
-        uint32 baseHealth = origCreatureStats->GenerateHealth(creatureTemplate);
         uint32 baseMana = origCreatureStats->GenerateMana(creatureTemplate);
         uint32 scaledHealth = 0;
         uint32 scaledMana = 0;
@@ -2494,35 +2493,71 @@ public:
         //  Health Scaling
         //
 
-        creatureABInfo->HealthMultiplier = defaultMultiplier * statMod_global * statMod_health;
+        float healthMultiplier = defaultMultiplier * statMod_global * statMod_health;
 
-        if (creatureABInfo->HealthMultiplier <= MinHPModifier)
-        {
-            creatureABInfo->HealthMultiplier = MinHPModifier;
-        }
+        if (healthMultiplier <= MinHPModifier)
+            healthMultiplier = MinHPModifier;
 
         float hpStatsRate  = 1.0f;
         if (LevelScaling) {
-            float newBaseHealth = 0;
-            if (creatureABInfo->selectedLevel <= 60)
-                newBaseHealth=creatureStats->BaseHealth[0];
-            else if(creatureABInfo->selectedLevel <= 70)
-                newBaseHealth=creatureStats->BaseHealth[1];
-            else {
-                newBaseHealth=creatureStats->BaseHealth[2];
-                // special increasing for end-game contents
+            float originalHealth = origCreatureStats->GenerateHealth(creatureTemplate);
+
+            float newBaseHealth;
+
+            // The database holds multiple values for base health, one for each expansion
+            // This code will smooth transition between the different expansions based on the highest player level in the instance
+
+            float vanillaHealth = creatureStats->BaseHealth[0];
+            float bcHealth = creatureStats->BaseHealth[1];
+            float wotlkHealth = creatureStats->BaseHealth[2];
+
+            // vanilla health
+            if (mapABInfo->highestPlayerLevel <= 60)
+            {
+                newBaseHealth = vanillaHealth;
+            }
+            // transition from vanilla to BC health
+            else if (mapABInfo->highestPlayerLevel < 63)
+            {
+                float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0f;
+                float bcMultiplier = 1.0f - vanillaMultiplier;
+
+                newBaseHealth = (vanillaHealth * vanillaMultiplier) + (bcHealth * bcMultiplier);
+            }
+            // BC health
+            else if (mapABInfo->highestPlayerLevel <= 70)
+            {
+                newBaseHealth = bcHealth;
+            }
+            // transition from BC to WotLK health
+            else if (mapABInfo->highestPlayerLevel < 73)
+            {
+                float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0f;
+                float wotlkMultiplier = 1.0f - bcMultiplier;
+
+                newBaseHealth = (bcHealth * bcMultiplier) + (wotlkHealth * wotlkMultiplier);
+            }
+            // WotLK health
+            else
+            {
+                newBaseHealth = wotlkHealth;
+
+                // special increase for end-game content
                 if (LevelScalingEndGameBoost)
-                    newBaseHealth *= creatureABInfo->selectedLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75 ? float(creatureABInfo->selectedLevel-70) * 0.3f : 1;
+                    if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
+                    {
+                        newBaseHealth *= (float)(mapABInfo->highestPlayerLevel-70) * 0.3f;
+                    }
             }
 
             float newHealth =  newBaseHealth * creatureTemplate->ModHealth;
+            hpStatsRate = newHealth / originalHealth;
 
-            hpStatsRate = newHealth / float(baseHealth);
+            healthMultiplier *= hpStatsRate;
+            creatureABInfo->HealthMultiplier = healthMultiplier;
+
+            scaledHealth = round(originalHealth * creatureABInfo->HealthMultiplier);
         }
-
-        creatureABInfo->HealthMultiplier *= hpStatsRate;
-
-        scaledHealth = round(((float) baseHealth * creatureABInfo->HealthMultiplier) + 1.0f);
 
         //
         //  Mana Scaling
@@ -2766,6 +2801,7 @@ public:
             offseti = (uint32)atoi(offset);
             handler->PSendSysMessage("Changing Player Difficulty Offset to %i.", offseti);
             PlayerCountDifficultyOffset = offseti;
+            lastConfigTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             return true;
         }
         else
