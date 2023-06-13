@@ -656,7 +656,7 @@ AutoBalance.LevelScaling=1
 #               Creatures will be scaled to the level of the highest-level player in the group.
 #
 #           dynamic:
-#               Creatures will be scaled to a level based on their original assignments compared to the 
+#               Creatures will be scaled to a level based on their original assignments compared to the
 #               average creature level. This means that lower-level trash will still be lower-level than
 #               you, and higher-level bosses will still be higher-level than you.
 #
@@ -667,7 +667,7 @@ AutoBalance.LevelScaling.Method="dynamic"
 
 #
 #     AutoBalance.LevelScaling.SkipHigherLevels
-#        If an instance's average creature level is no more than (SkipHigherLevels) levels 
+#        If an instance's average creature level is no more than (SkipHigherLevels) levels
 #        above the highest player level, do not scale down.
 #
 #        To disable scaling instance levels DOWN, set this to the max level of your server (likely 80).
@@ -676,7 +676,7 @@ AutoBalance.LevelScaling.Method="dynamic"
 #        Default: 3
 #
 #     AutoBalance.LevelScaling.SkipLowerLevels
-#        If an instance's average creature level is no more than (SkipLowerLevels) levels 
+#        If an instance's average creature level is no more than (SkipLowerLevels) levels
 #        below of the Highest player level, do not scale up.
 #
 #        To disable scaling instance levels UP, set this to the max level of your server (likely 80).
@@ -726,10 +726,30 @@ AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids = 5
 #
 #        Example: AutoBalance.StatModifier.PerInstance="409 0 3, 568 3, 43 -1 8"
 #
-#        Default: Recommended adjustments
+#        Default: "229 2" (Recommended adjustments)
 #
 # 229 - Blackrock Spire
 AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 2"
+
+#
+#     AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance
+#        Some dungeons contain multiple wings that exsit in the same InstanceID. These wings may have different level requirements.
+#        You may set this setting per-instance to ensure that only creatures within [WorldUnits] of any player are included in the 
+#        instance level calculation. This will improve the accuracy of creature levels in instances that contain multiple wings.
+#
+#        NOTE: If two players in a party enter two different wings of the same InstanceID at the same time, creature levels will be
+#              calculated incorrectly until one of those players leaves the instance.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID] [WorldUnits]"
+#
+#        Example: AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance="189 500, 624 250"
+#
+#        Default: "189 500" (Recommended adjustments)
+#
+# 189 - Scarlet Monastery
+AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance="189 500"
 
 #
 #     AutoBalance.LevelScaling.LevelEndGameBoost
@@ -756,10 +776,10 @@ AutoBalance.LevelScaling.EndGameBoost = 1
 #               players in the group.
 #
 #           dynamic:
-#               XP and Money will be scaled based on the the health and damage modifiers that are applied to 
+#               XP and Money will be scaled based on the the health and damage modifiers that are applied to
 #               the creature. Level scaling is taken into account when determining the reward scaling.
 #
-#               If scaling determines that a creature should have an XP scaling multiplier of .65, the creature 
+#               If scaling determines that a creature should have an XP scaling multiplier of .65, the creature
 #               will create 65% of the XP you would normally recieve from a creature at the scaled level.
 #
 #               If scaling determines that a creature should have a money scaling multiplier of 1.5, the creature
@@ -783,7 +803,7 @@ AutoBalance.RewardScaling.Method="dynamic"
 #
 #        Only takes effect if `AutoBalance.RewardScaling.XP` is 1.
 #
-#        If `RewardScaling.XP.Modifier` is set to 1.5 and RewardScaling determines that 100xp should be 
+#        If `RewardScaling.XP.Modifier` is set to 1.5 and RewardScaling determines that 100xp should be
 #        rewarded to each player, 150xp will be rewarded.
 #
 #        Default: 1.0 (no change)
@@ -802,7 +822,7 @@ AutoBalance.RewardScaling.XP.Modifier = 1.0
 #
 #        Only takes effect if `AutoBalance.RewardScaling.Money` is 1.
 #
-#        If `RewardScaling.Money.Modifier` is set to 1.5 and RewardScaling determines that 1 gold should be 
+#        If `RewardScaling.Money.Modifier` is set to 1.5 and RewardScaling determines that 1 gold should be
 #        rewarded to each player, 1 gold 50 silver will be rewarded.
 #
 #        Default: 1.0 (no change)
