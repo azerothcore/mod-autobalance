@@ -782,6 +782,9 @@ void UpdateMapLevelIfNeeded(Map* map)
                    mapABInfo->configTime,
                    lastConfigTime);
 
+        // see if the map should be enabled for AutoBalance at all
+        mapABInfo->enabled = ShouldMapBeEnabled(map);
+
         // if LevelScaling is disabled OR if the average creature level is inside the skip range,
         // set the map level to the average creature level, rounded to the nearest integer
         if (!LevelScaling ||
@@ -1732,13 +1735,6 @@ class AutoBalance_AllMapScript : public AllMapScript
                 }
             }
 
-            // always check level, even if not conf enabled
-            // because we can enable at runtime and we need this information
-            if (!mapABInfo->playerCount) {
-                mapABInfo->mapLevel = 0;
-                return;
-            }
-
             if (PlayerChangeNotify && !player->IsGameMaster() && !areAnyPlayersInCombat && EnableGlobal && mapABInfo->enabled)
             {
                 if (map->GetEntry()->IsDungeon() && player)
@@ -1801,7 +1797,7 @@ public:
         // If the config is out of date and the creature was reset, run modify against it
         if (ResetCreatureIfNeeded(creature))
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate(): Creature {} ({}) is reset and needs updates.", creature->GetName(), creature->GetLevel());
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate(): Creature {} ({}) is reset to its original stats.", creature->GetName(), creature->GetLevel());
 
             // Update the map's level if it is out of date
             UpdateMapLevelIfNeeded(creature->GetMap());
@@ -1869,6 +1865,9 @@ public:
         // if the config is outdated, reset the creature
         if (creatureABInfo->configTime != lastConfigTime)
         {
+            // before updating the creature, we should update the map level if needed
+            UpdateMapLevelIfNeeded(creature->GetMap());
+
             // retain the a few values
             uint8 unmodifiedLevel = creatureABInfo->UnmodifiedLevel;
             bool isActive = creatureABInfo->isActive;
@@ -1919,10 +1918,6 @@ public:
 
     void ModifyCreatureAttributes(Creature* creature)
     {
-        // make sure that we're enabled globally
-        if (!EnableGlobal)
-            return;
-
         // make sure we have a creature and that it's assigned to a map
         if (!creature || !creature->GetMap())
             return;
@@ -1948,7 +1943,7 @@ public:
             creatureABInfo->configTime = lastConfigTime;
 
         // check to make sure that the creature's map is enabled for scaling
-        if (!mapABInfo->enabled)
+        if (!mapABInfo->enabled || !EnableGlobal)
             return;
 
         // if this creature is below 85% of the minimum LFG level for the map, make no changes
