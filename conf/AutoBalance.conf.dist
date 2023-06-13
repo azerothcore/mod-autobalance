@@ -641,8 +641,7 @@ AutoBalance.DisabledID="6867"
 
 #
 #     AutoBalance.LevelScaling
-#        Check the max level of players in map and scale creature based on it.
-#        This triggers depending on the two options below AutoBalance.levelHigherOffset and AutoBalance.levelLowerOffset
+#        Scale creatures in instances based on the highest-level player.
 #        0 = Disabled
 #        1 = Enabled (only in dungeons/raids)
 #        Default:     1
@@ -650,15 +649,16 @@ AutoBalance.LevelScaling=1
 
 #
 #     AutoBalance.LevelScaling.Method
-#        Sets which method should be used when determining what level creature's should be scaled to.
+#        Selects which method should be used when the level for scaled creatures.
 #
 #           fixed:
 #               Creatures will be scaled to the level of the highest-level player in the group.
 #
 #           dynamic:
-#               Creatures will be scaled to a level based on their original assignments compared to the
-#               average creature level. This means that lower-level trash will still be lower-level than
-#               you, and higher-level bosses will still be higher-level than you.
+#               Creatures will be scaled to a level based on 1) their original assignments compared to the
+#               highest-level creature in the instance and 2) the highest-level player in the dungeon. This
+#               means that lower-level trash will still be lower level than you, and higher-level bosses
+#               will still be higher-level than you.
 #
 #        Possible values: "fixed" or "dynamic"
 #
@@ -689,7 +689,8 @@ AutoBalance.LevelScaling.SkipLowerLevels = 5
 #
 #     AutoBalance.LevelScaling.DynamicLevel.Ceiling.*
 #        Sets the maximum number of levels creatures scaled in "dynamic" mode can be OVER your highest-level
-#        player. For instances with wide level spreads, ensures that the level differences stay reasonable.
+#        player. The creature in the dungeon with the highest original level will be set to the highest-level
+#        player's level + this value.
 #
 #        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
 #
@@ -726,14 +727,14 @@ AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids = 5
 #
 #        Example: AutoBalance.StatModifier.PerInstance="409 0 3, 568 3, 43 -1 8"
 #
-#        Default: "229 2" (Recommended adjustments)
+#        Default: "229 1" (Recommended adjustments)
 #
 # 229 - Blackrock Spire
-AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 2"
+AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 1"
 
 #
 #     AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance
-#        Some dungeons contain multiple wings that exsit in the same InstanceID. These wings may have different level requirements.
+#        Some dungeons contain multiple wings that exist in the same InstanceID. These wings may have different level requirements.
 #        You may set this setting per-instance to ensure that only creatures within [WorldUnits] of any player are included in the
 #        instance level calculation. This will improve the accuracy of creature levels in instances that contain multiple wings.
 #
@@ -772,8 +773,7 @@ AutoBalance.LevelScaling.EndGameBoost = 1
 #
 #           fixed:
 #               XP and Money will be divided by the maximum number of players in the group
-#               regardless of scaling settings. The calculated value will be evenly split between
-#               players in the group.
+#               regardless of scaling settings. Each player will receive the calculated value.
 #
 #           dynamic:
 #               XP and Money will be scaled based on the the health and damage modifiers that are applied to
@@ -796,7 +796,7 @@ AutoBalance.RewardScaling.Method="dynamic"
 #     AutoBalance.RewardScaling.XP
 #        Scale XP based on the `AutoBalance.RewardScaling.Method` selection.
 #
-#        Default: 0 (1 = ON, 0 = OFF)
+#        Default: 1 (1 = ON, 0 = OFF)
 #
 #     AutoBalance.RewardScaling.XP.Modifier
 #        Apply a flat modifier to the amount of XP that is rewarded to players.
@@ -807,7 +807,7 @@ AutoBalance.RewardScaling.Method="dynamic"
 #        rewarded to each player, 150xp will be rewarded.
 #
 #        Default: 1.0 (no change)
-AutoBalance.RewardScaling.XP = 0
+AutoBalance.RewardScaling.XP = 1
 AutoBalance.RewardScaling.XP.Modifier = 1.0
 
 #
@@ -815,7 +815,7 @@ AutoBalance.RewardScaling.XP.Modifier = 1.0
 #        Scale Money drops based on the `AutoBalance.RewardScaling.Method` selection. If set to 0, the full
 #        amount will be rewarded.
 #
-#        Default: 0 (1 = ON, 0 = OFF)
+#        Default: 1 (1 = ON, 0 = OFF)
 #
 #     AutoBalance.RewardScaling.Money.Modifier
 #        Apply a flat modifier to the amount of money that is rewarded to players.
@@ -826,7 +826,7 @@ AutoBalance.RewardScaling.XP.Modifier = 1.0
 #        rewarded to each player, 1 gold 50 silver will be rewarded.
 #
 #        Default: 1.0 (no change)
-AutoBalance.RewardScaling.Money = 0
+AutoBalance.RewardScaling.Money = 1
 AutoBalance.RewardScaling.Money.Modifier = 1.0
 
 ##########################

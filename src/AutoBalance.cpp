@@ -1248,11 +1248,11 @@ class AutoBalance_WorldScript : public WorldScript
         // LevelScaling.*
         LevelScaling = sConfigMgr->GetOption<bool>("AutoBalance.LevelScaling", true);
 
-        LevelScalingMethod = sConfigMgr->GetOption<std::string>("AutoBalance.LevelScaling.Method", "fixed", false);
+        LevelScalingMethod = sConfigMgr->GetOption<std::string>("AutoBalance.LevelScaling.Method", "dynamic", false);
         if (LevelScalingMethod != "fixed" && LevelScalingMethod != "dynamic")
         {
-            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.LevelScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `fixed`.", RewardScalingMethod);
-            LevelScalingMethod = "fixed";
+            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.LevelScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", RewardScalingMethod);
+            LevelScalingMethod = "dynamic";
         }
 
         if (sConfigMgr->GetOption<float>("AutoBalance.LevelHigherOffset", false, false))
@@ -1282,17 +1282,17 @@ class AutoBalance_WorldScript : public WorldScript
         if (sConfigMgr->GetOption<float>("AutoBalance.DungeonScaleDownMoney", false, false))
             LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.DungeonScaleDownMoney` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
 
-        RewardScalingMethod = sConfigMgr->GetOption<std::string>("AutoBalance.RewardScaling.Method", "fixed", false);
+        RewardScalingMethod = sConfigMgr->GetOption<std::string>("AutoBalance.RewardScaling.Method", "dynamic", false);
         if (RewardScalingMethod != "fixed" && RewardScalingMethod != "dynamic")
         {
-            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.RewardScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `fixed`.", RewardScalingMethod);
-            RewardScalingMethod = "fixed";
+            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.RewardScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", RewardScalingMethod);
+            RewardScalingMethod = "dynamic";
         }
 
-        RewardScalingXP = sConfigMgr->GetOption<bool>("AutoBalance.RewardScaling.XP", sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", false, false));
+        RewardScalingXP = sConfigMgr->GetOption<bool>("AutoBalance.RewardScaling.XP", sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", true, false));
         RewardScalingXPModifier = sConfigMgr->GetOption<float>("AutoBalance.RewardScaling.XP.Modifier", 1.0f, false);
 
-        RewardScalingMoney = sConfigMgr->GetOption<bool>("AutoBalance.RewardScaling.Money", sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownMoney", false, false));
+        RewardScalingMoney = sConfigMgr->GetOption<bool>("AutoBalance.RewardScaling.Money", sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownMoney", true, false));
         RewardScalingMoneyModifier = sConfigMgr->GetOption<float>("AutoBalance.RewardScaling.Money.Modifier", 1.0f, false);
 
         // Announcement
