@@ -878,24 +878,6 @@ int GetForcedNumPlayers(int creatureId)
     return forcedCreatureIds[creatureId];
 }
 
-
-/* void getAreaLevel(Map *map, uint8 areaid, uint8 &min, uint8 &max) {
-    LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
-    if (dungeon && (map->IsDungeon() || map->IsRaid())) {
-        min  = dungeon->MinLevel;
-        max  = dungeon->TargetLevel ? dungeon->TargetLevel : dungeon->MaxLevel;
-    }
-
-    if (!min && !max)
-    {
-        AreaTableEntry const* areaEntry = sAreaTableStore.LookupEntry(areaid);
-        if (areaEntry && areaEntry->area_level > 0) {
-            min = areaEntry->area_level;
-            max = areaEntry->area_level;
-        }
-    }
-} */
-
 class AutoBalance_WorldScript : public WorldScript
 {
     public:
