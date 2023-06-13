@@ -734,7 +734,7 @@ AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 2"
 #
 #     AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance
 #        Some dungeons contain multiple wings that exsit in the same InstanceID. These wings may have different level requirements.
-#        You may set this setting per-instance to ensure that only creatures within [WorldUnits] of any player are included in the 
+#        You may set this setting per-instance to ensure that only creatures within [WorldUnits] of any player are included in the
 #        instance level calculation. This will improve the accuracy of creature levels in instances that contain multiple wings.
 #
 #        NOTE: If two players in a party enter two different wings of the same InstanceID at the same time, creature levels will be
