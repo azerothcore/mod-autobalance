@@ -663,7 +663,6 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                 // if this player matches the player we're supposed to skip, skip
                 if (playerHandle == playerToExcludeFromChecks)
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Skipping player {} for friendly check.", playerHandle->GetName());
                     continue;
                 }
 
@@ -689,7 +688,6 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                     // if this player matches the player we're supposed to skip, skip
                     if (playerHandle == playerToExcludeFromChecks)
                     {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Skipping player {} for distance check.", playerHandle->GetName());
                         continue;
                     }
 
