@@ -660,10 +660,10 @@ AutoBalance.LevelScaling=1
 #               average creature level. This means that lower-level trash will still be lower-level than
 #               you, and higher-level bosses will still be higher-level than you.
 #
-#        Possible values: `fixed` or `dynamic`
+#        Possible values: "fixed" or "dynamic"
 #
-#        Default: fixed (but `dynamic` is recommended)
-AutoBalance.LevelScaling.Method="fixed"
+#        Default: "dynamic"
+AutoBalance.LevelScaling.Method="dynamic"
 
 #
 #     AutoBalance.LevelScaling.SkipHigherLevels
@@ -732,7 +732,7 @@ AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids = 5
 AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 2"
 
 #
-#     AutoBalance.LevelEndGameBoost
+#     AutoBalance.LevelScaling.LevelEndGameBoost
 #        End game creatures have an exponential (not linear) regression
 #        that is not correctly handled by db values. Keep this enabled
 #        to have stats as near possible to the official ones.
@@ -769,8 +769,8 @@ AutoBalance.LevelScaling.EndGameBoost = 1
 #
 #        Possible values: "fixed" or "dynamic"
 #
-#        Default: "fixed" (but "dynamic" is recommended)
-AutoBalance.RewardScaling.Method="fixed"
+#        Default: "dynamic"
+AutoBalance.RewardScaling.Method="dynamic"
 
 #
 #     AutoBalance.RewardScaling.XP
