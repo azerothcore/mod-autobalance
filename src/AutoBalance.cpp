@@ -1688,7 +1688,7 @@ class AutoBalance_AllMapScript : public AllMapScript
 
                             // notify the player that they left the instance while combat was in progress
                             ChatHandler chatHandle = ChatHandler(player->GetSession());
-                            chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 You left the instance while combat was in progress. The instance player count is still %u.", mapABInfo->playerCount);
+                            chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 You left the instance while combat was in progress. The instance player count is still %u.", mapABInfo->playerCount);
 
                             break;
                         }
@@ -1704,7 +1704,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (mapPlayer != player)
                             {
                                 ChatHandler chatHandle = ChatHandler(mapPlayer->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s left the instance while combat was in progress. The instance player count is still %u.", player->GetName().c_str(), mapABInfo->playerCount);
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s left the instance while combat was in progress. The instance player count is still %u.", player->GetName().c_str(), mapABInfo->playerCount);
                             }
                         }
                     }
@@ -1724,10 +1724,11 @@ class AutoBalance_AllMapScript : public AllMapScript
                     {
                         for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
                         {
-                            if (Player* playerHandle = playerIteration->GetSource())
+                            Player* mapPlayer = playerIteration->GetSource();
+                            if (mapPlayer && mapPlayer != player)
                             {
-                                ChatHandler chatHandle = ChatHandler(playerHandle->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [-AutoBalance]|r|cffFF8000 %s left the instance. Player count set to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), mapABInfo->playerCount, PlayerCountDifficultyOffset);
+                                ChatHandler chatHandle = ChatHandler(mapPlayer->GetSession());
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s left the instance. Player count set to %u (Player Difficulty Offset = %u) |r", player->GetName().c_str(), mapABInfo->playerCount, PlayerCountDifficultyOffset);
                             }
                         }
                     }
