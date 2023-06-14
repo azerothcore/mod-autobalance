@@ -723,14 +723,15 @@ AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids = 5
 #
 #        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
 #
-#        Format: "[InstanceID] [DynamicLevelCeiling] [DynamicLevelFloor], [InstanceID] [DynamicLevelCeiling] [DynamicLevelFloor], ..."
+#        Format: "[InstanceID] [SkipHigherLevels] [SkipLowerLevels] [DynamicLevelCeiling] [DynamicLevelFloor], [InstanceID] [SkipHigherLevels] [SkipLowerLevels] [DynamicLevelCeiling] [DynamicLevelFloor], ..."
 #
-#        Example: AutoBalance.StatModifier.PerInstance="409 0 3, 568 3, 43 -1 8"
+#        Example: AutoBalance.StatModifier.PerInstance="409 -1 -1 0 3, 568 3, 43 -1 8"
 #
-#        Default: "229 1" (Recommended adjustments)
+#        Default: "229 -1 -1 1, 230 0 0" (Recommended adjustments)
 #
 # 229 - Blackrock Spire
-AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 1"
+# 230 - Blackrock Depths
+AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 -1 -1 1, 230 0 0"
 
 #
 #     AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance

@@ -162,6 +162,8 @@ public:
     uint32 activeCreatureCount = 0;
 
     bool isLevelScalingEnabled;
+    int levelScalingSkipHigherLevels, levelScalingSkipLowerLevels;
+    int levelScalingDynamicCeiling, levelScalingDynamicFloor;
 };
 
 class AutoBalanceStatModifiers : public DataMap::Base
@@ -195,8 +197,10 @@ class AutoBalanceLevelScalingDynamicLevelSettings: public DataMap::Base
 {
 public:
     AutoBalanceLevelScalingDynamicLevelSettings() {}
-    AutoBalanceLevelScalingDynamicLevelSettings(int ceiling, int floor) :
-        ceiling(ceiling), floor(floor) {}
+    AutoBalanceLevelScalingDynamicLevelSettings(int skipHigher, int skipLower, int ceiling, int floor) :
+        skipHigher(skipHigher), skipLower(skipLower), ceiling(ceiling), floor(floor) {}
+    int skipHigher;
+    int skipLower;
     int ceiling;
     int floor;
 };
@@ -381,19 +385,23 @@ std::map<uint8, AutoBalanceLevelScalingDynamicLevelSettings> LoadDynamicLevelOve
     dungeonIdStream.str(dungeonIdString);
     while (std::getline(dungeonIdStream, delimitedValue, ',')) // Process each dungeon ID in the string, delimited by the comma - "," and then space " "
     {
-        std::string val1, val2, val3;
+        std::string val1, val2, val3, val4, val5;
         std::stringstream dungeonStream(delimitedValue);
-        dungeonStream >> val1 >> val2 >> val3;
+        dungeonStream >> val1 >> val2 >> val3 >> val4 >> val5;
 
         auto dungeonMapId = atoi(val1.c_str());
 
         // Replace any missing values with -1
         if (val2.empty()) { val2 = "-1"; }
         if (val3.empty()) { val3 = "-1"; }
+        if (val4.empty()) { val3 = "-1"; }
+        if (val5.empty()) { val3 = "-1"; }
 
         AutoBalanceLevelScalingDynamicLevelSettings dynamicLevelSettings = AutoBalanceLevelScalingDynamicLevelSettings(
             atoi(val2.c_str()),
-            atoi(val3.c_str())
+            atoi(val3.c_str()),
+            atoi(val4.c_str()),
+            atoi(val5.c_str())
         );
 
         overrideMap[dungeonMapId] = dynamicLevelSettings;
@@ -530,6 +538,87 @@ bool ShouldMapBeEnabled(Map* map)
     {
         // we're not in a dungeon or a raid, we never scale
         return false;
+    }
+}
+
+void LoadMapSettings(Map* map)
+{
+    // Load (or create) the map's info
+    AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+
+    // create an InstanceMap object
+    InstanceMap* instanceMap = map->ToInstanceMap();
+
+    // should the map be enabled at all?
+    mapABInfo->enabled = ShouldMapBeEnabled(map);
+
+    //
+    // Dynamic Level Scaling Floor and Ceiling
+    //
+
+    // 5-player normal dungeons
+    if (instanceMap->GetMaxPlayers() <= 5 && !instanceMap->IsHeroic())
+    {
+        mapABInfo->levelScalingDynamicCeiling = LevelScalingDynamicLevelCeilingDungeons;
+        mapABInfo->levelScalingDynamicFloor = LevelScalingDynamicLevelFloorDungeons;
+
+    }
+    // 5-player heroic dungeons
+    else if (instanceMap->GetMaxPlayers() <= 5 && instanceMap->IsHeroic())
+    {
+        mapABInfo->levelScalingDynamicCeiling = LevelScalingDynamicLevelCeilingHeroicDungeons;
+        mapABInfo->levelScalingDynamicFloor = LevelScalingDynamicLevelFloorHeroicDungeons;
+    }
+    // Normal raids
+    else if (instanceMap->GetMaxPlayers() > 5 && !instanceMap->IsHeroic())
+    {
+        mapABInfo->levelScalingDynamicCeiling = LevelScalingDynamicLevelCeilingRaids;
+        mapABInfo->levelScalingDynamicFloor = LevelScalingDynamicLevelFloorRaids;
+    }
+    // Heroic raids
+    else if (instanceMap->GetMaxPlayers() > 5 && instanceMap->IsHeroic())
+    {
+        mapABInfo->levelScalingDynamicCeiling = LevelScalingDynamicLevelCeilingHeroicRaids;
+        mapABInfo->levelScalingDynamicFloor = LevelScalingDynamicLevelFloorHeroicRaids;
+    }
+    // something went wrong
+    else
+    {
+        LOG_ERROR("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Unable to determine dynamic scaling floor and ceiling for instance {}.", instanceMap->GetMapName());
+        mapABInfo->levelScalingDynamicCeiling = 3;
+        mapABInfo->levelScalingDynamicFloor = 5;
+    }
+
+    //
+    // Level Scaling Skip Levels
+    //
+
+    // Load the global settings into the map
+    mapABInfo->levelScalingSkipHigherLevels = LevelScalingSkipHigherLevels;
+    mapABInfo->levelScalingSkipLowerLevels = LevelScalingSkipLowerLevels;
+
+    //
+    // Per-instance overrides, if applicable
+    //
+    if (hasDynamicLevelOverride(map->GetId()))
+    {
+        AutoBalanceLevelScalingDynamicLevelSettings* myDynamicLevelSettings = &levelScalingDynamicLevelOverrides[map->GetId()];
+
+        // LevelScaling.SkipHigherLevels
+        if (myDynamicLevelSettings->skipHigher != -1)
+            mapABInfo->levelScalingSkipHigherLevels = myDynamicLevelSettings->skipHigher;
+
+        // LevelScaling.SkipLowerLevels
+        if (myDynamicLevelSettings->skipLower != -1)
+            mapABInfo->levelScalingSkipLowerLevels = myDynamicLevelSettings->skipLower;
+
+        // LevelScaling.DynamicLevelCeiling
+        if (myDynamicLevelSettings->ceiling != -1)
+            mapABInfo->levelScalingDynamicCeiling = myDynamicLevelSettings->ceiling;
+
+        // LevelScaling.DynamicLevelFloor
+        if (myDynamicLevelSettings->floor != -1)
+            mapABInfo->levelScalingDynamicFloor = myDynamicLevelSettings->floor;
     }
 }
 
@@ -671,7 +760,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                     continue;
                 }
 
-                // if the creature is friendly
+                // if the creature is friendly and not a boss
                 if (creature->IsFriendlyTo(playerHandle) && !creature->IsDungeonBoss())
                 {
                     LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is friendly to {} - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
@@ -785,14 +874,14 @@ void UpdateMapLevelIfNeeded(Map* map)
                    mapABInfo->configTime,
                    lastConfigTime);
 
-        // see if the map should be enabled for AutoBalance at all
-        mapABInfo->enabled = ShouldMapBeEnabled(map);
+        // load the map's settings
+        LoadMapSettings(map);
 
         // if LevelScaling is disabled OR if the average creature level is inside the skip range,
         // set the map level to the average creature level, rounded to the nearest integer
         if (!LevelScaling ||
-            (mapABInfo->avgCreatureLevel <= mapABInfo->highestPlayerLevel + LevelScalingSkipHigherLevels &&
-              mapABInfo->avgCreatureLevel >= mapABInfo->highestPlayerLevel - LevelScalingSkipLowerLevels)
+            ((mapABInfo->avgCreatureLevel <= mapABInfo->highestPlayerLevel + mapABInfo->levelScalingSkipHigherLevels && mapABInfo->levelScalingSkipHigherLevels != 0) &&
+              (mapABInfo->avgCreatureLevel >= mapABInfo->highestPlayerLevel - mapABInfo->levelScalingSkipLowerLevels && mapABInfo->levelScalingSkipLowerLevels != 0))
            )
         {
             mapABInfo->mapLevel = (uint8)(mapABInfo->avgCreatureLevel + 0.5f);
@@ -1287,6 +1376,7 @@ class AutoBalance_WorldScript : public WorldScript
         {
             RewardScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
         }
+        else
         {
             LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.RewardScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", RewardScalingMethodString);
             RewardScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
@@ -1603,6 +1693,9 @@ class AutoBalance_AllMapScript : public AllMapScript
                 mapABInfo->lfgMaxLevel = dungeon->MaxLevel;
                 mapABInfo->lfgTargetLevel = dungeon->TargetLevel;
             }
+
+            // load the map's settings
+            LoadMapSettings(map);
         }
 
         void OnPlayerEnterAll(Map* map, Player* player)
@@ -1990,8 +2083,8 @@ public:
 
         // only scale levels if level scaling is enabled and the instance's average creature level is not within the skip range
         if (LevelScaling &&
-             (mapABInfo->avgCreatureLevel >= mapABInfo->highestPlayerLevel + LevelScalingSkipHigherLevels ||
-              mapABInfo->avgCreatureLevel <= mapABInfo->highestPlayerLevel - LevelScalingSkipLowerLevels)
+             ((mapABInfo->avgCreatureLevel > mapABInfo->highestPlayerLevel + mapABInfo->levelScalingSkipHigherLevels || mapABInfo->levelScalingSkipHigherLevels == 0) ||
+              (mapABInfo->avgCreatureLevel < mapABInfo->highestPlayerLevel - mapABInfo->levelScalingSkipLowerLevels || mapABInfo->levelScalingSkipLowerLevels == 0))
            )
         {
             uint8 selectedLevel;
@@ -1999,67 +2092,21 @@ public:
             // if we're using dynamic scaling, calculate the creature's level based relative to the highest player level in the map
             if (LevelScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
             {
-                // Set the dynamic scaling floor and ceiling based on whether the instance is a "dungeon" or a "raid"
-                uint8 LevelScalingDynamicLevelFloor;
-                uint8 LevelScalingDynamicLevelCeiling;
-
-                // 5-player normal dungeons
-                if (instanceMap->GetMaxPlayers() <= 5 && !instanceMap->IsHeroic())
-                {
-                    LevelScalingDynamicLevelFloor = LevelScalingDynamicLevelFloorDungeons;
-                    LevelScalingDynamicLevelCeiling = LevelScalingDynamicLevelCeilingDungeons;
-                }
-                // 5-player heroic dungeons
-                else if (instanceMap->GetMaxPlayers() <= 5 && instanceMap->IsHeroic())
-                {
-                    LevelScalingDynamicLevelFloor = LevelScalingDynamicLevelFloorHeroicDungeons;
-                    LevelScalingDynamicLevelCeiling = LevelScalingDynamicLevelCeilingHeroicDungeons;
-                }
-                // Normal raids
-                else if (instanceMap->GetMaxPlayers() > 5 && !instanceMap->IsHeroic())
-                {
-                    LevelScalingDynamicLevelFloor = LevelScalingDynamicLevelFloorRaids;
-                    LevelScalingDynamicLevelCeiling = LevelScalingDynamicLevelCeilingRaids;
-                }
-                // Heroic raids
-                else if (instanceMap->GetMaxPlayers() > 5 && instanceMap->IsHeroic())
-                {
-                    LevelScalingDynamicLevelFloor = LevelScalingDynamicLevelFloorHeroicRaids;
-                    LevelScalingDynamicLevelCeiling = LevelScalingDynamicLevelCeilingHeroicRaids;
-                }
-                // something went wrong
-                else
-                {
-                    LOG_ERROR("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Unable to determine dynamic scaling floor and ceiling for instance {}.", instanceMap->GetMapName());
-                    LevelScalingDynamicLevelFloor = 5;
-                    LevelScalingDynamicLevelCeiling = 3;
-                }
-
-                // apply per-instance overrides, if applicable
-                if (hasDynamicLevelOverride(mapId))
-                {
-                    AutoBalanceLevelScalingDynamicLevelSettings* myDynamicLevelSettings = &levelScalingDynamicLevelOverrides[mapId];
-
-                    // Alter the dynamic scaling floor and ceiling based on the instance's override settings, if set
-                    if (myDynamicLevelSettings->ceiling != -1) { LevelScalingDynamicLevelCeiling = myDynamicLevelSettings->ceiling; }
-                    if (myDynamicLevelSettings->floor != -1)   { LevelScalingDynamicLevelFloor =   myDynamicLevelSettings->floor;   }
-                }
-
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) dynamic scaling floor: {}, ceiling: {}.", creature->GetName(), creatureABInfo->UnmodifiedLevel, LevelScalingDynamicLevelFloor, LevelScalingDynamicLevelCeiling);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) dynamic scaling floor: {}, ceiling: {}.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->levelScalingDynamicFloor, mapABInfo->levelScalingDynamicCeiling);
 
                 // calculate the creature's new level
-                selectedLevel = (mapABInfo->highestPlayerLevel + LevelScalingDynamicLevelCeiling) - (mapABInfo->highestCreatureLevel - creatureABInfo->UnmodifiedLevel);
+                selectedLevel = (mapABInfo->highestPlayerLevel + mapABInfo->levelScalingDynamicCeiling) - (mapABInfo->highestCreatureLevel - creatureABInfo->UnmodifiedLevel);
 
                 // check to be sure that the creature's new level is at least the dynamic scaling floor
-                if (selectedLevel < (mapABInfo->highestPlayerLevel - LevelScalingDynamicLevelFloor))
+                if (selectedLevel < (mapABInfo->highestPlayerLevel - mapABInfo->levelScalingDynamicFloor))
                 {
-                    selectedLevel = mapABInfo->highestPlayerLevel - LevelScalingDynamicLevelFloor;
+                    selectedLevel = mapABInfo->highestPlayerLevel - mapABInfo->levelScalingDynamicFloor;
                 }
 
                 // check to be sure that the creature's new level is no higher than the dynamic scaling ceiling
-                if (selectedLevel > (mapABInfo->highestPlayerLevel + LevelScalingDynamicLevelCeiling))
+                if (selectedLevel > (mapABInfo->highestPlayerLevel + mapABInfo->levelScalingDynamicCeiling))
                 {
-                    selectedLevel = mapABInfo->highestPlayerLevel + LevelScalingDynamicLevelCeiling;
+                    selectedLevel = mapABInfo->highestPlayerLevel + mapABInfo->levelScalingDynamicCeiling;
                 }
 
                 LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) scaled to {} via dynamic scaling.", creature->GetName(), creatureABInfo->UnmodifiedLevel, selectedLevel);
@@ -2929,7 +2976,9 @@ public:
                                     mapABInfo->lowestPlayerLevel,
                                     mapABInfo->highestPlayerLevel
                                     );
-            handler->PSendSysMessage("Original Map Level: %u (%s)", (uint8)(mapABInfo->avgCreatureLevel+0.5f), mapABInfo->isLevelScalingEnabled ? "Level Scaling Enabled" : "Level Scaling Disabled");
+            handler->PSendSysMessage("Map Level: %u%s", (uint8)(mapABInfo->avgCreatureLevel+0.5f),
+                                                        mapABInfo->isLevelScalingEnabled ? std::string("->") + std::to_string(mapABInfo->highestPlayerLevel) + std::string(" (Level Scaling Enabled)") : std::string(" (Level Scaling Disabled)")
+                                    );
             handler->PSendSysMessage("LFG Range: Lvl %u - %u (Target: Lvl %u)", mapABInfo->lfgMinLevel, mapABInfo->lfgMaxLevel, mapABInfo->lfgTargetLevel);
             handler->PSendSysMessage("Active Creatures in map: %u (Lvl %u - %u | Avg Lvl %.2f)",
                                     mapABInfo->activeCreatureCount,
@@ -2962,14 +3011,15 @@ public:
         }
 
         AutoBalanceCreatureInfo *creatureABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+        AutoBalanceMapInfo *mapABInfo=target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
         handler->PSendSysMessage("---");
-        handler->PSendSysMessage("%s (%u->%u%s), %s",
+        handler->PSendSysMessage("%s (%u%s%s), %s",
                                   target->GetName(),
                                   creatureABInfo->UnmodifiedLevel,
-                                  creatureABInfo->selectedLevel ? creatureABInfo->selectedLevel : creatureABInfo->UnmodifiedLevel,
+                                  mapABInfo->isLevelScalingEnabled ? std::string("->") + std::to_string(creatureABInfo->selectedLevel) : "",
                                   target->IsDungeonBoss() ? " | Boss" : "",
-                                  creatureABInfo->isActive ? "Active for Stats" : "Skipped for Stats");
+                                  creatureABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
         handler->PSendSysMessage("Health multiplier: %.3f", creatureABInfo->HealthMultiplier);
         handler->PSendSysMessage("Mana multiplier: %.3f", creatureABInfo->ManaMultiplier);
         handler->PSendSysMessage("Armor multiplier: %.3f", creatureABInfo->ArmorMultiplier);
