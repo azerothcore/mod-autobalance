@@ -201,6 +201,11 @@ public:
     int floor;
 };
 
+enum ScalingMethod {
+    AUTOBALANCE_SCALING_FIXED,
+    AUTOBALANCE_SCALING_DYNAMIC
+};
+
 // The map values correspond with the .AutoBalance.XX.Name entries in the configuration file.
 static std::map<int, int> forcedCreatureIds;
 static std::map<uint32, uint8> enabledDungeonIds;
@@ -218,14 +223,14 @@ static bool LevelScaling;
 static int8 LevelScalingSkipHigherLevels, LevelScalingSkipLowerLevels;
 static int8 LevelScalingDynamicLevelCeilingDungeons, LevelScalingDynamicLevelFloorDungeons, LevelScalingDynamicLevelCeilingRaids, LevelScalingDynamicLevelFloorRaids;
 static int8 LevelScalingDynamicLevelCeilingHeroicDungeons, LevelScalingDynamicLevelFloorHeroicDungeons, LevelScalingDynamicLevelCeilingHeroicRaids, LevelScalingDynamicLevelFloorHeroicRaids;
-static std::string LevelScalingMethod;
+static ScalingMethod LevelScalingMethod;
 static uint32 rewardRaid, rewardDungeon, MinPlayerReward;
 static bool Announcement;
 static bool LevelScalingEndGameBoost, PlayerChangeNotify, rewardEnabled;
 static float MinHPModifier, MinManaModifier, MinDamageModifier, MinCCDurationModifier, MaxCCDurationModifier;
 
 // RewardScaling.*
-static std::string RewardScalingMethod;
+static ScalingMethod RewardScalingMethod;
 static bool RewardScalingXP, RewardScalingMoney;
 static float RewardScalingXPModifier, RewardScalingMoneyModifier;
 
@@ -1231,11 +1236,19 @@ class AutoBalance_WorldScript : public WorldScript
         // LevelScaling.*
         LevelScaling = sConfigMgr->GetOption<bool>("AutoBalance.LevelScaling", true);
 
-        LevelScalingMethod = sConfigMgr->GetOption<std::string>("AutoBalance.LevelScaling.Method", "dynamic", false);
-        if (LevelScalingMethod != "fixed" && LevelScalingMethod != "dynamic")
+        std::string LevelScalingMethodString = sConfigMgr->GetOption<std::string>("AutoBalance.LevelScaling.Method", "dynamic", false);
+        if (LevelScalingMethodString == "fixed")
         {
-            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.LevelScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", RewardScalingMethod);
-            LevelScalingMethod = "dynamic";
+            LevelScalingMethod = AUTOBALANCE_SCALING_FIXED;
+        }
+        else if (LevelScalingMethodString == "dynamic")
+        {
+            LevelScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
+        }
+        else
+        {
+            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.LevelScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", LevelScalingMethodString);
+            LevelScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
         }
 
         if (sConfigMgr->GetOption<float>("AutoBalance.LevelHigherOffset", false, false))
@@ -1265,11 +1278,18 @@ class AutoBalance_WorldScript : public WorldScript
         if (sConfigMgr->GetOption<float>("AutoBalance.DungeonScaleDownMoney", false, false))
             LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.DungeonScaleDownMoney` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");
 
-        RewardScalingMethod = sConfigMgr->GetOption<std::string>("AutoBalance.RewardScaling.Method", "dynamic", false);
-        if (RewardScalingMethod != "fixed" && RewardScalingMethod != "dynamic")
+        std::string RewardScalingMethodString = sConfigMgr->GetOption<std::string>("AutoBalance.RewardScaling.Method", "dynamic", false);
+        if (RewardScalingMethodString == "fixed")
         {
-            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.RewardScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", RewardScalingMethod);
-            RewardScalingMethod = "dynamic";
+            RewardScalingMethod = AUTOBALANCE_SCALING_FIXED;
+        }
+        else if (RewardScalingMethodString == "dynamic")
+        {
+            RewardScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
+        }
+        {
+            LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.RewardScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", RewardScalingMethodString);
+            RewardScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
         }
 
         RewardScalingXP = sConfigMgr->GetOption<bool>("AutoBalance.RewardScaling.XP", sConfigMgr->GetOption<bool>("AutoBalance.DungeonScaleDownXP", true, false));
@@ -1335,13 +1355,13 @@ class AutoBalance_PlayerScript : public PlayerScript
 
                 if (map->IsDungeon())
                 {
-                    if (RewardScalingMethod == "dynamic")
+                    if (RewardScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
                     {
                         LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnGiveXP(): Distributing XP from '{}' in dynamic mode - {}->{}",
                                  victim->GetName(), amount, uint32(amount * creatureABInfo->XPModifier));
                         amount = uint32(amount * creatureABInfo->XPModifier);
                     }
-                    else if (RewardScalingMethod == "fixed")
+                    else if (RewardScalingMethod == AUTOBALANCE_SCALING_FIXED)
                     {
                         // Ensure that the players always get the same XP, even when entering the dungeon alone
                         auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
@@ -1374,14 +1394,14 @@ class AutoBalance_PlayerScript : public PlayerScript
                     AutoBalanceCreatureInfo *creatureABInfo=sourceCreature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
                     // Dynamic Mode
-                    if (RewardScalingMethod == "dynamic")
+                    if (RewardScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
                     {
                         LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnBeforeLootMoney(): Distributing money from '{}' in dynamic mode - {}->{}",
                                  sourceCreature->GetName(), loot->gold, uint32(loot->gold * creatureABInfo->MoneyModifier));
                         loot->gold = uint32(loot->gold * creatureABInfo->MoneyModifier);
                     }
                     // Fixed Mode
-                    else
+                    else if (RewardScalingMethod == AUTOBALANCE_SCALING_FIXED)
                     {
                         // Ensure that the players always get the same money, even when entering the dungeon alone
                         auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
@@ -1977,7 +1997,7 @@ public:
             uint8 selectedLevel;
 
             // if we're using dynamic scaling, calculate the creature's level based relative to the highest player level in the map
-            if (LevelScalingMethod == "dynamic")
+            if (LevelScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
             {
                 // Set the dynamic scaling floor and ceiling based on whether the instance is a "dungeon" or a "raid"
                 uint8 LevelScalingDynamicLevelFloor;
@@ -2770,11 +2790,11 @@ public:
         // XP Scaling
         if (RewardScalingXP)
         {
-            if (RewardScalingMethod == "fixed")
+            if (RewardScalingMethod == AUTOBALANCE_SCALING_FIXED)
             {
                 creatureABInfo->XPModifier = RewardScalingXPModifier;
             }
-            else if (RewardScalingMethod == "dynamic")
+            else if (RewardScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
             {
                 creatureABInfo->XPModifier = averageMultiplierAfterLevelScaling * RewardScalingXPModifier;
             }
@@ -2785,11 +2805,11 @@ public:
         {
             //LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) has an average post-level-scaling modifier of {}.", creature->GetName(), creature->GetLevel(), averageMultiplierAfterLevelScaling);
 
-            if (RewardScalingMethod == "fixed")
+            if (RewardScalingMethod == AUTOBALANCE_SCALING_FIXED)
             {
                 creatureABInfo->MoneyModifier = RewardScalingMoneyModifier;
             }
-            else if (RewardScalingMethod == "dynamic")
+            else if (RewardScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
             {
                 creatureABInfo->MoneyModifier = averageMultiplierAfterLevelScaling * RewardScalingMoneyModifier;
             }
