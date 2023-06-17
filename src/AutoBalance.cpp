@@ -133,7 +133,8 @@ public:
     uint8 UnmodifiedLevel = 0;
 
     bool isActive = false;
-    bool inCreatureList = false;
+    bool wasAliveNowDead = false;
+    bool isInCreatureList = false;
 };
 
 class AutoBalanceMapInfo : public DataMap::Base
@@ -622,7 +623,7 @@ void LoadMapSettings(Map* map)
     }
 }
 
-void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Player* playerToExcludeFromChecks = nullptr)
+void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Player* playerToExcludeFromChecks = nullptr, bool forceRecalculation = false)
 {
     // make sure we have a creature and that it's assigned to a map
     if (!creature || !creature->GetMap())
@@ -718,63 +719,51 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         return;
     }
 
+    // is this creature already in the map's creature list?
+    bool isCreatureAlreadyInCreatureList = creatureABInfo->isInCreatureList;
+
     // add the creature to the map's creature list if configured to do so
-    if (addToCreatureList && !creatureABInfo->inCreatureList)
+    if (addToCreatureList && !isCreatureAlreadyInCreatureList)
     {
         mapABInfo->allMapCreatures.push_back(creature);
-        creatureABInfo->inCreatureList = true;
+        creatureABInfo->isInCreatureList = true;
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is creature #{} in the creature list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
     }
 
     // alter stats for the map if needed
     bool isIncludedInMapStats = true;
 
+    // if this creature was already in the creature list, don't consider it for map stats (again)
+    // exception for if forceRecalculation is true (used on player enter/exit to recalculate map stats)
+    if (isCreatureAlreadyInCreatureList && !forceRecalculation)
+    {
+        isIncludedInMapStats = false;
+    }
+
     Map::PlayerList const &playerList = creature->GetMap()->GetPlayers();
     if (!playerList.IsEmpty())
     {
-        // if the creature is vendor, trainer, or has gossip, don't use it to update map stats
-        if  ((creature->IsVendor() ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_GOSSIP) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_QUESTGIVER) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER_PROFESSION) ||
-                creature->HasNpcFlag(UNIT_NPC_FLAG_REPAIR) ||
-                creature->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) ||
-                creature->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE)) &&
-                (!creature->IsDungeonBoss())
-            )
+        // only do these additional checks if we still think they need to be applied to the map stats
+        if (isIncludedInMapStats)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
-            isIncludedInMapStats = false;
-        }
-        else
-        {
-            // if the creature is friendly to a player, don't use it to update map stats
-            for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+            // if the creature is vendor, trainer, or has gossip, don't use it to update map stats
+            if  ((creature->IsVendor() ||
+                    creature->HasNpcFlag(UNIT_NPC_FLAG_GOSSIP) ||
+                    creature->HasNpcFlag(UNIT_NPC_FLAG_QUESTGIVER) ||
+                    creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER) ||
+                    creature->HasNpcFlag(UNIT_NPC_FLAG_TRAINER_PROFESSION) ||
+                    creature->HasNpcFlag(UNIT_NPC_FLAG_REPAIR) ||
+                    creature->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) ||
+                    creature->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE)) &&
+                    (!creature->IsDungeonBoss())
+                )
             {
-                Player* playerHandle = playerIteration->GetSource();
-
-                // if this player matches the player we're supposed to skip, skip
-                if (playerHandle == playerToExcludeFromChecks)
-                {
-                    continue;
-                }
-
-                // if the creature is friendly and not a boss
-                if (creature->IsFriendlyTo(playerHandle) && !creature->IsDungeonBoss())
-                {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is friendly to {} - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
-                    isIncludedInMapStats = false;
-                    break;
-                }
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+                isIncludedInMapStats = false;
             }
-
-            // perform the distance check if an override is configured for this map
-            if (hasLevelScalingDistanceCheckOverride(instanceMap->GetId()))
+            else
             {
-                uint32 distance = levelScalingDistanceCheckOverrides[instanceMap->GetId()];
-                bool isPlayerWithinDistance = false;
-
+                // if the creature is friendly to a player, don't use it to update map stats
                 for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
                 {
                     Player* playerHandle = playerIteration->GetSource();
@@ -785,21 +774,47 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                         continue;
                     }
 
-                    if (playerHandle->IsWithinDist(creature, 500))
+                    // if the creature is friendly and not a boss
+                    if (creature->IsFriendlyTo(playerHandle) && !creature->IsDungeonBoss())
                     {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is in range ({} world units) of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, distance, playerHandle->GetName());
-                        isPlayerWithinDistance = true;
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is friendly to {} - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
+                        isIncludedInMapStats = false;
                         break;
-                    }
-                    else
-                    {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is NOT in range ({} world units) of any player and is NOT considered active.", creature->GetName(), creature->GetLevel(), distance);
                     }
                 }
 
-                // if no players were within the distance, don't include this creature in the map stats
-                if (!isPlayerWithinDistance)
-                    isIncludedInMapStats = false;
+                // perform the distance check if an override is configured for this map
+                if (hasLevelScalingDistanceCheckOverride(instanceMap->GetId()))
+                {
+                    uint32 distance = levelScalingDistanceCheckOverrides[instanceMap->GetId()];
+                    bool isPlayerWithinDistance = false;
+
+                    for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+                    {
+                        Player* playerHandle = playerIteration->GetSource();
+
+                        // if this player matches the player we're supposed to skip, skip
+                        if (playerHandle == playerToExcludeFromChecks)
+                        {
+                            continue;
+                        }
+
+                        if (playerHandle->IsWithinDist(creature, 500))
+                        {
+                            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is in range ({} world units) of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, distance, playerHandle->GetName());
+                            isPlayerWithinDistance = true;
+                            break;
+                        }
+                        else
+                        {
+                            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is NOT in range ({} world units) of any player and is NOT considered active.", creature->GetName(), creature->GetLevel(), distance);
+                        }
+                    }
+
+                    // if no players were within the distance, don't include this creature in the map stats
+                    if (!isPlayerWithinDistance)
+                        isIncludedInMapStats = false;
+                }
             }
         }
 
@@ -828,6 +843,10 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
             lastConfigTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): lastConfigTime reset to {}", lastConfigTime);
         }
+        else if (isCreatureAlreadyInCreatureList)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        }
         else
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is NOT included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
@@ -854,7 +873,7 @@ void RemoveCreatureFromMapData(Creature* creature)
 
                 // mark this creature as removed
                 AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
-                creatureABInfo->inCreatureList = false;
+                creatureABInfo->isInCreatureList = false;
                 break;
             }
         }
@@ -1447,8 +1466,8 @@ class AutoBalance_PlayerScript : public PlayerScript
                 {
                     if (RewardScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
                     {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnGiveXP(): Distributing XP from '{}' in dynamic mode - {}->{}",
-                                 victim->GetName(), amount, uint32(amount * creatureABInfo->XPModifier));
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnGiveXP(): Distributing XP from '{}' to '{}' in dynamic mode - {}->{}",
+                                 victim->GetName(), player->GetName(), amount, uint32(amount * creatureABInfo->XPModifier));
                         amount = uint32(amount * creatureABInfo->XPModifier);
                     }
                     else if (RewardScalingMethod == AUTOBALANCE_SCALING_FIXED)
@@ -1456,8 +1475,8 @@ class AutoBalance_PlayerScript : public PlayerScript
                         // Ensure that the players always get the same XP, even when entering the dungeon alone
                         auto maxPlayerCount = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()))->GetMaxPlayers();
                         auto currentPlayerCount = map->GetPlayersCountExceptGMs();
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnGiveXP(): Distributing XP from '{}' in fixed mode - {}->{}",
-                                 victim->GetName(), amount, uint32(amount * creatureABInfo->XPModifier * ((float)currentPlayerCount / maxPlayerCount)));
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnGiveXP(): Distributing XP from '{}' to '{}' in fixed mode - {}->{}",
+                                 victim->GetName(), player->GetName(), amount, uint32(amount * creatureABInfo->XPModifier * ((float)currentPlayerCount / maxPlayerCount)));
                         amount = uint32(amount * creatureABInfo->XPModifier * ((float)currentPlayerCount / maxPlayerCount));
                     }
                 }
@@ -1719,7 +1738,7 @@ class AutoBalance_AllMapScript : public AllMapScript
             // see which existing creatures are active
             for (std::vector<Creature*>::iterator creatureIterator = mapABInfo->allMapCreatures.begin(); creatureIterator != mapABInfo->allMapCreatures.end(); ++creatureIterator)
             {
-                AddCreatureToMapData(*creatureIterator, false);
+                AddCreatureToMapData(*creatureIterator, false, nullptr, true);
             }
 
             // determine if the map should be enabled for scaling based on the current settings
@@ -1774,10 +1793,10 @@ class AutoBalance_AllMapScript : public AllMapScript
             mapABInfo->avgCreatureLevel = 0;
             mapABInfo->activeCreatureCount = 0;
 
-            // see which existing characters are active
+            // see which existing creatures are active
             for (std::vector<Creature*>::iterator creatureIterator = mapABInfo->allMapCreatures.begin(); creatureIterator != mapABInfo->allMapCreatures.end(); ++creatureIterator)
             {
-                AddCreatureToMapData(*creatureIterator, false, player);
+                AddCreatureToMapData(*creatureIterator, false, player, true);
             }
 
             // determine if the map should be enabled for scaling based on the current settings
@@ -1949,10 +1968,12 @@ public:
             return false;
         }
         // if the creature is dead but configTime is NOT 0, we set it to 0 so that it will be recalculated if revived
+        // also remember that this creature was once alive but is now dead
         else if (creature->isDead())
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(): {} ({}) is dead and configTime is not 0 - prime for reset if revived.", creature->GetName(), creature->GetLevel());
             creatureABInfo->configTime = 0;
+            creatureABInfo->wasAliveNowDead = true;
             return false;
         }
 
@@ -1962,9 +1983,11 @@ public:
             // before updating the creature, we should update the map level if needed
             UpdateMapLevelIfNeeded(creature->GetMap());
 
-            // retain the a few values
+            // retain some values
             uint8 unmodifiedLevel = creatureABInfo->UnmodifiedLevel;
             bool isActive = creatureABInfo->isActive;
+            bool wasAliveNowDead = creatureABInfo->wasAliveNowDead;
+            bool isInCreatureList = creatureABInfo->isInCreatureList;
 
             // reset AutoBalance modifiers
             creature->CustomData.Erase("AutoBalanceCreatureInfo");
@@ -1996,8 +2019,10 @@ public:
             // armor
             creature->SetArmor(origCreatureStats->GenerateArmor(creatureTemplate));
 
-            // restore the isActive flag
+            // restore the saved data
             creatureABInfo->isActive = isActive;
+            creatureABInfo->wasAliveNowDead = wasAliveNowDead;
+            creatureABInfo->isInCreatureList = isInCreatureList;
 
             // damage and ccduration are handled using AutoBalanceCreatureInfo data only
 
@@ -2048,9 +2073,19 @@ public:
         if (creatureABInfo->UnmodifiedLevel > (float)mapABInfo->lfgMaxLevel * 1.15f)
             return;
 
-        // if the creature is dead, make no changes
-        if (!creature->IsAlive())
+        // if the creature was dead (but this function is being called because they are being revived), reset it and allow modifications
+        if (creatureABInfo->wasAliveNowDead)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes(): {} ({}) was dead but appears to be alive now, reset wasAliveNowDead flag.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            // if the creature was dead, reset it
+            creatureABInfo->wasAliveNowDead = false;
+        }
+        // if the creature is dead and wasn't marked as dead by this script, simply skip
+        else if (creature->isDead())
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes(): {} ({}) is dead, do not modify.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             return;
+        }
 
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
@@ -2610,74 +2645,70 @@ public:
             healthMultiplier = MinHPModifier;
 
         float hpStatsRate  = 1.0f;
-        if (LevelScaling) {
-            float originalHealth = origCreatureStats->GenerateHealth(creatureTemplate);
+        float originalHealth = origCreatureStats->GenerateHealth(creatureTemplate);
 
-            float newBaseHealth;
+        float newBaseHealth;
 
-            // The database holds multiple values for base health, one for each expansion
-            // This code will smooth transition between the different expansions based on the highest player level in the instance
+        // The database holds multiple values for base health, one for each expansion
+        // This code will smooth transition between the different expansions based on the highest player level in the instance
 
-            float vanillaHealth = creatureStats->BaseHealth[0];
-            float bcHealth = creatureStats->BaseHealth[1];
-            float wotlkHealth = creatureStats->BaseHealth[2];
+        float vanillaHealth = creatureStats->BaseHealth[0];
+        float bcHealth = creatureStats->BaseHealth[1];
+        float wotlkHealth = creatureStats->BaseHealth[2];
 
-            // vanilla health
-            if (mapABInfo->highestPlayerLevel <= 60)
-            {
-                newBaseHealth = vanillaHealth;
-            }
-            // transition from vanilla to BC health
-            else if (mapABInfo->highestPlayerLevel < 63)
-            {
-                float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0f;
-                float bcMultiplier = 1.0f - vanillaMultiplier;
-
-                newBaseHealth = (vanillaHealth * vanillaMultiplier) + (bcHealth * bcMultiplier);
-            }
-            // BC health
-            else if (mapABInfo->highestPlayerLevel <= 70)
-            {
-                newBaseHealth = bcHealth;
-            }
-            // transition from BC to WotLK health
-            else if (mapABInfo->highestPlayerLevel < 73)
-            {
-                float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0f;
-                float wotlkMultiplier = 1.0f - bcMultiplier;
-
-                newBaseHealth = (bcHealth * bcMultiplier) + (wotlkHealth * wotlkMultiplier);
-            }
-            // WotLK health
-            else
-            {
-                newBaseHealth = wotlkHealth;
-
-                // special increase for end-game content
-                if (LevelScalingEndGameBoost)
-                    if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
-                    {
-                        newBaseHealth *= (float)(mapABInfo->highestPlayerLevel-70) * 0.3f;
-                    }
-            }
-
-            float newHealth =  newBaseHealth * creatureTemplate->ModHealth;
-            hpStatsRate = newHealth / originalHealth;
-
-            healthMultiplier *= hpStatsRate;
-            creatureABInfo->HealthMultiplier = healthMultiplier;
-
-            scaledHealth = round(originalHealth * creatureABInfo->HealthMultiplier);
+        // vanilla health
+        if (mapABInfo->highestPlayerLevel <= 60)
+        {
+            newBaseHealth = vanillaHealth;
         }
+        // transition from vanilla to BC health
+        else if (mapABInfo->highestPlayerLevel < 63)
+        {
+            float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0f;
+            float bcMultiplier = 1.0f - vanillaMultiplier;
+
+            newBaseHealth = (vanillaHealth * vanillaMultiplier) + (bcHealth * bcMultiplier);
+        }
+        // BC health
+        else if (mapABInfo->highestPlayerLevel <= 70)
+        {
+            newBaseHealth = bcHealth;
+        }
+        // transition from BC to WotLK health
+        else if (mapABInfo->highestPlayerLevel < 73)
+        {
+            float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0f;
+            float wotlkMultiplier = 1.0f - bcMultiplier;
+
+            newBaseHealth = (bcHealth * bcMultiplier) + (wotlkHealth * wotlkMultiplier);
+        }
+        // WotLK health
+        else
+        {
+            newBaseHealth = wotlkHealth;
+
+            // special increase for end-game content
+            if (LevelScalingEndGameBoost)
+                if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
+                {
+                    newBaseHealth *= (float)(mapABInfo->highestPlayerLevel-70) * 0.3f;
+                }
+        }
+
+        float newHealth =  newBaseHealth * creatureTemplate->ModHealth;
+        hpStatsRate = newHealth / originalHealth;
+
+        healthMultiplier *= hpStatsRate;
+        creatureABInfo->HealthMultiplier = healthMultiplier;
+
+        scaledHealth = round(originalHealth * creatureABInfo->HealthMultiplier);
 
         //
         //  Mana Scaling
         //
         float manaStatsRate  = 1.0f;
-        if (LevelScaling) {
-            float newMana = creatureStats->GenerateMana(creatureTemplate);
-                manaStatsRate = newMana/float(baseMana);
-        }
+        float newMana = creatureStats->GenerateMana(creatureTemplate);
+            manaStatsRate = newMana/float(baseMana);
 
         // check to be sure that manaStatsRate is not nan
         if (manaStatsRate != manaStatsRate)
@@ -2714,57 +2745,55 @@ public:
         }
 
         // Calculate the new base damage
-        if (LevelScaling) {
-            float origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
-            float newDmgBase = 0;
+        float origDmgBase = origCreatureStats->GenerateBaseDamage(creatureTemplate);
+        float newDmgBase = 0;
 
-            float vanillaDamage = creatureStats->BaseDamage[0];
-            float bcDamage = creatureStats->BaseDamage[1];
-            float wotlkDamage = creatureStats->BaseDamage[2];
+        float vanillaDamage = creatureStats->BaseDamage[0];
+        float bcDamage = creatureStats->BaseDamage[1];
+        float wotlkDamage = creatureStats->BaseDamage[2];
 
-            // The database holds multiple values for base damage, one for each expansion
-            // This code will smooth transition between the different expansions based on the highest player level in the instance
+        // The database holds multiple values for base damage, one for each expansion
+        // This code will smooth transition between the different expansions based on the highest player level in the instance
 
-            // vanilla damage
-            if (mapABInfo->highestPlayerLevel <= 60)
-            {
-                newDmgBase=vanillaDamage;
-            }
-            // transition from vanilla to BC damage
-            else if (mapABInfo->highestPlayerLevel < 63)
-            {
-                float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0;
-                float bcMultiplier = 1.0f - vanillaMultiplier;
-
-                newDmgBase=(vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
-            }
-            // BC damage
-            else if (mapABInfo->highestPlayerLevel <= 70)
-            {
-                newDmgBase=bcDamage;
-            }
-            // transition from BC to WotLK damage
-            else if (mapABInfo->highestPlayerLevel < 73)
-            {
-                float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0;
-                float wotlkMultiplier = 1.0f - bcMultiplier;
-
-                newDmgBase=(bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
-            }
-            // WotLK damage
-            else
-            {
-                newDmgBase=wotlkDamage;
-
-                // special increase for end-game content
-                if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
-                    if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
-                        newDmgBase *= float(mapABInfo->highestPlayerLevel-70) * 0.3f;
-                }
-            }
-
-            damageMul *= newDmgBase/origDmgBase;
+        // vanilla damage
+        if (mapABInfo->highestPlayerLevel <= 60)
+        {
+            newDmgBase=vanillaDamage;
         }
+        // transition from vanilla to BC damage
+        else if (mapABInfo->highestPlayerLevel < 63)
+        {
+            float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0;
+            float bcMultiplier = 1.0f - vanillaMultiplier;
+
+            newDmgBase=(vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
+        }
+        // BC damage
+        else if (mapABInfo->highestPlayerLevel <= 70)
+        {
+            newDmgBase=bcDamage;
+        }
+        // transition from BC to WotLK damage
+        else if (mapABInfo->highestPlayerLevel < 73)
+        {
+            float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0;
+            float wotlkMultiplier = 1.0f - bcMultiplier;
+
+            newDmgBase=(bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
+        }
+        // WotLK damage
+        else
+        {
+            newDmgBase=wotlkDamage;
+
+            // special increase for end-game content
+            if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
+                if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
+                    newDmgBase *= float(mapABInfo->highestPlayerLevel-70) * 0.3f;
+            }
+        }
+
+        damageMul *= newDmgBase/origDmgBase;
 
         //
         // Crowd Control Debuff Duration Scaling
