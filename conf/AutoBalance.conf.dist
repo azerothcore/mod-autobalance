@@ -640,41 +640,127 @@ AutoBalance.DisabledID="6867"
 ##########################
 
 #
-#     AutoBalance.levelScaling
-#        Check the max level of players in map and scale creature based on it.
-#        This triggers depending on the two options below AutoBalance.levelHigherOffset and AutoBalance.levelLowerOffset
+#     AutoBalance.LevelScaling
+#        Scale creatures in instances based on the highest-level player.
 #        0 = Disabled
 #        1 = Enabled (only in dungeons/raids)
 #        Default:     1
-AutoBalance.levelScaling=1
+AutoBalance.LevelScaling=1
 
 #
-#     AutoBalance.levelHigherOffset
-#     AutoBalance.levelLowerOffset
-#        Level Offsets between creatures will not be scaled by level.
-#        You can even use it to disable scaling from lower to higher levelScaling
-#        setting levelLowerOffset to 80 (max wotlk level) for example.
-#        default: 3 (higher), 0 (lower)
-AutoBalance.levelHigherOffset = 3
-AutoBalance.levelLowerOffset  = 0
+#     AutoBalance.LevelScaling.Method
+#        Selects which method should be used when the level for scaled creatures.
+#
+#           fixed:
+#               Creatures will be scaled to the level of the highest-level player in the group.
+#
+#           dynamic:
+#               Creatures will be scaled to a level based on 1) their original assignments compared to the
+#               highest-level creature in the instance and 2) the highest-level player in the dungeon. This
+#               means that lower-level trash will still be lower level than you, and higher-level bosses
+#               will still be higher-level than you.
+#
+#        Possible values: "fixed" or "dynamic"
+#
+#        Default: "dynamic"
+AutoBalance.LevelScaling.Method="dynamic"
 
 #
-#     AutoBalance.levelUseDbValuesWhenExists
-#        When enabled with levelScaling, the creature will use its default database values
-#        instead of level scaling formula when player/party level has correspondance with
-#        creature_template minlevel/maxlevel.
+#     AutoBalance.LevelScaling.SkipHigherLevels
+#        If an instance's average creature level is no more than (SkipHigherLevels) levels
+#        above the highest player level, do not scale down.
 #
-#        Default:     0 (1 = ON, 0 = OFF)
-AutoBalance.levelUseDbValuesWhenExists = 0
+#        To disable scaling instance levels DOWN, set this to the max level of your server (likely 80).
+#        To disable this feature entirely and scale all higher-level instances, set this to 0.
+#
+#        Default: 3
+#
+#     AutoBalance.LevelScaling.SkipLowerLevels
+#        If an instance's average creature level is no more than (SkipLowerLevels) levels
+#        below of the Highest player level, do not scale up.
+#
+#        To disable scaling instance levels UP, set this to the max level of your server (likely 80).
+#        To disable this feature entirely and scale all lower-level instances, set this to 0.
+#
+#        Default: 5
+AutoBalance.LevelScaling.SkipHigherLevels = 3
+AutoBalance.LevelScaling.SkipLowerLevels = 5
 
 #
-#     AutoBalance.LevelEndGameBoost
+#     AutoBalance.LevelScaling.DynamicLevel.Ceiling.*
+#        Sets the maximum number of levels creatures scaled in "dynamic" mode can be OVER your highest-level
+#        player. The creature in the dungeon with the highest original level will be set to the highest-level
+#        player's level + this value.
+#
+#        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
+#
+#        Default: 1 (Dungeons), 2 (Heroic Dungeons), 3 (Raids), 3 (Heroic Raids)
+#
+#     AutoBalance.LevelScaling.DynamicLevel.Floor.*
+#        Sets the maximum number of levels creatures scaled in "dynamic" mode can be UNDER your highest-level
+#        player. For instances with wide level spreads, ensures that the level differences stay reasonable.
+#
+#        Only takes effect if AutoBalance.LevelScaling.Method = "dynamic"
+#
+#        Default: 5
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.Dungeons = 1
+AutoBalance.LevelScaling.DynamicLevel.Floor.Dungeons = 5
+
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.HeroicDungeons = 2
+AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicDungeons = 5
+
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.Raids = 3
+AutoBalance.LevelScaling.DynamicLevel.Floor.Raids = 5
+
+AutoBalance.LevelScaling.DynamicLevel.Ceiling.HeroicRaids = 3
+AutoBalance.LevelScaling.DynamicLevel.Floor.HeroicRaids = 5
+
+#
+#     AutoBalance.LevelScaling.DynamicLevel.PerInstance
+#        Allows setting per-instance Dynamic Level options. Specifying a value of `-1` will skip overriding of that value.
+#        You may omit entries from the end of the string if desired. Only one set of values should be specified per InstanceID.
+#        Set to a value of "" to disable the feature.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID] [SkipHigherLevels] [SkipLowerLevels] [DynamicLevelCeiling] [DynamicLevelFloor], [InstanceID] [SkipHigherLevels] [SkipLowerLevels] [DynamicLevelCeiling] [DynamicLevelFloor], ..."
+#
+#        Example: AutoBalance.StatModifier.PerInstance="409 -1 -1 0 3, 568 3, 43 -1 8"
+#
+#        Default: "229 -1 -1 1, 230 0 0" (Recommended adjustments)
+#
+# 229 - Blackrock Spire
+# 230 - Blackrock Depths
+AutoBalance.LevelScaling.DynamicLevel.PerInstance="229 -1 -1 1, 230 0 0"
+
+#
+#     AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance
+#        Some dungeons contain multiple wings that exist in the same InstanceID. These wings may have different level requirements.
+#        You may set this setting per-instance to ensure that only creatures within [WorldUnits] of any player are included in the
+#        instance level calculation. This will improve the accuracy of creature levels in instances that contain multiple wings.
+#
+#        NOTE: If two players in a party enter two different wings of the same InstanceID at the same time, creature levels will be
+#              calculated incorrectly until one of those players leaves the instance.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID] [WorldUnits]"
+#
+#        Example: AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance="189 500, 624 250"
+#
+#        Default: "189 500" (Recommended adjustments)
+#
+# 189 - Scarlet Monastery
+AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance="189 500"
+
+#
+#     AutoBalance.LevelScaling.LevelEndGameBoost
 #        End game creatures have an exponential (not linear) regression
 #        that is not correctly handled by db values. Keep this enabled
 #        to have stats as near possible to the official ones.
 #
 #        Default:     1 (1 = ON, 0 = OFF)
-AutoBalance.LevelEndGameBoost = 1
+AutoBalance.LevelScaling.EndGameBoost = 1
 
 ##########################
 #
@@ -683,39 +769,72 @@ AutoBalance.LevelEndGameBoost = 1
 ##########################
 
 #
-#     AutoBalance.DungeonScaleDownXP
-#        Decrease individual player's amount of XP gained during a dungeon to match the
-#        amount of XP gained during a full group run. Example: In a 5-man group, you
-#        earn 1/5 of the total XP per kill, but if you solo the dungeon with
-#        AutoBalance.DungeonScaleDownXP = 0, you will earn 5/5 of the total XP.
-#        With the option enabled, you will earn 1/5.
-#        Default:     0 (1 = ON, 0 = OFF)
-AutoBalance.DungeonScaleDownXP = 0
+#     AutoBalance.RewardScaling.Method
+#        Sets which method should be used when scaling down XP and Money in an instance.
+#
+#           fixed:
+#               XP and Money will be divided by the maximum number of players in the group
+#               regardless of scaling settings. Each player will receive the calculated value.
+#
+#           dynamic:
+#               XP and Money will be scaled based on the the health and damage modifiers that are applied to
+#               the creature. Level scaling is taken into account when determining the reward scaling.
+#
+#               If scaling determines that a creature should have an XP scaling multiplier of .65, the creature
+#               will create 65% of the XP you would normally recieve from a creature at the scaled level.
+#
+#               If scaling determines that a creature should have a money scaling multiplier of 1.5, the creature
+#               will create 150% of the money it would have at its original level and scaling.
+#
+#               The XP and money is evenly split amongst all players in the instance.
+#
+#        Possible values: "fixed" or "dynamic"
+#
+#        Default: "dynamic"
+AutoBalance.RewardScaling.Method="dynamic"
 
 #
-#     AutoBalance.DungeonScaleDownMoney
-#        Decrease individual player's amount of money gained during a dungeon to match the
-#        amount of money gained during a full group run. Example: In a 5-man group, you
-#        earn 1/5 of the total money per kill, but if you solo the dungeon with
-#        AutoBalance.DungeonScaleDownMoney = 0, you will earn 5/5 of the total money.
-#        With the option enabled, you will earn 1/5.
-#        Default:     0 (1 = ON, 0 = OFF)
-AutoBalance.DungeonScaleDownMoney = 0
+#     AutoBalance.RewardScaling.XP
+#        Scale XP based on the `AutoBalance.RewardScaling.Method` selection.
+#
+#        Default: 1 (1 = ON, 0 = OFF)
+#
+#     AutoBalance.RewardScaling.XP.Modifier
+#        Apply a flat modifier to the amount of XP that is rewarded to players.
+#
+#        Only takes effect if `AutoBalance.RewardScaling.XP` is 1.
+#
+#        If `RewardScaling.XP.Modifier` is set to 1.5 and RewardScaling determines that 100xp should be
+#        rewarded to each player, 150xp will be rewarded.
+#
+#        Default: 1.0 (no change)
+AutoBalance.RewardScaling.XP = 1
+AutoBalance.RewardScaling.XP.Modifier = 1.0
+
+#
+#     AutoBalance.RewardScaling.Money
+#        Scale Money drops based on the `AutoBalance.RewardScaling.Method` selection. If set to 0, the full
+#        amount will be rewarded.
+#
+#        Default: 1 (1 = ON, 0 = OFF)
+#
+#     AutoBalance.RewardScaling.Money.Modifier
+#        Apply a flat modifier to the amount of money that is rewarded to players.
+#
+#        Only takes effect if `AutoBalance.RewardScaling.Money` is 1.
+#
+#        If `RewardScaling.Money.Modifier` is set to 1.5 and RewardScaling determines that 1 gold should be
+#        rewarded to each player, 1 gold 50 silver will be rewarded.
+#
+#        Default: 1.0 (no change)
+AutoBalance.RewardScaling.Money = 1
+AutoBalance.RewardScaling.Money.Modifier = 1.0
 
 ##########################
 #
 # Messages
 #
 ##########################
-
-#
-#     AutoBalance.DebugLevel
-#        0 = None
-#        1 = Errors Only
-#        2 = Errors and Basic Information
-#        3 = All  Info
-#        Default:     2
-AutoBalance.DebugLevel=2
 
 #
 #     AutoBalance.PlayerChangeNotify
@@ -791,8 +910,13 @@ AutoBalance.rate.health=
 AutoBalance.rate.mana=
 AutoBalance.rate.armor=
 AutoBalance.rate.damage=
+AutoBalance.DungeonScaleDownXP=
+AutoBalance.DungeonScaleDownMoney=
+AutoBalance.LevelHigherOffset=
+AutoBalance.LevelLowerOffset=
 
 # The following variables have been removed entirely and should not be used in a new or existing deployment.
 # Their values should be left blank.
 # Their entire functionality (and more) has been moved to new settings referenced in this config file.
 AutoBalance.DungeonsOnly=
+AutoBalance.levelUseDbValuesWhenExists=
