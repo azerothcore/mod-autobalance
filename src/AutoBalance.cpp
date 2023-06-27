@@ -2651,56 +2651,60 @@ public:
 
         // The database holds multiple values for base health, one for each expansion
         // This code will smooth transition between the different expansions based on the highest player level in the instance
+        // Only do this if level scaling is enabled
 
-        float vanillaHealth = creatureStats->BaseHealth[0];
-        float bcHealth = creatureStats->BaseHealth[1];
-        float wotlkHealth = creatureStats->BaseHealth[2];
-
-        // vanilla health
-        if (mapABInfo->highestPlayerLevel <= 60)
+        if (LevelScaling)
         {
-            newBaseHealth = vanillaHealth;
-        }
-        // transition from vanilla to BC health
-        else if (mapABInfo->highestPlayerLevel < 63)
-        {
-            float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0f;
-            float bcMultiplier = 1.0f - vanillaMultiplier;
+            float vanillaHealth = creatureStats->BaseHealth[0];
+            float bcHealth = creatureStats->BaseHealth[1];
+            float wotlkHealth = creatureStats->BaseHealth[2];
 
-            newBaseHealth = (vanillaHealth * vanillaMultiplier) + (bcHealth * bcMultiplier);
-        }
-        // BC health
-        else if (mapABInfo->highestPlayerLevel <= 70)
-        {
-            newBaseHealth = bcHealth;
-        }
-        // transition from BC to WotLK health
-        else if (mapABInfo->highestPlayerLevel < 73)
-        {
-            float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0f;
-            float wotlkMultiplier = 1.0f - bcMultiplier;
+            // vanilla health
+            if (mapABInfo->highestPlayerLevel <= 60)
+            {
+                newBaseHealth = vanillaHealth;
+            }
+            // transition from vanilla to BC health
+            else if (mapABInfo->highestPlayerLevel < 63)
+            {
+                float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0f;
+                float bcMultiplier = 1.0f - vanillaMultiplier;
 
-            newBaseHealth = (bcHealth * bcMultiplier) + (wotlkHealth * wotlkMultiplier);
+                newBaseHealth = (vanillaHealth * vanillaMultiplier) + (bcHealth * bcMultiplier);
+            }
+            // BC health
+            else if (mapABInfo->highestPlayerLevel <= 70)
+            {
+                newBaseHealth = bcHealth;
+            }
+            // transition from BC to WotLK health
+            else if (mapABInfo->highestPlayerLevel < 73)
+            {
+                float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0f;
+                float wotlkMultiplier = 1.0f - bcMultiplier;
+
+                newBaseHealth = (bcHealth * bcMultiplier) + (wotlkHealth * wotlkMultiplier);
+            }
+            // WotLK health
+            else
+            {
+                newBaseHealth = wotlkHealth;
+
+                // special increase for end-game content
+                if (LevelScalingEndGameBoost)
+                    if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
+                    {
+                        newBaseHealth *= (float)(mapABInfo->highestPlayerLevel-70) * 0.3f;
+                    }
+            }
+
+            float newHealth = newBaseHealth * creatureTemplate->ModHealth;
+            hpStatsRate = newHealth / originalHealth;
+
+            healthMultiplier *= hpStatsRate;
         }
-        // WotLK health
-        else
-        {
-            newBaseHealth = wotlkHealth;
 
-            // special increase for end-game content
-            if (LevelScalingEndGameBoost)
-                if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
-                {
-                    newBaseHealth *= (float)(mapABInfo->highestPlayerLevel-70) * 0.3f;
-                }
-        }
-
-        float newHealth =  newBaseHealth * creatureTemplate->ModHealth;
-        hpStatsRate = newHealth / originalHealth;
-
-        healthMultiplier *= hpStatsRate;
         creatureABInfo->HealthMultiplier = healthMultiplier;
-
         scaledHealth = round(originalHealth * creatureABInfo->HealthMultiplier);
 
         //
@@ -2754,46 +2758,50 @@ public:
 
         // The database holds multiple values for base damage, one for each expansion
         // This code will smooth transition between the different expansions based on the highest player level in the instance
+        // Only do this if level scaling is enabled
 
-        // vanilla damage
-        if (mapABInfo->highestPlayerLevel <= 60)
-        {
-            newDmgBase=vanillaDamage;
-        }
-        // transition from vanilla to BC damage
-        else if (mapABInfo->highestPlayerLevel < 63)
-        {
-            float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0;
-            float bcMultiplier = 1.0f - vanillaMultiplier;
-
-            newDmgBase=(vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
-        }
-        // BC damage
-        else if (mapABInfo->highestPlayerLevel <= 70)
-        {
-            newDmgBase=bcDamage;
-        }
-        // transition from BC to WotLK damage
-        else if (mapABInfo->highestPlayerLevel < 73)
-        {
-            float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0;
-            float wotlkMultiplier = 1.0f - bcMultiplier;
-
-            newDmgBase=(bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
-        }
-        // WotLK damage
-        else
-        {
-            newDmgBase=wotlkDamage;
-
-            // special increase for end-game content
-            if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
-                if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
-                    newDmgBase *= float(mapABInfo->highestPlayerLevel-70) * 0.3f;
+        if (LevelScaling)
+            {
+            // vanilla damage
+            if (mapABInfo->highestPlayerLevel <= 60)
+            {
+                newDmgBase=vanillaDamage;
             }
-        }
+            // transition from vanilla to BC damage
+            else if (mapABInfo->highestPlayerLevel < 63)
+            {
+                float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0;
+                float bcMultiplier = 1.0f - vanillaMultiplier;
 
-        damageMul *= newDmgBase/origDmgBase;
+                newDmgBase=(vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
+            }
+            // BC damage
+            else if (mapABInfo->highestPlayerLevel <= 70)
+            {
+                newDmgBase=bcDamage;
+            }
+            // transition from BC to WotLK damage
+            else if (mapABInfo->highestPlayerLevel < 73)
+            {
+                float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0;
+                float wotlkMultiplier = 1.0f - bcMultiplier;
+
+                newDmgBase=(bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
+            }
+            // WotLK damage
+            else
+            {
+                newDmgBase=wotlkDamage;
+
+                // special increase for end-game content
+                if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
+                    if (mapABInfo->highestPlayerLevel >= 75 && creatureABInfo->UnmodifiedLevel < 75)
+                        newDmgBase *= float(mapABInfo->highestPlayerLevel-70) * 0.3f;
+                }
+            }
+
+            damageMul *= newDmgBase/origDmgBase;
+        }
 
         //
         // Crowd Control Debuff Duration Scaling
