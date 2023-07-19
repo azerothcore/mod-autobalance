@@ -550,6 +550,17 @@ void LoadMapSettings(Map* map)
     // create an InstanceMap object
     InstanceMap* instanceMap = map->ToInstanceMap();
 
+	//check for null pointer
+	if (!map)
+	{
+		return;
+	}
+
+	if (!map->IsDungeon() && !map->IsRaid())
+	{
+		return;
+	}
+
     // should the map be enabled at all?
     mapABInfo->enabled = ShouldMapBeEnabled(map);
 
