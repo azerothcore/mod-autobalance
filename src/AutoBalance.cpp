@@ -2620,9 +2620,9 @@ public:
 
         // Per-creature modifiers applied last
         // AutoBalance.StatModifier.PerCreature
-        if (hasStatModifierCreatureOverride(creatureTemplate->Entry))
+        if (hasStatModifierCreatureOverride(creatureABInfo->entry))
         {
-            AutoBalanceStatModifiers* myCreatureOverrides = &statModifierCreatureOverrides[creatureTemplate->Entry];
+            AutoBalanceStatModifiers* myCreatureOverrides = &statModifierCreatureOverrides[creatureABInfo->entry];
 
             if (myCreatureOverrides->global != -1)      { statMod_global =      myCreatureOverrides->global;      }
             if (myCreatureOverrides->health != -1)      { statMod_health =      myCreatureOverrides->health;      }
