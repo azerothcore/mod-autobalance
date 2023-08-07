@@ -2874,7 +2874,7 @@ public:
         else
             creature->setPowerType(pType); // fix creatures with different power types
 
-        uint32 playerDamageRequired = creature->GetPlayerDamageReq()
+        uint32 playerDamageRequired = creature->GetPlayerDamageReq();
         if(prevPlayerDamageRequired == 0)
         {
             // If already reached damage threshold for loot, drop to zero again
