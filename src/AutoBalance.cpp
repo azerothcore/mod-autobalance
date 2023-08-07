@@ -2878,7 +2878,7 @@ public:
         if(prevPlayerDamageRequired == 0)
         {
             // If already reached damage threshold for loot, drop to zero again
-            creature->LowerPlayerDamageReq(playerDamageRequired, true)
+            creature->LowerPlayerDamageReq(playerDamageRequired, true);
         }
         else
         {
