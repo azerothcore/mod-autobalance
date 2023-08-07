@@ -2847,6 +2847,7 @@ public:
         uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
         uint32 prevHealth = creature->GetHealth();
         uint32 prevPower = creature->GetPower(POWER_MANA);
+        uint32 prevPlayerDamageRequired = creature->GetPlayerDamageReq();
 
         Powers pType= creature->getPowerType();
 
@@ -2872,6 +2873,20 @@ public:
             creature->SetPower(POWER_MANA, scaledCurPower);
         else
             creature->setPowerType(pType); // fix creatures with different power types
+
+        uint32 playerDamageRequired = creature->GetPlayerDamageReq()
+        if(prevPlayerDamageRequired == 0)
+        {
+            // If already reached damage threshold for loot, drop to zero again
+            creature->LowerPlayerDamageReq(playerDamageRequired, true)
+        }
+        else
+        {
+            // Scale the damage requirements similar to creature HP
+            uint32 scaledPlayerDmgReq=prevPlayerDamageRequired && prevMaxHealth ? float(prevPlayerDamageRequired)/float(prevMaxHealth)*float(prevHealth) : 0;
+            // Do some math
+            creature->LowerPlayerDamageReq(playerDamageRequired - scaledPlayerDmgReq, true);
+        }
 
         //
         // Reward Scaling
