@@ -641,7 +641,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         return;
 
     // if this isn't a dungeon or a battleground, skip
-    if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsBattleground()))
+    if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsRaid()))
         return;
 
     // get AutoBalance data
@@ -1606,7 +1606,7 @@ class AutoBalance_UnitScript : public UnitScript
         if (
             !(
                 (target->GetMap()->IsDungeon() && attacker->GetMap()->IsDungeon()) ||
-                (target->GetMap()->IsBattleground() && attacker->GetMap()->IsBattleground())
+                (target->GetMap()->IsRaid() && attacker->GetMap()->IsRaid())
             )
            )
             return damage;
@@ -1659,7 +1659,7 @@ class AutoBalance_UnitScript : public UnitScript
         if (
             !(
                 (target->GetMap()->IsDungeon() && caster->GetMap()->IsDungeon()) ||
-                (target->GetMap()->IsBattleground() && caster->GetMap()->IsBattleground())
+                (target->GetMap()->IsRaid() && caster->GetMap()->IsRaid())
             )
            )
             return originalDuration;
@@ -1710,7 +1710,7 @@ class AutoBalance_AllMapScript : public AllMapScript
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {}", map->GetMapName());
 
-            if (!map->IsDungeon() && !map->IsBattleground())
+            if (!map->IsDungeon() && !map->IsRaid())
                 return;
 
             // get the map's info
@@ -1731,7 +1731,7 @@ class AutoBalance_AllMapScript : public AllMapScript
         void OnPlayerEnterAll(Map* map, Player* player)
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll(): {}", map->GetMapName());
-            if (!map->IsDungeon() && !map->IsBattleground())
+            if (!map->IsDungeon() && !map->IsRaid())
                 return;
 
             if (player->IsGameMaster())
@@ -1937,8 +1937,9 @@ public:
         if (!creature || !creature->GetMap())
             return false;
 
+
         // if this isn't a dungeon or a battleground, make no changes
-        if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsBattleground()))
+        if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsRaid()))
             return false;
 
         // if this is a pet or summon controlled by the player, make no changes
@@ -2053,7 +2054,7 @@ public:
             return;
 
         // if this isn't a dungeon or a battleground, make no changes
-        if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsBattleground()))
+        if (!(creature->GetMap()->IsDungeon() || creature->GetMap()->IsRaid()))
             return;
 
         // if this is a pet or summon controlled by the player, make no changes
@@ -2847,10 +2848,10 @@ public:
         uint32 prevMaxPower = creature->GetMaxPower(POWER_MANA);
         uint32 prevHealth = creature->GetHealth();
         uint32 prevPower = creature->GetPower(POWER_MANA);
-        
+
         uint32 prevPlayerDamageRequired = creature->GetPlayerDamageReq();
         uint32 prevCreateHealth = creature->GetCreateHealth();
-        
+
         Powers pType= creature->getPowerType();
 
         creature->SetArmor(newBaseArmor);
@@ -3032,7 +3033,7 @@ public:
 
         AutoBalanceMapInfo *mapABInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-        if (player->GetMap()->IsDungeon() || player->GetMap()->IsBattleground())
+        if (player->GetMap()->IsDungeon() || player->GetMap()->IsRaid())
         {
             handler->PSendSysMessage("---");
             handler->PSendSysMessage("Map: %s (ID: %u)", player->GetMap()->GetMapName(), player->GetMapId());
