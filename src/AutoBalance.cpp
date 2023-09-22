@@ -3128,7 +3128,12 @@ public:
         if (player->GetMap()->IsDungeon() || player->GetMap()->IsBattleground())
         {
             handler->PSendSysMessage("---");
-            handler->PSendSysMessage("Map: %s (ID: %u)%s", player->GetMap()->GetMapName(), player->GetMapId(), mapABInfo->enabled ? "" : " - AutoBalance is DISABLED");
+            handler->PSendSysMessage("Map: ID %u | %s (%u-player %s)",
+                                    player->GetMapId(),
+                                    player->GetMap()->GetMapName(),
+                                    player->GetMap()->ToInstanceMap()->GetMaxPlayers(),
+                                    player->GetMap()->ToInstanceMap()->IsHeroic() ? "Heroic" : "Normal",
+                                    mapABInfo->enabled ? "" : " | AutoBalance DISABLED");
             handler->PSendSysMessage("Players on map: %u (Lvl %u - %u)",
                                     mapABInfo->playerCount,
                                     mapABInfo->lowestPlayerLevel,
