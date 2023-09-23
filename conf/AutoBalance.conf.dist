@@ -669,20 +669,21 @@ AutoBalance.MaxCCDurationModifier=1.0
 #
 #     AutoBalance.ForcedIDXX
 #        Sets MobIDs for the group they belong to.
-#        All 5 Man Mobs should go in .AutoBalance.5.Name
-#        All 10 Man Mobs should go in .AutoBalance.10.Name etc.
-AutoBalance.ForcedID40="11583,16441,30057,13020,15589,14435,18192,14889,14888,14887,14890,15302,15818,15742,15741,15740,18338"
-AutoBalance.ForcedID25="22997,21966,21965,21964,21806,21215,21845,19728,12397,17711,18256,18192,"
+#        All 5-player creatures should go in AutoBalance.ForcedID5=
+#        All 10-player creatures should go in AutoBalance.ForcedID10=
+#        All X-player creatures should go in AutoBalance.ForcedIDX=
+AutoBalance.ForcedID40=""
+AutoBalance.ForcedID25=""
 AutoBalance.ForcedID20=""
-AutoBalance.ForcedID10="15689,15550,16152,17521,17225,16028,29324,31099"
-AutoBalance.ForcedID5="8317,15203,15204,15205,15305,6109,26801,30508,26799,30495,26803,30497,27859,27249"
+AutoBalance.ForcedID10=""
+AutoBalance.ForcedID5=""
 AutoBalance.ForcedID2=""
 
 #
 #     AutoBalance.DisabledID
 #        Disable scaling on specific creatures
 #
-AutoBalance.DisabledID="6867"
+AutoBalance.DisabledID=""
 
 ##########################
 #
