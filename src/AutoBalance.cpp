@@ -468,7 +468,7 @@ bool isDungeonInDisabledDungeonIds(uint32 dungeonId)
 
 bool isDungeonInMinPlayerMap(uint32 dungeonId, bool isHeroic)
 {
-    if (isHeroic == true) {
+    if (isHeroic) {
         return (minPlayersPerHeroicDungeonIdMap.find(dungeonId) != minPlayersPerHeroicDungeonIdMap.end());
     } else {
         return (minPlayersPerDungeonIdMap.find(dungeonId) != minPlayersPerDungeonIdMap.end());
