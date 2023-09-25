@@ -1,7 +1,7 @@
 [worldserver]
 ##########################
 #
-# Enable Settings
+# Enable / Disable Settings
 #
 ##########################
 
@@ -29,6 +29,67 @@ AutoBalance.Enable.5MHeroic=1
 AutoBalance.Enable.10MHeroic=1
 AutoBalance.Enable.25MHeroic=1
 AutoBalance.Enable.OtherHeroic=1
+
+#
+#     AutoBalance.Disable.PerInstance
+#        Disable all features for the given instance IDs. If an instance ID is not specified here, that instance will follow
+#        the `AutoBalance.Enable.*` settings.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID], [InstanceID], [InstanceID], ..."
+#
+#        Example: AutoBalance.Disable.PerInstance="33, 43, 129"
+#
+#        Default: ""
+AutoBalance.Disable.PerInstance = ""
+
+##########################
+#
+# Minimum Players
+#
+##########################
+#
+#     AutoBalance.MinPlayers
+#     AutoBalance.MinPlayers.Heroic
+#        Sets the Minimum Number of players to scale down to for all normal/heroic instances.
+#        If fewer than this number of players enter the instance, scale to the specified value.
+#
+#        NOTE: Player Difficulty Offset is applied AFTER the player count is adjusted for the MinPlayer setting
+#
+#        AutoBalance.MinPlayers affects only normal instances.
+#        AutoBalance.MinPlayers.Heroic affects only heroic instances.
+#
+#        Example: AutoBalance.MinPlayers = 1
+#                 AutoBalance.MinPlayers.Heroic = 5
+#
+#        Default: 1
+AutoBalance.MinPlayers = 1
+AutoBalance.MinPlayers.Heroic = 1
+
+#
+#     AutoBalance.MinPlayers.PerInstance
+#     AutoBalance.MinPlayers.Heroic.PerInstance
+#        Sets the Minimum Number of players to scale down to per-instance ID.
+#        If fewer than this number of players enter the instance, scale to the specified value.
+#
+#        NOTE: Player Difficulty Offset is applied AFTER the player count is adjusted for the MinPlayer setting
+#
+#        AutoBalance.MinPlayers.PerInstance affects only normal instances.
+#        AutoBalance.MinPlayers.Heroic.PerInstance affects only heroic instances.
+#
+#        If a given Instance ID is not specified in this list, the minimum number of players is set by the generic MinPlayers settings.
+#
+#        Get a list of Instance IDs here: https://wowpedia.fandom.com/wiki/InstanceID#Classic
+#
+#        Format: "[InstanceID] [MinPlayers], [InstanceID] [MinPlayers], [InstanceID] [MinPlayers], ..."
+#
+#        Example: AutoBalance.MinPlayers.PerInstance="33 2, 43 5, 129 4"
+#                 AutoBalance.MinPlayers.PerInstance="33 5, 43 5, 129 5"
+#
+#        Default: ""
+AutoBalance.MinPlayers.PerInstance = ""
+AutoBalance.MinPlayers.Heroic.PerInstance = ""
 
 ##########################
 #
@@ -604,34 +665,25 @@ AutoBalance.MaxCCDurationModifier=1.0
 # Misc Settings
 #
 ##########################
-#
-#     AutoBalance.PerDungeonPlayerCounts
-#        Allows setting a per-instance setting for minimum number of players to scale. For example, dungeons could remain at 5 players, but raids could be chosen to scale down to 5 players as well.
-#        Formatted as "[InstanceID] [playerCount], [InstanceID] [playerCount], [InstanceID] [playerCount], ..."
-#        Example: AutoBalance.PerDungeonPlayerCounts="33 1,34 1,36 1,43 1,47 1,48 1,70 1,90 1,109 1,129 1,189 1,209 1,349 1,389 1, 289 2, 329 2, 230 2, 429 2, 309 5, 409 5"
-#        For instances not listed, the instance's original player count (5, 10, 20, 25, or 40) is used as the minimum, meaning no scaling will take place.
-#        To disable, leave empty; all instances will then scale down to 1 player minimum. This is the default setting.
-#        Default: ""
-#
-AutoBalance.PerDungeonPlayerCounts=""
 
 #
 #     AutoBalance.ForcedIDXX
 #        Sets MobIDs for the group they belong to.
-#        All 5 Man Mobs should go in .AutoBalance.5.Name
-#        All 10 Man Mobs should go in .AutoBalance.10.Name etc.
-AutoBalance.ForcedID40="11583,16441,30057,13020,15589,14435,18192,14889,14888,14887,14890,15302,15818,15742,15741,15740,18338"
-AutoBalance.ForcedID25="22997,21966,21965,21964,21806,21215,21845,19728,12397,17711,18256,18192,"
+#        All 5-player creatures should go in AutoBalance.ForcedID5=
+#        All 10-player creatures should go in AutoBalance.ForcedID10=
+#        All X-player creatures should go in AutoBalance.ForcedIDX=
+AutoBalance.ForcedID40=""
+AutoBalance.ForcedID25=""
 AutoBalance.ForcedID20=""
-AutoBalance.ForcedID10="15689,15550,16152,17521,17225,16028,29324,31099"
-AutoBalance.ForcedID5="8317,15203,15204,15205,15305,6109,26801,30508,26799,30495,26803,30497,27859,27249"
+AutoBalance.ForcedID10=""
+AutoBalance.ForcedID5=""
 AutoBalance.ForcedID2=""
 
 #
 #     AutoBalance.DisabledID
 #        Disable scaling on specific creatures
 #
-AutoBalance.DisabledID="6867"
+AutoBalance.DisabledID=""
 
 ##########################
 #
@@ -914,6 +966,7 @@ AutoBalance.DungeonScaleDownXP=
 AutoBalance.DungeonScaleDownMoney=
 AutoBalance.LevelHigherOffset=
 AutoBalance.LevelLowerOffset=
+AutoBalance.PerDungeonPlayerCounts=
 
 # The following variables have been removed entirely and should not be used in a new or existing deployment.
 # Their values should be left blank.
