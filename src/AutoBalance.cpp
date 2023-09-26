@@ -783,7 +783,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     }
 
     // if this is a non-relevant creature, skip
-    if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
+    if ((creature->IsCritter() && creature->GetLevel() <= 5) || creature->IsTotem() || creature->IsTrigger())
     {
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): {} ({}) is a critter, totem, or trigger - skip.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
@@ -2082,7 +2082,7 @@ public:
             return false;
 
         // if this is a non-relevant creature, skip
-        if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
+        if ((creature->IsCritter() && creature->GetLevel() <= 5) || creature->IsTotem() || creature->IsTrigger())
             return false;
 
         // get (or create) the creature and map's info
@@ -2197,7 +2197,7 @@ public:
             return;
 
         // if this is a non-relevant creature, make no changes
-        if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
+        if ((creature->IsCritter() && creature->GetLevel() <= 5) || creature->IsTotem() || creature->IsTrigger())
             return;
 
         // grab creature and map data
