@@ -44,6 +44,7 @@
 #include "ScriptMgrMacros.h"
 #include "Group.h"
 #include "Log.h"
+#include "SharedDefines.h"
 #include <chrono>
 
 #if AC_COMPILER == AC_COMPILER_GNU
@@ -109,7 +110,6 @@ ABModuleScript::ABModuleScript(const char* name)
     ScriptRegistry<ABModuleScript>::AddScript(this);
 }
 
-
 class AutoBalanceCreatureInfo : public DataMap::Base
 {
 public:
@@ -155,6 +155,9 @@ public:
     uint8 lfgMinLevel = 0;
     uint8 lfgTargetLevel = 80;
     uint8 lfgMaxLevel = 80;
+
+    uint8 worldDamageTargetLevel = 1;
+    float worldDamageMultiplier = 1.0f;
 
     bool enabled = false;
 
@@ -460,7 +463,6 @@ std::map<uint32, uint32> LoadDistanceCheckOverrides(std::string dungeonIdString)
     return overrideMap;
 }
 
-
 bool isDungeonInDisabledDungeonIds(uint32 dungeonId)
 {
     return (std::find(disabledDungeonIds.begin(), disabledDungeonIds.end(), dungeonId) != disabledDungeonIds.end());
@@ -474,7 +476,6 @@ bool isDungeonInMinPlayerMap(uint32 dungeonId, bool isHeroic)
         return (minPlayersPerDungeonIdMap.find(dungeonId) != minPlayersPerDungeonIdMap.end());
     }
 }
-
 
 bool hasDungeonOverride(uint32 dungeonId)
 {
@@ -588,6 +589,652 @@ bool ShouldMapBeEnabled(Map* map)
     }
 }
 
+AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* instanceMap, bool isBoss = false)
+{
+    uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
+    uint32 mapId = instanceMap->GetEntry()->MapID;
+
+    float inflectionValue, curveFloor, curveCeiling;
+
+    inflectionValue  = (float)maxNumberOfPlayers;
+
+    //
+    // Base Inflection Point
+    //
+    if (instanceMap->IsHeroic())
+    {
+        switch (maxNumberOfPlayers)
+        {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                inflectionValue *= InflectionPointHeroic;
+                curveFloor = InflectionPointHeroicCurveFloor;
+                curveCeiling = InflectionPointHeroicCurveCeiling;
+                break;
+            case 10:
+                inflectionValue *= InflectionPointRaid10MHeroic;
+                curveFloor = InflectionPointRaid10MHeroicCurveFloor;
+                curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
+                break;
+            case 25:
+                inflectionValue *= InflectionPointRaid25MHeroic;
+                curveFloor = InflectionPointRaid25MHeroicCurveFloor;
+                curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
+                break;
+            default:
+                inflectionValue *= InflectionPointRaidHeroic;
+                curveFloor = InflectionPointRaidHeroicCurveFloor;
+                curveCeiling = InflectionPointRaidHeroicCurveCeiling;
+        }
+    }
+    else
+    {
+        switch (maxNumberOfPlayers)
+        {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                inflectionValue *= InflectionPoint;
+                curveFloor = InflectionPointCurveFloor;
+                curveCeiling = InflectionPointCurveCeiling;
+                break;
+            case 10:
+                inflectionValue *= InflectionPointRaid10M;
+                curveFloor = InflectionPointRaid10MCurveFloor;
+                curveCeiling = InflectionPointRaid10MCurveCeiling;
+                break;
+            case 15:
+                inflectionValue *= InflectionPointRaid15M;
+                curveFloor = InflectionPointRaid15MCurveFloor;
+                curveCeiling = InflectionPointRaid15MCurveCeiling;
+                break;
+            case 20:
+                inflectionValue *= InflectionPointRaid20M;
+                curveFloor = InflectionPointRaid20MCurveFloor;
+                curveCeiling = InflectionPointRaid20MCurveCeiling;
+                break;
+            case 25:
+                inflectionValue *= InflectionPointRaid25M;
+                curveFloor = InflectionPointRaid25MCurveFloor;
+                curveCeiling = InflectionPointRaid25MCurveCeiling;
+                break;
+            case 40:
+                inflectionValue *= InflectionPointRaid40M;
+                curveFloor = InflectionPointRaid40MCurveFloor;
+                curveCeiling = InflectionPointRaid40MCurveCeiling;
+                break;
+            default:
+                inflectionValue *= InflectionPointRaid;
+                curveFloor = InflectionPointRaidCurveFloor;
+                curveCeiling = InflectionPointRaidCurveCeiling;
+        }
+    }
+
+    // Per map ID overrides alter the above settings, if set
+    if (hasDungeonOverride(mapId))
+    {
+        AutoBalanceInflectionPointSettings* myInflectionPointOverrides = &dungeonOverrides[mapId];
+
+        // Alter the inflectionValue according to the override, if set
+        if (myInflectionPointOverrides->value != -1)
+        {
+            inflectionValue  = (float)maxNumberOfPlayers; // Starting over
+            inflectionValue *= myInflectionPointOverrides->value;
+        }
+
+        if (myInflectionPointOverrides->curveFloor != -1)   { curveFloor =    myInflectionPointOverrides->curveFloor;   }
+        if (myInflectionPointOverrides->curveCeiling != -1) { curveCeiling =  myInflectionPointOverrides->curveCeiling; }
+    }
+
+    //
+    // Boss Inflection Point
+    //
+    if (isBoss) {
+
+        float bossInflectionPointMultiplier;
+
+        // Determine the correct boss inflection multiplier
+        if (instanceMap->IsHeroic())
+        {
+            switch (maxNumberOfPlayers)
+            {
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    bossInflectionPointMultiplier = InflectionPointHeroicBoss;
+                    break;
+                case 10:
+                    bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss;
+                    break;
+                case 25:
+                    bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss;
+                    break;
+                default:
+                    bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss;
+            }
+        }
+        else
+        {
+            switch (maxNumberOfPlayers)
+            {
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                    bossInflectionPointMultiplier = InflectionPointBoss;
+                    break;
+                case 10:
+                    bossInflectionPointMultiplier = InflectionPointRaid10MBoss;
+                    break;
+                case 15:
+                    bossInflectionPointMultiplier = InflectionPointRaid15MBoss;
+                    break;
+                case 20:
+                    bossInflectionPointMultiplier = InflectionPointRaid20MBoss;
+                    break;
+                case 25:
+                    bossInflectionPointMultiplier = InflectionPointRaid25MBoss;
+                    break;
+                case 40:
+                    bossInflectionPointMultiplier = InflectionPointRaid40MBoss;
+                    break;
+                default:
+                    bossInflectionPointMultiplier = InflectionPointRaidBoss;
+            }
+        }
+
+        // Per map ID overrides alter the above settings, if set
+        if (hasBossOverride(mapId))
+        {
+            AutoBalanceInflectionPointSettings* myBossOverrides = &bossOverrides[mapId];
+
+            // If set, alter the inflectionValue according to the override
+            if (myBossOverrides->value != -1)
+            {
+                inflectionValue *= myBossOverrides->value;
+            }
+            // Otherwise, calculate using the value determined by instance type
+            else
+            {
+                inflectionValue *= bossInflectionPointMultiplier;
+            }
+        }
+        // No override, use the value determined by the instance type
+        else
+        {
+            inflectionValue *= bossInflectionPointMultiplier;
+        }
+    }
+
+    return AutoBalanceInflectionPointSettings(inflectionValue, curveFloor, curveCeiling);
+}
+
+AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* creature = nullptr)
+{
+    // map variables
+    uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
+    uint32 mapId = instanceMap->GetEntry()->MapID;
+
+    // get the creature's info if a creature was specified
+    AutoBalanceCreatureInfo* creatureABInfo = nullptr;
+    if (creature)
+        creatureABInfo = creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+    // this will be the return value
+    AutoBalanceStatModifiers statModifiers;
+
+    // Apply the per-instance-type modifiers first
+    // AutoBalance.StatModifier*(.Boss).<stat>
+    if (instanceMap->IsHeroic()) // heroic
+    {
+        switch (maxNumberOfPlayers)
+        {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierHeroic_Boss_Global;
+                    statModifiers.health = StatModifierHeroic_Boss_Health;
+                    statModifiers.mana = StatModifierHeroic_Boss_Mana;
+                    statModifiers.armor = StatModifierHeroic_Boss_Armor;
+                    statModifiers.damage = StatModifierHeroic_Boss_Damage;
+                    statModifiers.ccduration = StatModifierHeroic_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifierHeroic_Global;
+                    statModifiers.health = StatModifierHeroic_Health;
+                    statModifiers.mana = StatModifierHeroic_Mana;
+                    statModifiers.armor = StatModifierHeroic_Armor;
+                    statModifiers.damage = StatModifierHeroic_Damage;
+                    statModifiers.ccduration = StatModifierHeroic_CCDuration;
+                }
+                break;
+            case 10:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid10MHeroic_Boss_Global;
+                    statModifiers.health = StatModifierRaid10MHeroic_Boss_Health;
+                    statModifiers.mana = StatModifierRaid10MHeroic_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid10MHeroic_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid10MHeroic_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid10MHeroic_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid10MHeroic_Global;
+                    statModifiers.health = StatModifierRaid10MHeroic_Health;
+                    statModifiers.mana = StatModifierRaid10MHeroic_Mana;
+                    statModifiers.armor = StatModifierRaid10MHeroic_Armor;
+                    statModifiers.damage = StatModifierRaid10MHeroic_Damage;
+                    statModifiers.ccduration = StatModifierRaid10MHeroic_CCDuration;
+                }
+                break;
+            case 25:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid25MHeroic_Boss_Global;
+                    statModifiers.health = StatModifierRaid25MHeroic_Boss_Health;
+                    statModifiers.mana = StatModifierRaid25MHeroic_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid25MHeroic_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid25MHeroic_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid25MHeroic_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid25MHeroic_Global;
+                    statModifiers.health = StatModifierRaid25MHeroic_Health;
+                    statModifiers.mana = StatModifierRaid25MHeroic_Mana;
+                    statModifiers.armor = StatModifierRaid25MHeroic_Armor;
+                    statModifiers.damage = StatModifierRaid25MHeroic_Damage;
+                    statModifiers.ccduration = StatModifierRaid25MHeroic_CCDuration;
+                }
+                break;
+            default:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaidHeroic_Boss_Global;
+                    statModifiers.health = StatModifierRaidHeroic_Boss_Health;
+                    statModifiers.mana = StatModifierRaidHeroic_Boss_Mana;
+                    statModifiers.armor = StatModifierRaidHeroic_Boss_Armor;
+                    statModifiers.damage = StatModifierRaidHeroic_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaidHeroic_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaidHeroic_Global;
+                    statModifiers.health = StatModifierRaidHeroic_Health;
+                    statModifiers.mana = StatModifierRaidHeroic_Mana;
+                    statModifiers.armor = StatModifierRaidHeroic_Armor;
+                    statModifiers.damage = StatModifierRaidHeroic_Damage;
+                    statModifiers.ccduration = StatModifierRaidHeroic_CCDuration;
+                }
+        }
+    }
+    else // non-heroic
+    {
+        switch (maxNumberOfPlayers)
+        {
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifier_Boss_Global;
+                    statModifiers.health = StatModifier_Boss_Health;
+                    statModifiers.mana = StatModifier_Boss_Mana;
+                    statModifiers.armor = StatModifier_Boss_Armor;
+                    statModifiers.damage = StatModifier_Boss_Damage;
+                    statModifiers.ccduration = StatModifier_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifier_Global;
+                    statModifiers.health = StatModifier_Health;
+                    statModifiers.mana = StatModifier_Mana;
+                    statModifiers.armor = StatModifier_Armor;
+                    statModifiers.damage = StatModifier_Damage;
+                    statModifiers.ccduration = StatModifier_CCDuration;
+                }
+                break;
+            case 10:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid10M_Boss_Global;
+                    statModifiers.health = StatModifierRaid10M_Boss_Health;
+                    statModifiers.mana = StatModifierRaid10M_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid10M_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid10M_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid10M_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid10M_Global;
+                    statModifiers.health = StatModifierRaid10M_Health;
+                    statModifiers.mana = StatModifierRaid10M_Mana;
+                    statModifiers.armor = StatModifierRaid10M_Armor;
+                    statModifiers.damage = StatModifierRaid10M_Damage;
+                    statModifiers.ccduration = StatModifierRaid10M_CCDuration;
+                }
+                break;
+            case 25:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid25M_Boss_Global;
+                    statModifiers.health = StatModifierRaid25M_Boss_Health;
+                    statModifiers.mana = StatModifierRaid25M_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid25M_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid25M_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid25M_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid25M_Global;
+                    statModifiers.health = StatModifierRaid25M_Health;
+                    statModifiers.mana = StatModifierRaid25M_Mana;
+                    statModifiers.armor = StatModifierRaid25M_Armor;
+                    statModifiers.damage = StatModifierRaid25M_Damage;
+                    statModifiers.ccduration = StatModifierRaid25M_CCDuration;
+                }
+                break;
+            default:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid_Boss_Global;
+                    statModifiers.health = StatModifierRaid_Boss_Health;
+                    statModifiers.mana = StatModifierRaid_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid_Boss_CCDuration;
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid_Global;
+                    statModifiers.health = StatModifierRaid_Health;
+                    statModifiers.mana = StatModifierRaid_Mana;
+                    statModifiers.armor = StatModifierRaid_Armor;
+                    statModifiers.damage = StatModifierRaid_Damage;
+                    statModifiers.ccduration = StatModifierRaid_CCDuration;
+                }
+        }
+    }
+
+    // Per-Map Overrides
+    // AutoBalance.StatModifier.Boss.PerInstance
+    if (creature && creature->IsDungeonBoss() && hasStatModifierBossOverride(mapId))
+    {
+        AutoBalanceStatModifiers* myStatModifierBossOverrides = &statModifierBossOverrides[mapId];
+
+        if (myStatModifierBossOverrides->global != -1)      { statModifiers.global =      myStatModifierBossOverrides->global;      }
+        if (myStatModifierBossOverrides->health != -1)      { statModifiers.health =      myStatModifierBossOverrides->health;      }
+        if (myStatModifierBossOverrides->mana != -1)        { statModifiers.mana =        myStatModifierBossOverrides->mana;        }
+        if (myStatModifierBossOverrides->armor != -1)       { statModifiers.armor =       myStatModifierBossOverrides->armor;       }
+        if (myStatModifierBossOverrides->damage != -1)      { statModifiers.damage =      myStatModifierBossOverrides->damage;      }
+        if (myStatModifierBossOverrides->ccduration != -1)  { statModifiers.ccduration =  myStatModifierBossOverrides->ccduration;  }
+    }
+    // AutoBalance.StatModifier.PerInstance
+    else if (hasStatModifierOverride(mapId))
+    {
+        AutoBalanceStatModifiers* myStatModifierOverrides = &statModifierOverrides[mapId];
+
+        if (myStatModifierOverrides->global != -1)      { statModifiers.global =      myStatModifierOverrides->global;      }
+        if (myStatModifierOverrides->health != -1)      { statModifiers.health =      myStatModifierOverrides->health;      }
+        if (myStatModifierOverrides->mana != -1)        { statModifiers.mana =        myStatModifierOverrides->mana;        }
+        if (myStatModifierOverrides->armor != -1)       { statModifiers.armor =       myStatModifierOverrides->armor;       }
+        if (myStatModifierOverrides->damage != -1)      { statModifiers.damage =      myStatModifierOverrides->damage;      }
+        if (myStatModifierOverrides->ccduration != -1)  { statModifiers.ccduration =  myStatModifierOverrides->ccduration;  }
+    }
+
+    // Per-creature modifiers applied last
+    // AutoBalance.StatModifier.PerCreature
+    if (creature && hasStatModifierCreatureOverride(creatureABInfo->entry))
+    {
+        AutoBalanceStatModifiers* myCreatureOverrides = &statModifierCreatureOverrides[creatureABInfo->entry];
+
+        if (myCreatureOverrides->global != -1)      { statModifiers.global =      myCreatureOverrides->global;      }
+        if (myCreatureOverrides->health != -1)      { statModifiers.health =      myCreatureOverrides->health;      }
+        if (myCreatureOverrides->mana != -1)        { statModifiers.mana =        myCreatureOverrides->mana;        }
+        if (myCreatureOverrides->armor != -1)       { statModifiers.armor =       myCreatureOverrides->armor;       }
+        if (myCreatureOverrides->damage != -1)      { statModifiers.damage =      myCreatureOverrides->damage;      }
+        if (myCreatureOverrides->ccduration != -1)  { statModifiers.ccduration =  myCreatureOverrides->ccduration;  }
+    }
+
+    return statModifiers;
+
+}
+
+float GetDefaultMultiplier(InstanceMap* instanceMap, AutoBalanceInflectionPointSettings inflectionPointSettings)
+{
+    // Note: InflectionPoint handle the number of players required to get 50% health.
+    //       you'd adjust this to raise or lower the hp modifier for per additional player in a non-whole group.
+    //
+    //       diff modify the rate of percentage increase between
+    //       number of players. Generally the closer to the value of 1 you have this
+    //       the less gradual the rate will be. For example in a 5 man it would take 3
+    //       total players to face a mob at full health.
+    //
+    //       The +1 and /2 values raise the TanH function to a positive range and make
+    //       sure the modifier never goes above the value or 1.0 or below 0.
+    //
+    //       curveFloor and curveCeiling squishes the curve by adjusting the curve start and end points.
+    //       This allows for better control over high and low player count scaling.
+
+    // get the max player count for the map
+    uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
+
+    // get the adjustedPlayerCount for this instance
+    AutoBalanceMapInfo *mapABInfo=instanceMap->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+
+    // #maththings
+    float diff = ((float)maxNumberOfPlayers/5)*1.5f;
+
+    // For math reasons that I do not understand, curveCeiling needs to be adjusted to bring the actual multiplier
+    // closer to the curveCeiling setting. Create an adjustment based on how much the ceiling should be changed at
+    // the max players multiplier.
+    float curveCeilingAdjustment =
+        inflectionPointSettings.curveCeiling /
+        (((tanh(((float)maxNumberOfPlayers - inflectionPointSettings.value) / diff) + 1.0f) / 2.0f) *
+        (inflectionPointSettings.curveCeiling - inflectionPointSettings.curveFloor) + inflectionPointSettings.curveFloor);
+
+    // Adjust the multiplier based on the configured floor and ceiling values, plus the ceiling adjustment we just calculated
+    float defaultMultiplier =
+        ((tanh(((float)mapABInfo->adjustedPlayerCount - inflectionPointSettings.value) / diff) + 1.0f) / 2.0f) *
+        (inflectionPointSettings.curveCeiling * curveCeilingAdjustment - inflectionPointSettings.curveFloor) +
+        inflectionPointSettings.curveFloor;
+
+    return defaultMultiplier;
+}
+
+float GetWorldDamageMultiplier(Map* map, uint32 adjustedPlayerCount)
+{
+    // null check
+    if (!map)
+        return 1.0f;
+
+    // if this isn't a dungeon, return 1.0f
+    if (!(map->IsDungeon() || map->IsBattleground()))
+        return 1.0f;
+
+    // grab map data
+    AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+
+    // if the map isn't enabled, return 1.0f
+    if (!mapABInfo->enabled)
+        return 1.0f;
+
+    // if there are no players on the map, return 1.0f
+    if (map->GetPlayersCountExceptGMs() == 0)
+        return 1.0f;
+
+    // create some data variables
+    InstanceMap* instanceMap = (InstanceMap*)map;
+    uint32 mapId = instanceMap->GetEntry()->MapID;
+    uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
+    uint8 avgMapCreatureLevelRounded = (uint8)(mapABInfo->avgCreatureLevel + 0.5f);
+
+    // only scale damage based on level if level scaling is enabled and the instance's average creature level is not within the skip range
+    if (LevelScaling &&
+            ((mapABInfo->avgCreatureLevel > mapABInfo->highestPlayerLevel + mapABInfo->levelScalingSkipHigherLevels || mapABInfo->levelScalingSkipHigherLevels == 0) ||
+            (mapABInfo->avgCreatureLevel < mapABInfo->highestPlayerLevel - mapABInfo->levelScalingSkipLowerLevels || mapABInfo->levelScalingSkipLowerLevels == 0))
+        )
+    {
+        mapABInfo->worldDamageTargetLevel = mapABInfo->highestPlayerLevel;
+        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) damage level will be scaled to {}.", map->GetMapName(), avgMapCreatureLevelRounded, mapABInfo->worldDamageTargetLevel);
+    }
+    else
+    {
+        mapABInfo->worldDamageTargetLevel = avgMapCreatureLevelRounded;
+        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being outside the skip range.", map->GetMapName(), avgMapCreatureLevelRounded);
+    }
+
+    // get the inflection point settings for this map
+    AutoBalanceInflectionPointSettings inflectionPointSettings = getInflectionPointSettings(instanceMap);
+
+    // Generate the default world damage multiplier before level scaling
+    float worldDamageMultiplier = GetDefaultMultiplier(instanceMap, inflectionPointSettings);
+
+    LOG_DEBUG("module.AutoBalance",
+        "GetWorldDamageModifier: Map {} ({}) starting damage multiplier for {} player(s) before level scaling: {}.",
+        map->GetMapName(),
+        avgMapCreatureLevelRounded,
+        adjustedPlayerCount,
+        worldDamageMultiplier);
+
+    // level scale the multiplier
+    if (LevelScaling)
+    {
+        // use creature base stats to determine how to level scale the damage multiplier
+        CreatureBaseStats const* origMapStats = sObjectMgr->GetCreatureBaseStats(avgMapCreatureLevelRounded, CLASS_WARRIOR);
+        CreatureBaseStats const* adjustedMapStats = sObjectMgr->GetCreatureBaseStats(mapABInfo->worldDamageTargetLevel, CLASS_WARRIOR);
+
+        float originalDamageBase, newDamageBase;
+        float vanillaDamage, bcDamage, wotlkDamage;
+
+        // The database holds multiple values for base damage, one for each expansion
+        // This code will smooth transition between the different expansions based on the highest player level in the instance
+        // Only do this if level scaling is enabled
+
+        //
+        // Original Damage Base
+        //
+
+        vanillaDamage = origMapStats->BaseDamage[0];
+        bcDamage = origMapStats->BaseDamage[1];
+        wotlkDamage = origMapStats->BaseDamage[2];
+
+        // vanilla damage
+        if (mapABInfo->avgCreatureLevel <= 60)
+        {
+            originalDamageBase = vanillaDamage;
+        }
+        // transition from vanilla to BC damage
+        else if (mapABInfo->avgCreatureLevel < 63)
+        {
+            float vanillaMultiplier = (63 - mapABInfo->avgCreatureLevel) / 3.0;
+            float bcMultiplier = 1.0f - vanillaMultiplier;
+
+            originalDamageBase = (vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
+        }
+        // BC damage
+        else if (mapABInfo->avgCreatureLevel <= 70)
+        {
+            originalDamageBase = bcDamage;
+        }
+        // transition from BC to WotLK damage
+        else if (mapABInfo->avgCreatureLevel < 73)
+        {
+            float bcMultiplier = (73 - mapABInfo->avgCreatureLevel) / 3.0;
+            float wotlkMultiplier = 1.0f - bcMultiplier;
+
+            originalDamageBase = (bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
+        }
+        // WotLK damage
+        else
+        {
+            originalDamageBase = wotlkDamage;
+
+            // special increase for end-game content
+            if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
+                if (mapABInfo->avgCreatureLevel >= 75 && avgMapCreatureLevelRounded < 75)
+                    originalDamageBase *= float(mapABInfo->avgCreatureLevel - 70) * 0.3f;
+            }
+        }
+
+        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) original damage base is {}.", map->GetMapName(), avgMapCreatureLevelRounded, originalDamageBase);
+
+        //
+        // New Damage Base
+        //
+
+        vanillaDamage = adjustedMapStats->BaseDamage[0];
+        bcDamage = adjustedMapStats->BaseDamage[1];
+        wotlkDamage = adjustedMapStats->BaseDamage[2];
+
+        // vanilla damage
+        if (mapABInfo->highestPlayerLevel <= 60)
+        {
+            newDamageBase = vanillaDamage;
+        }
+        // transition from vanilla to BC damage
+        else if (mapABInfo->highestPlayerLevel < 63)
+        {
+            float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0;
+            float bcMultiplier = 1.0f - vanillaMultiplier;
+
+            newDamageBase = (vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
+        }
+        // BC damage
+        else if (mapABInfo->highestPlayerLevel <= 70)
+        {
+            newDamageBase = bcDamage;
+        }
+        // transition from BC to WotLK damage
+        else if (mapABInfo->highestPlayerLevel < 73)
+        {
+            float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0;
+            float wotlkMultiplier = 1.0f - bcMultiplier;
+
+            newDamageBase = (bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
+        }
+        // WotLK damage
+        else
+        {
+            newDamageBase = wotlkDamage;
+
+            // special increase for end-game content
+            if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
+                if (mapABInfo->highestPlayerLevel >= 75 && avgMapCreatureLevelRounded < 75)
+                    newDamageBase *= float(mapABInfo->highestPlayerLevel - 70) * 0.3f;
+            }
+        }
+
+        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) new damage base is {}.", map->GetMapName(), mapABInfo->highestPlayerLevel, newDamageBase);
+
+        worldDamageMultiplier *= newDamageBase / originalDamageBase;
+    }
+
+    LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}->{}) final damage multiplier is {}.",
+              map->GetMapName(), avgMapCreatureLevelRounded,
+              mapABInfo->highestPlayerLevel,
+              worldDamageMultiplier
+    );
+
+    return worldDamageMultiplier;
+}
+
 void LoadMapSettings(Map* map)
 {
     // Load (or create) the map's info
@@ -606,6 +1253,14 @@ void LoadMapSettings(Map* map)
 	{
 		return;
 	}
+
+    // get the map's LFG stats
+    LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
+    if (dungeon) {
+        mapABInfo->lfgMinLevel = dungeon->MinLevel;
+        mapABInfo->lfgMaxLevel = dungeon->MaxLevel;
+        mapABInfo->lfgTargetLevel = dungeon->TargetLevel;
+    }
 
     LOG_DEBUG("module.AutoBalance", "LoadMapSettings: Loading settings for map {}.", map->GetMapName());
 
@@ -685,6 +1340,7 @@ void LoadMapSettings(Map* map)
     //
     // Per-instance overrides, if applicable
     //
+
     if (hasDynamicLevelOverride(map->GetId()))
     {
         AutoBalanceLevelScalingDynamicLevelSettings* myDynamicLevelSettings = &levelScalingDynamicLevelOverrides[map->GetId()];
@@ -1067,6 +1723,9 @@ void UpdateMapDataIfNeeded(Map* map)
             mapABInfo->isLevelScalingEnabled = true;
             LOG_DEBUG("module.AutoBalance", "UpdateMapLevelIfNeeded(): Map {} scaling is enabled. Map level is now {} (highest player level).", map->GetMapName(), mapABInfo->mapLevel);
         }
+
+        // Update World Damage multiplier
+        mapABInfo->worldDamageMultiplier = GetWorldDamageMultiplier(map, mapABInfo->adjustedPlayerCount);
 
         // mark the config updated
         mapABInfo->configTime = lastConfigTime;
@@ -1828,17 +2487,6 @@ class AutoBalance_AllMapScript : public AllMapScript
             if (!map->IsDungeon() && !map->IsBattleground())
                 return;
 
-            // get the map's info
-            AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-
-            // get the map's LFG stats
-            LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
-            if (dungeon) {
-                mapABInfo->lfgMinLevel = dungeon->MinLevel;
-                mapABInfo->lfgMaxLevel = dungeon->MaxLevel;
-                mapABInfo->lfgTargetLevel = dungeon->TargetLevel;
-            }
-
             // load the map's settings
             LoadMapSettings(map);
         }
@@ -2317,469 +2965,23 @@ public:
         uint32 scaledHealth = 0;
         uint32 scaledMana = 0;
 
-        // Note: InflectionPoint handle the number of players required to get 50% health.
-        //       you'd adjust this to raise or lower the hp modifier for per additional player in a non-whole group.
-        //
-        //       diff modify the rate of percentage increase between
-        //       number of players. Generally the closer to the value of 1 you have this
-        //       the less gradual the rate will be. For example in a 5 man it would take 3
-        //       total players to face a mob at full health.
-        //
-        //       The +1 and /2 values raise the TanH function to a positive range and make
-        //       sure the modifier never goes above the value or 1.0 or below 0.
-        //
-        //       curveFloor and curveCeiling squishes the curve by adjusting the curve start and end points.
-        //       This allows for better control over high and low player count scaling.
-
-        float defaultMultiplier;
-        float curveFloor;
-        float curveCeiling;
-
-        //
         // Inflection Point
-        //
-        float inflectionValue  = (float)maxNumberOfPlayers;
+        AutoBalanceInflectionPointSettings inflectionPointSettings = getInflectionPointSettings(instanceMap, creature->IsDungeonBoss());
 
-        if (instanceMap->IsHeroic())
-        {
-            switch (maxNumberOfPlayers)
-            {
-			    case 1:
-			    case 2:
-			    case 3:
-			    case 4:
-			    case 5:
-                    inflectionValue *= InflectionPointHeroic;
-                    curveFloor = InflectionPointHeroicCurveFloor;
-                    curveCeiling = InflectionPointHeroicCurveCeiling;
-                    break;
-                case 10:
-                    inflectionValue *= InflectionPointRaid10MHeroic;
-                    curveFloor = InflectionPointRaid10MHeroicCurveFloor;
-                    curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
-                    break;
-                case 25:
-                    inflectionValue *= InflectionPointRaid25MHeroic;
-                    curveFloor = InflectionPointRaid25MHeroicCurveFloor;
-                    curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
-                    break;
-                default:
-                    inflectionValue *= InflectionPointRaidHeroic;
-                    curveFloor = InflectionPointRaidHeroicCurveFloor;
-                    curveCeiling = InflectionPointRaidHeroicCurveCeiling;
-            }
-        }
-        else
-        {
-            switch (maxNumberOfPlayers)
-            {
-			    case 1:
-			    case 2:
-			    case 3:
-			    case 4:
-			    case 5:
-                    inflectionValue *= InflectionPoint;
-                    curveFloor = InflectionPointCurveFloor;
-                    curveCeiling = InflectionPointCurveCeiling;
-                    break;
-                case 10:
-                    inflectionValue *= InflectionPointRaid10M;
-                    curveFloor = InflectionPointRaid10MCurveFloor;
-                    curveCeiling = InflectionPointRaid10MCurveCeiling;
-                    break;
-                case 15:
-                    inflectionValue *= InflectionPointRaid15M;
-                    curveFloor = InflectionPointRaid15MCurveFloor;
-                    curveCeiling = InflectionPointRaid15MCurveCeiling;
-                    break;
-                case 20:
-                    inflectionValue *= InflectionPointRaid20M;
-                    curveFloor = InflectionPointRaid20MCurveFloor;
-                    curveCeiling = InflectionPointRaid20MCurveCeiling;
-                    break;
-                case 25:
-                    inflectionValue *= InflectionPointRaid25M;
-                    curveFloor = InflectionPointRaid25MCurveFloor;
-                    curveCeiling = InflectionPointRaid25MCurveCeiling;
-                    break;
-                case 40:
-                    inflectionValue *= InflectionPointRaid40M;
-                    curveFloor = InflectionPointRaid40MCurveFloor;
-                    curveCeiling = InflectionPointRaid40MCurveCeiling;
-                    break;
-                default:
-                    inflectionValue *= InflectionPointRaid;
-                    curveFloor = InflectionPointRaidCurveFloor;
-                    curveCeiling = InflectionPointRaidCurveCeiling;
-            }
-        }
-
-        // Per map ID overrides alter the above settings, if set
-        if (hasDungeonOverride(mapId))
-        {
-            AutoBalanceInflectionPointSettings* myInflectionPointOverrides = &dungeonOverrides[mapId];
-
-            // Alter the inflectionValue according to the override, if set
-            if (myInflectionPointOverrides->value != -1)
-            {
-                inflectionValue  = (float)maxNumberOfPlayers; // Starting over
-                inflectionValue *= myInflectionPointOverrides->value;
-            }
-
-            if (myInflectionPointOverrides->curveFloor != -1)   { curveFloor =    myInflectionPointOverrides->curveFloor;   }
-            if (myInflectionPointOverrides->curveCeiling != -1) { curveCeiling =  myInflectionPointOverrides->curveCeiling; }
-        }
-
-        //
-        // Boss Inflection Point
-        //
-        if (creature->IsDungeonBoss()) {
-
-            float bossInflectionPointMultiplier;
-
-            // Determine the correct boss inflection multiplier
-            if (instanceMap->IsHeroic())
-            {
-                switch (maxNumberOfPlayers)
-                {
-			        case 1:
-			        case 2:
-			        case 3:
-			        case 4:
-			        case 5:
-                        bossInflectionPointMultiplier = InflectionPointHeroicBoss;
-                        break;
-                    case 10:
-                        bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss;
-                        break;
-                    case 25:
-                        bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss;
-                        break;
-                    default:
-                        bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss;
-                }
-            }
-            else
-            {
-                switch (maxNumberOfPlayers)
-                {
-			        case 1:
-			        case 2:
-			        case 3:
-			        case 4:
-			        case 5:
-                        bossInflectionPointMultiplier = InflectionPointBoss;
-                        break;
-                    case 10:
-                        bossInflectionPointMultiplier = InflectionPointRaid10MBoss;
-                        break;
-                    case 15:
-                        bossInflectionPointMultiplier = InflectionPointRaid15MBoss;
-                        break;
-                    case 20:
-                        bossInflectionPointMultiplier = InflectionPointRaid20MBoss;
-                        break;
-                    case 25:
-                        bossInflectionPointMultiplier = InflectionPointRaid25MBoss;
-                        break;
-                    case 40:
-                        bossInflectionPointMultiplier = InflectionPointRaid40MBoss;
-                        break;
-                    default:
-                        bossInflectionPointMultiplier = InflectionPointRaidBoss;
-                }
-            }
-
-            // Per map ID overrides alter the above settings, if set
-            if (hasBossOverride(mapId))
-            {
-                AutoBalanceInflectionPointSettings* myBossOverrides = &bossOverrides[mapId];
-
-                // If set, alter the inflectionValue according to the override
-                if (myBossOverrides->value != -1)
-                {
-                    inflectionValue *= myBossOverrides->value;
-                }
-                // Otherwise, calculate using the value determined by instance type
-                else
-                {
-                    inflectionValue *= bossInflectionPointMultiplier;
-                }
-            }
-            // No override, use the value determined by the instance type
-            else
-            {
-                inflectionValue *= bossInflectionPointMultiplier;
-            }
-        }
-
-        //
-        // Stat Modifiers
-        //
-
-        // Calculate stat modifiers
-        float statMod_global, statMod_health, statMod_mana, statMod_armor, statMod_damage, statMod_ccDuration;
-        float statMod_boss_global, statMod_boss_health, statMod_boss_mana, statMod_boss_armor, statMod_boss_damage, statMod_boss_ccDuration;
-
-        // Apply the per-instance-type modifiers first
-		if (instanceMap->IsHeroic())
-		{
-			switch (maxNumberOfPlayers)
-			{
-			    case 1:
-			    case 2:
-			    case 3:
-			    case 4:
-			    case 5:
-			        statMod_global = StatModifierHeroic_Global;
-			        statMod_health = StatModifierHeroic_Health;
-			        statMod_mana = StatModifierHeroic_Mana;
-			        statMod_armor = StatModifierHeroic_Armor;
-			        statMod_damage = StatModifierHeroic_Damage;
-			        statMod_ccDuration = StatModifierHeroic_CCDuration;
-
-			        statMod_boss_global = StatModifierHeroic_Boss_Global;
-			        statMod_boss_health = StatModifierHeroic_Boss_Health;
-			        statMod_boss_mana = StatModifierHeroic_Boss_Mana;
-			        statMod_boss_armor = StatModifierHeroic_Boss_Armor;
-			        statMod_boss_damage = StatModifierHeroic_Boss_Damage;
-			        statMod_boss_ccDuration = StatModifierHeroic_Boss_CCDuration;
-			        break;
-			    case 10:
-                    statMod_global = StatModifierRaid10MHeroic_Global;
-                    statMod_health = StatModifierRaid10MHeroic_Health;
-                    statMod_mana = StatModifierRaid10MHeroic_Mana;
-                    statMod_armor = StatModifierRaid10MHeroic_Armor;
-                    statMod_damage = StatModifierRaid10MHeroic_Damage;
-                    statMod_ccDuration = StatModifierRaid10MHeroic_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid10MHeroic_Boss_Global;
-                    statMod_boss_health = StatModifierRaid10MHeroic_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid10MHeroic_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid10MHeroic_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid10MHeroic_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid10MHeroic_Boss_CCDuration;
-			        break;
-			    case 25:
-                    statMod_global = StatModifierRaid25MHeroic_Global;
-                    statMod_health = StatModifierRaid25MHeroic_Health;
-                    statMod_mana = StatModifierRaid25MHeroic_Mana;
-                    statMod_armor = StatModifierRaid25MHeroic_Armor;
-                    statMod_damage = StatModifierRaid25MHeroic_Damage;
-                    statMod_ccDuration = StatModifierRaid25MHeroic_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid25MHeroic_Boss_Global;
-                    statMod_boss_health = StatModifierRaid25MHeroic_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid25MHeroic_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid25MHeroic_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid25MHeroic_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid25MHeroic_Boss_CCDuration;
-                    break;
-			    default:
-                    statMod_global = StatModifierRaidHeroic_Global;
-                    statMod_health = StatModifierRaidHeroic_Health;
-                    statMod_mana = StatModifierRaidHeroic_Mana;
-                    statMod_armor = StatModifierRaidHeroic_Armor;
-                    statMod_damage = StatModifierRaidHeroic_Damage;
-                    statMod_ccDuration = StatModifierRaidHeroic_CCDuration;
-
-                    statMod_boss_global = StatModifierRaidHeroic_Global;
-                    statMod_boss_health = StatModifierRaidHeroic_Health;
-                    statMod_boss_mana = StatModifierRaidHeroic_Mana;
-                    statMod_boss_armor = StatModifierRaidHeroic_Armor;
-                    statMod_boss_damage = StatModifierRaidHeroic_Damage;
-                    statMod_boss_ccDuration = StatModifierRaidHeroic_Boss_CCDuration;
-			}
-		}
-		else
-		{
-			switch (maxNumberOfPlayers)
-			{
-			    case 1:
-			    case 2:
-			    case 3:
-			    case 4:
-			    case 5:
-			        statMod_global = StatModifier_Global;
-			        statMod_health = StatModifier_Health;
-			        statMod_mana = StatModifier_Mana;
-			        statMod_armor = StatModifier_Armor;
-			        statMod_damage = StatModifier_Damage;
-			        statMod_ccDuration = StatModifier_CCDuration;
-
-			        statMod_boss_global = StatModifier_Boss_Global;
-			        statMod_boss_health = StatModifier_Boss_Health;
-			        statMod_boss_mana = StatModifier_Boss_Mana;
-			        statMod_boss_armor = StatModifier_Boss_Armor;
-			        statMod_boss_damage = StatModifier_Boss_Damage;
-			        statMod_boss_ccDuration = StatModifier_Boss_CCDuration;
-			        break;
-			    case 10:
-                    statMod_global = StatModifierRaid10M_Global;
-                    statMod_health = StatModifierRaid10M_Health;
-                    statMod_mana = StatModifierRaid10M_Mana;
-                    statMod_armor = StatModifierRaid10M_Armor;
-                    statMod_damage = StatModifierRaid10M_Damage;
-                    statMod_ccDuration = StatModifierRaid10M_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid10M_Boss_Global;
-                    statMod_boss_health = StatModifierRaid10M_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid10M_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid10M_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid10M_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid10M_Boss_CCDuration;
-                    break;
-			    case 15:
-                    statMod_global = StatModifierRaid15M_Global;
-                    statMod_health = StatModifierRaid15M_Health;
-                    statMod_mana = StatModifierRaid15M_Mana;
-                    statMod_armor = StatModifierRaid15M_Armor;
-                    statMod_damage = StatModifierRaid15M_Damage;
-                    statMod_ccDuration = StatModifierRaid15M_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid15M_Boss_Global;
-                    statMod_boss_health = StatModifierRaid15M_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid15M_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid15M_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid15M_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid15M_Boss_CCDuration;
-                    break;
-			    case 20:
-                    statMod_global = StatModifierRaid20M_Global;
-                    statMod_health = StatModifierRaid20M_Health;
-                    statMod_mana = StatModifierRaid20M_Mana;
-                    statMod_armor = StatModifierRaid20M_Armor;
-                    statMod_damage = StatModifierRaid20M_Damage;
-                    statMod_ccDuration = StatModifierRaid20M_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid20M_Boss_Global;
-                    statMod_boss_health = StatModifierRaid20M_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid20M_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid20M_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid20M_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid20M_Boss_CCDuration;
-                    break;
-			    case 25:
-                    statMod_global = StatModifierRaid25M_Global;
-                    statMod_health = StatModifierRaid25M_Health;
-                    statMod_mana = StatModifierRaid25M_Mana;
-                    statMod_armor = StatModifierRaid25M_Armor;
-                    statMod_damage = StatModifierRaid25M_Damage;
-                    statMod_ccDuration = StatModifierRaid25M_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid25M_Boss_Global;
-                    statMod_boss_health = StatModifierRaid25M_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid25M_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid25M_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid25M_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid25M_Boss_CCDuration;
-                    break;
-			    case 40:
-                    statMod_global = StatModifierRaid40M_Global;
-                    statMod_health = StatModifierRaid40M_Health;
-                    statMod_mana = StatModifierRaid40M_Mana;
-                    statMod_armor = StatModifierRaid40M_Armor;
-                    statMod_damage = StatModifierRaid40M_Damage;
-                    statMod_ccDuration = StatModifierRaid40M_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid40M_Boss_Global;
-                    statMod_boss_health = StatModifierRaid40M_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid40M_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid40M_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid40M_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid40M_Boss_CCDuration;
-                    break;
-			    default:
-                    statMod_global = StatModifierRaid_Global;
-                    statMod_health = StatModifierRaid_Health;
-                    statMod_mana = StatModifierRaid_Mana;
-                    statMod_armor = StatModifierRaid_Armor;
-                    statMod_damage = StatModifierRaid_Damage;
-                    statMod_ccDuration = StatModifierRaid_CCDuration;
-
-                    statMod_boss_global = StatModifierRaid_Boss_Global;
-                    statMod_boss_health = StatModifierRaid_Boss_Health;
-                    statMod_boss_mana = StatModifierRaid_Boss_Mana;
-                    statMod_boss_armor = StatModifierRaid_Boss_Armor;
-                    statMod_boss_damage = StatModifierRaid_Boss_Damage;
-                    statMod_boss_ccDuration = StatModifierRaid_Boss_CCDuration;
-			}
-		}
-
-        // Boss modifiers
-        if (creature->IsDungeonBoss())
-        {
-            // Start with the settings determined above
-            // AutoBalance.StatModifier*.Boss.<stat>
-            if (creature->IsDungeonBoss())
-            {
-                statMod_global = statMod_boss_global;
-                statMod_health = statMod_boss_health;
-                statMod_mana = statMod_boss_mana;
-                statMod_armor = statMod_boss_armor;
-                statMod_damage = statMod_boss_damage;
-                statMod_ccDuration = statMod_boss_ccDuration;
-            }
-
-            // Per-instance boss overrides
-            // AutoBalance.StatModifier.Boss.PerInstance
-            if (creature->IsDungeonBoss() && hasStatModifierBossOverride(mapId))
-            {
-                AutoBalanceStatModifiers* myStatModifierBossOverrides = &statModifierBossOverrides[mapId];
-
-                if (myStatModifierBossOverrides->global != -1)      { statMod_global =      myStatModifierBossOverrides->global;      }
-                if (myStatModifierBossOverrides->health != -1)      { statMod_health =      myStatModifierBossOverrides->health;      }
-                if (myStatModifierBossOverrides->mana != -1)        { statMod_mana =        myStatModifierBossOverrides->mana;        }
-                if (myStatModifierBossOverrides->armor != -1)       { statMod_armor =       myStatModifierBossOverrides->armor;       }
-                if (myStatModifierBossOverrides->damage != -1)      { statMod_damage =      myStatModifierBossOverrides->damage;      }
-                if (myStatModifierBossOverrides->ccduration != -1)  { statMod_ccDuration =  myStatModifierBossOverrides->ccduration;  }
-            }
-        }
-        // Non-boss modifiers
-        else
-        {
-            // Per-instance non-boss overrides
-            // AutoBalance.StatModifier.PerInstance
-            if (hasStatModifierOverride(mapId))
-            {
-                AutoBalanceStatModifiers* myStatModifierOverrides = &statModifierOverrides[mapId];
-
-                if (myStatModifierOverrides->global != -1)      { statMod_global =      myStatModifierOverrides->global;      }
-                if (myStatModifierOverrides->health != -1)      { statMod_health =      myStatModifierOverrides->health;      }
-                if (myStatModifierOverrides->mana != -1)        { statMod_mana =        myStatModifierOverrides->mana;        }
-                if (myStatModifierOverrides->armor != -1)       { statMod_armor =       myStatModifierOverrides->armor;       }
-                if (myStatModifierOverrides->damage != -1)      { statMod_damage =      myStatModifierOverrides->damage;      }
-                if (myStatModifierOverrides->ccduration != -1)  { statMod_ccDuration =  myStatModifierOverrides->ccduration;  }
-            }
-        }
-
-        // Per-creature modifiers applied last
-        // AutoBalance.StatModifier.PerCreature
-        if (hasStatModifierCreatureOverride(creatureABInfo->entry))
-        {
-            AutoBalanceStatModifiers* myCreatureOverrides = &statModifierCreatureOverrides[creatureABInfo->entry];
-
-            if (myCreatureOverrides->global != -1)      { statMod_global =      myCreatureOverrides->global;      }
-            if (myCreatureOverrides->health != -1)      { statMod_health =      myCreatureOverrides->health;      }
-            if (myCreatureOverrides->mana != -1)        { statMod_mana =        myCreatureOverrides->mana;        }
-            if (myCreatureOverrides->armor != -1)       { statMod_armor =       myCreatureOverrides->armor;       }
-            if (myCreatureOverrides->damage != -1)      { statMod_damage =      myCreatureOverrides->damage;      }
-            if (myCreatureOverrides->ccduration != -1)  { statMod_ccDuration =  myCreatureOverrides->ccduration;  }
-        }
-
-        // #maththings
-        float diff = ((float)maxNumberOfPlayers/5)*1.5f;
-
-        // For math reasons that I do not understand, curveCeiling needs to be adjusted to bring the actual multiplier
-        // closer to the curveCeiling setting. Create an adjustment based on how much the ceiling should be changed at
-        // the max players multiplier.
-        float curveCeilingAdjustment = curveCeiling / (((tanh(((float)maxNumberOfPlayers - inflectionValue) / diff) + 1.0f) / 2.0f) * (curveCeiling - curveFloor) + curveFloor);
-
-        // Adjust the multiplier based on the configured floor and ceiling values, plus the ceiling adjustment we just calculated
-        defaultMultiplier = ((tanh(((float)creatureABInfo->instancePlayerCount - inflectionValue) / diff) + 1.0f) / 2.0f) * (curveCeiling * curveCeilingAdjustment - curveFloor) + curveFloor;
+        // Generate the default multiplier
+        float defaultMultiplier = GetDefaultMultiplier(instanceMap, inflectionPointSettings);
 
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
+
+        // Stat Modifiers
+        AutoBalanceStatModifiers statModifiers = getStatModifiers(instanceMap, creature);
+        float statMod_global        = statModifiers.global;
+        float statMod_health        = statModifiers.health;
+        float statMod_mana          = statModifiers.mana;
+        float statMod_armor         = statModifiers.armor;
+        float statMod_damage        = statModifiers.damage;
+        float statMod_ccDuration    = statModifiers.ccduration;
 
         //
         //  Health Scaling
@@ -3160,6 +3362,7 @@ public:
                                     (uint8)(mapABInfo->avgCreatureLevel+0.5f),
                                     mapABInfo->isLevelScalingEnabled ? std::string("->") + std::to_string(mapABInfo->highestPlayerLevel) + std::string(" (Level Scaling Enabled)") : std::string(" (Level Scaling Disabled)")
                                     );
+            handler->PSendSysMessage("World damage multiplifer: %.3f", mapABInfo->worldDamageMultiplier);
             handler->PSendSysMessage("Original Creature Level Range: %u - %u (Avg: %.2f)",
                                     mapABInfo->lowestCreatureLevel,
                                     mapABInfo->highestCreatureLevel,
