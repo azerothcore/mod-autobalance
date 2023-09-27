@@ -156,8 +156,9 @@ public:
     uint8 lfgTargetLevel = 80;
     uint8 lfgMaxLevel = 80;
 
-    uint8 worldDamageTargetLevel = 1;
+    uint8 worldMultiplierTargetLevel = 1;
     float worldDamageMultiplier = 1.0f;
+    float worldHealthMultiplier = 1.0f;
 
     bool enabled = false;
 
@@ -214,6 +215,11 @@ public:
 enum ScalingMethod {
     AUTOBALANCE_SCALING_FIXED,
     AUTOBALANCE_SCALING_DYNAMIC
+};
+
+enum BaseValueType {
+    AUTOBALANCE_HEALTH,
+    AUTOBALANCE_DAMAGE
 };
 
 // The map values correspond with the .AutoBalance.XX.Name entries in the configuration file.
@@ -587,6 +593,71 @@ bool ShouldMapBeEnabled(Map* map)
         // we're not in a dungeon or a raid, we never scale
         return false;
     }
+}
+
+float getBaseExpansionValueForLevel(const float baseValues[3], uint8 targetLevel)
+{
+    // the database holds multiple base values depending on the expansion
+    // this function returns the correct base value for the given level and
+    // smooths the transition between expansions
+
+    float vanillaValue = baseValues[0];
+    float bcValue = baseValues[1];
+    float wotlkValue = baseValues[2];
+
+    float returnValue;
+
+    // vanilla
+    if (targetLevel <= 60)
+    {
+        returnValue = vanillaValue;
+        LOG_DEBUG("module.AutoBalance", "getBaseExpansionValueForLevel: Returning Vanilla = {}", returnValue);
+    }
+    // transition from vanilla to BC
+    else if (targetLevel < 63)
+    {
+        float vanillaMultiplier = (63 - targetLevel) / 3.0;
+        float bcMultiplier = 1.0f - vanillaMultiplier;
+
+        returnValue = (vanillaValue * vanillaMultiplier) + (bcValue * bcMultiplier);
+        LOG_DEBUG("module.AutoBalance", "getBaseExpansionValueForLevel: Returning Vanilla/BC = {}", returnValue);
+    }
+    // BC
+    else if (targetLevel <= 70)
+    {
+        returnValue = bcValue;
+        LOG_DEBUG("module.AutoBalance", "getBaseExpansionValueForLevel: Returning BC = {}", returnValue);
+    }
+    // transition from BC to WotLK
+    else if (targetLevel < 73)
+    {
+        float bcMultiplier = (73 - targetLevel) / 3.0f;
+        float wotlkMultiplier = 1.0f - bcMultiplier;
+
+        returnValue = (bcValue * bcMultiplier) + (wotlkValue * wotlkMultiplier);
+        LOG_DEBUG("module.AutoBalance", "getBaseExpansionValueForLevel: Returning BC/WotLK = {}", returnValue);
+    }
+    // WotLK
+    else
+    {
+        returnValue = wotlkValue;
+        LOG_DEBUG("module.AutoBalance", "getBaseExpansionValueForLevel: Returning WotLK = {}", returnValue);
+    }
+
+    return returnValue;
+}
+
+uint32 getBaseExpansionValueForLevel(const uint32 baseValues[3], uint8 targetLevel)
+{
+    // convert baseValues from an array of uint32 to an array of float
+    float floatBaseValues[3];
+    for (int i = 0; i < 3; i++)
+    {
+        floatBaseValues[i] = (float)baseValues[i];
+    }
+
+    // return the result
+    return getBaseExpansionValueForLevel(floatBaseValues, targetLevel);
 }
 
 AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* instanceMap, bool isBoss = false)
@@ -1016,7 +1087,7 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
 
 }
 
-float GetDefaultMultiplier(InstanceMap* instanceMap, AutoBalanceInflectionPointSettings inflectionPointSettings)
+float getDefaultMultiplier(InstanceMap* instanceMap, AutoBalanceInflectionPointSettings inflectionPointSettings)
 {
     // Note: InflectionPoint handle the number of players required to get 50% health.
     //       you'd adjust this to raise or lower the hp modifier for per additional player in a non-whole group.
@@ -1037,6 +1108,7 @@ float GetDefaultMultiplier(InstanceMap* instanceMap, AutoBalanceInflectionPointS
 
     // get the adjustedPlayerCount for this instance
     AutoBalanceMapInfo *mapABInfo=instanceMap->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    float adjustedPlayerCount = mapABInfo->adjustedPlayerCount;
 
     // #maththings
     float diff = ((float)maxNumberOfPlayers/5)*1.5f;
@@ -1051,14 +1123,14 @@ float GetDefaultMultiplier(InstanceMap* instanceMap, AutoBalanceInflectionPointS
 
     // Adjust the multiplier based on the configured floor and ceiling values, plus the ceiling adjustment we just calculated
     float defaultMultiplier =
-        ((tanh(((float)mapABInfo->adjustedPlayerCount - inflectionPointSettings.value) / diff) + 1.0f) / 2.0f) *
+        ((tanh((adjustedPlayerCount - inflectionPointSettings.value) / diff) + 1.0f) / 2.0f) *
         (inflectionPointSettings.curveCeiling * curveCeilingAdjustment - inflectionPointSettings.curveFloor) +
         inflectionPointSettings.curveFloor;
 
     return defaultMultiplier;
 }
 
-float GetWorldDamageMultiplier(Map* map, uint32 adjustedPlayerCount)
+float getWorldMultiplier(Map* map, BaseValueType baseValueType)
 {
     // null check
     if (!map)
@@ -1082,157 +1154,153 @@ float GetWorldDamageMultiplier(Map* map, uint32 adjustedPlayerCount)
     // create some data variables
     InstanceMap* instanceMap = (InstanceMap*)map;
     uint32 mapId = instanceMap->GetEntry()->MapID;
-    uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
     uint8 avgMapCreatureLevelRounded = (uint8)(mapABInfo->avgCreatureLevel + 0.5f);
-
-    // only scale damage based on level if level scaling is enabled and the instance's average creature level is not within the skip range
-    if (LevelScaling &&
-            ((mapABInfo->avgCreatureLevel > mapABInfo->highestPlayerLevel + mapABInfo->levelScalingSkipHigherLevels || mapABInfo->levelScalingSkipHigherLevels == 0) ||
-            (mapABInfo->avgCreatureLevel < mapABInfo->highestPlayerLevel - mapABInfo->levelScalingSkipLowerLevels || mapABInfo->levelScalingSkipLowerLevels == 0))
-        )
-    {
-        mapABInfo->worldDamageTargetLevel = mapABInfo->highestPlayerLevel;
-        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) damage level will be scaled to {}.", map->GetMapName(), avgMapCreatureLevelRounded, mapABInfo->worldDamageTargetLevel);
-    }
-    else
-    {
-        mapABInfo->worldDamageTargetLevel = avgMapCreatureLevelRounded;
-        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being outside the skip range.", map->GetMapName(), avgMapCreatureLevelRounded);
-    }
 
     // get the inflection point settings for this map
     AutoBalanceInflectionPointSettings inflectionPointSettings = getInflectionPointSettings(instanceMap);
 
-    // Generate the default world damage multiplier before level scaling
-    float worldDamageMultiplier = GetDefaultMultiplier(instanceMap, inflectionPointSettings);
+    // Generate the default multiplier before level scaling
+    // This value is only based on the adjusted number of players in the instance
+    float worldMultiplier = getDefaultMultiplier(instanceMap, inflectionPointSettings);
 
     LOG_DEBUG("module.AutoBalance",
-        "GetWorldDamageModifier: Map {} ({}) starting damage multiplier for {} player(s) before level scaling: {}.",
+        "getWorldMultiplier: Map {} ({}) starting {} multiplier for {} player(s) before level scaling: {}.",
         map->GetMapName(),
         avgMapCreatureLevelRounded,
-        adjustedPlayerCount,
-        worldDamageMultiplier);
+        baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+        mapABInfo->adjustedPlayerCount,
+        worldMultiplier
+    );
 
-    // level scale the multiplier
-    if (LevelScaling)
+    // only scale based on level if level scaling is enabled and the instance's average creature level is not within the skip range
+    if (LevelScaling &&
+            (
+                (mapABInfo->avgCreatureLevel > mapABInfo->highestPlayerLevel + mapABInfo->levelScalingSkipHigherLevels || mapABInfo->levelScalingSkipHigherLevels == 0) ||
+                (mapABInfo->avgCreatureLevel < mapABInfo->highestPlayerLevel - mapABInfo->levelScalingSkipLowerLevels || mapABInfo->levelScalingSkipLowerLevels == 0)
+            )
+        )
     {
-        // use creature base stats to determine how to level scale the damage multiplier
-        CreatureBaseStats const* origMapStats = sObjectMgr->GetCreatureBaseStats(avgMapCreatureLevelRounded, CLASS_WARRIOR);
-        CreatureBaseStats const* adjustedMapStats = sObjectMgr->GetCreatureBaseStats(mapABInfo->worldDamageTargetLevel, CLASS_WARRIOR);
+        mapABInfo->worldMultiplierTargetLevel = mapABInfo->highestPlayerLevel;
+        LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) {} level will be scaled to {}.",
+            map->GetMapName(),
+            avgMapCreatureLevelRounded,
+            baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+            mapABInfo->worldMultiplierTargetLevel
+        );
 
-        float originalDamageBase, newDamageBase;
-        float vanillaDamage, bcDamage, wotlkDamage;
+        // use creature base stats to determine how to level scale the damage multiplier
+        CreatureBaseStats const* origMapBaseStats = sObjectMgr->GetCreatureBaseStats(avgMapCreatureLevelRounded, CLASS_WARRIOR);
+        CreatureBaseStats const* adjustedMapBaseStats = sObjectMgr->GetCreatureBaseStats(mapABInfo->worldMultiplierTargetLevel, CLASS_WARRIOR);
 
         // The database holds multiple values for base damage, one for each expansion
         // This code will smooth transition between the different expansions based on the highest player level in the instance
         // Only do this if level scaling is enabled
 
-        //
-        // Original Damage Base
-        //
+        // Original Base Value
+        float originalBaseValue;
 
-        vanillaDamage = origMapStats->BaseDamage[0];
-        bcDamage = origMapStats->BaseDamage[1];
-        wotlkDamage = origMapStats->BaseDamage[2];
-
-        // vanilla damage
-        if (mapABInfo->avgCreatureLevel <= 60)
+        if (baseValueType == BaseValueType::AUTOBALANCE_HEALTH) // health
         {
-            originalDamageBase = vanillaDamage;
+            originalBaseValue = getBaseExpansionValueForLevel(
+                origMapBaseStats->BaseHealth,
+                avgMapCreatureLevelRounded
+            );
         }
-        // transition from vanilla to BC damage
-        else if (mapABInfo->avgCreatureLevel < 63)
+        else // damage
         {
-            float vanillaMultiplier = (63 - mapABInfo->avgCreatureLevel) / 3.0;
-            float bcMultiplier = 1.0f - vanillaMultiplier;
-
-            originalDamageBase = (vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
+            originalBaseValue = getBaseExpansionValueForLevel(
+                origMapBaseStats->BaseDamage,
+                avgMapCreatureLevelRounded
+            );
         }
-        // BC damage
-        else if (mapABInfo->avgCreatureLevel <= 70)
-        {
-            originalDamageBase = bcDamage;
-        }
-        // transition from BC to WotLK damage
-        else if (mapABInfo->avgCreatureLevel < 73)
-        {
-            float bcMultiplier = (73 - mapABInfo->avgCreatureLevel) / 3.0;
-            float wotlkMultiplier = 1.0f - bcMultiplier;
 
-            originalDamageBase = (bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
-        }
-        // WotLK damage
-        else
-        {
-            originalDamageBase = wotlkDamage;
+        LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) original {} base is {}.",
+            map->GetMapName(),
+            avgMapCreatureLevelRounded,
+            baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+            originalBaseValue
+        );
 
-            // special increase for end-game content
-            if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
-                if (mapABInfo->avgCreatureLevel >= 75 && avgMapCreatureLevelRounded < 75)
-                    originalDamageBase *= float(mapABInfo->avgCreatureLevel - 70) * 0.3f;
+        // New Base Value
+        float newBaseValue;
+
+        if (baseValueType == BaseValueType::AUTOBALANCE_HEALTH) // health
+        {
+            newBaseValue = getBaseExpansionValueForLevel(
+                adjustedMapBaseStats->BaseHealth,
+                mapABInfo->worldMultiplierTargetLevel
+            );
+        }
+        else // damage
+        {
+            newBaseValue = getBaseExpansionValueForLevel(
+                adjustedMapBaseStats->BaseDamage,
+                mapABInfo->worldMultiplierTargetLevel
+            );
+        }
+
+        // Handle LevelScalingEndGameBoost
+        if (LevelScalingEndGameBoost)
+        {
+            if (
+                baseValueType == BaseValueType::AUTOBALANCE_HEALTH &&
+                mapABInfo->worldMultiplierTargetLevel >= 75 &&
+                avgMapCreatureLevelRounded < 75
+            )
+            {
+                newBaseValue *= (float)(mapABInfo->worldMultiplierTargetLevel - 70) * 0.3f;
+                LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) base {} value is boosted by LevelScalingEndGameBoost. New value: {}",
+                    map->GetMapName(),
+                    mapABInfo->worldMultiplierTargetLevel,
+                    baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+                    newBaseValue
+                );
+            }
+            else if (
+                baseValueType == BaseValueType::AUTOBALANCE_DAMAGE &&
+                instanceMap->GetMaxPlayers() <= 5 &&
+                mapABInfo->worldMultiplierTargetLevel >= 75 &&
+                avgMapCreatureLevelRounded < 75
+            )
+            {
+                newBaseValue *= (float)(mapABInfo->worldMultiplierTargetLevel - 70) * 0.3f;
+                LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) base {} value is boosted by LevelScalingEndGameBoost. New value: {}",
+                    map->GetMapName(),
+                    mapABInfo->worldMultiplierTargetLevel,
+                    baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+                    newBaseValue
+                );
+            }
+            else {
+                LOG_DEBUG("module.AutoBalance",
+                    "getWorldMultiplier: LevelScalingEndGameBoost is enabled, but the instance is not eligible for the boost.");
             }
         }
 
-        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) original damage base is {}.", map->GetMapName(), avgMapCreatureLevelRounded, originalDamageBase);
+        LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) new {} base is {}.",
+            map->GetMapName(),
+            mapABInfo->highestPlayerLevel,
+            baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+            newBaseValue
+        );
 
-        //
-        // New Damage Base
-        //
-
-        vanillaDamage = adjustedMapStats->BaseDamage[0];
-        bcDamage = adjustedMapStats->BaseDamage[1];
-        wotlkDamage = adjustedMapStats->BaseDamage[2];
-
-        // vanilla damage
-        if (mapABInfo->highestPlayerLevel <= 60)
-        {
-            newDamageBase = vanillaDamage;
-        }
-        // transition from vanilla to BC damage
-        else if (mapABInfo->highestPlayerLevel < 63)
-        {
-            float vanillaMultiplier = (63 - mapABInfo->highestPlayerLevel) / 3.0;
-            float bcMultiplier = 1.0f - vanillaMultiplier;
-
-            newDamageBase = (vanillaDamage * vanillaMultiplier) + (bcDamage * bcMultiplier);
-        }
-        // BC damage
-        else if (mapABInfo->highestPlayerLevel <= 70)
-        {
-            newDamageBase = bcDamage;
-        }
-        // transition from BC to WotLK damage
-        else if (mapABInfo->highestPlayerLevel < 73)
-        {
-            float bcMultiplier = (73 - mapABInfo->highestPlayerLevel) / 3.0;
-            float wotlkMultiplier = 1.0f - bcMultiplier;
-
-            newDamageBase = (bcDamage * bcMultiplier) + (wotlkDamage * wotlkMultiplier);
-        }
-        // WotLK damage
-        else
-        {
-            newDamageBase = wotlkDamage;
-
-            // special increase for end-game content
-            if (LevelScalingEndGameBoost && maxNumberOfPlayers <= 5) {
-                if (mapABInfo->highestPlayerLevel >= 75 && avgMapCreatureLevelRounded < 75)
-                    newDamageBase *= float(mapABInfo->highestPlayerLevel - 70) * 0.3f;
-            }
-        }
-
-        LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}) new damage base is {}.", map->GetMapName(), mapABInfo->highestPlayerLevel, newDamageBase);
-
-        worldDamageMultiplier *= newDamageBase / originalDamageBase;
+        // update the world multiplier accordingly
+        worldMultiplier *= newBaseValue / originalBaseValue;
+    }
+    else
+    {
+        mapABInfo->worldMultiplierTargetLevel = avgMapCreatureLevelRounded;
+        LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being outside the skip range.", map->GetMapName(), avgMapCreatureLevelRounded);
     }
 
-    LOG_DEBUG("module.AutoBalance", "GetWorldDamageModifier: Map {} ({}->{}) final damage multiplier is {}.",
+    LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}->{}) final {} multiplier is {}.",
               map->GetMapName(), avgMapCreatureLevelRounded,
               mapABInfo->highestPlayerLevel,
-              worldDamageMultiplier
+              baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+              worldMultiplier
     );
 
-    return worldDamageMultiplier;
+    return worldMultiplier;
 }
 
 void LoadMapSettings(Map* map)
@@ -1725,7 +1793,10 @@ void UpdateMapDataIfNeeded(Map* map)
         }
 
         // Update World Damage multiplier
-        mapABInfo->worldDamageMultiplier = GetWorldDamageMultiplier(map, mapABInfo->adjustedPlayerCount);
+        mapABInfo->worldDamageMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_DAMAGE);
+
+        // Update World Health multiplier
+        mapABInfo->worldHealthMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_HEALTH);
 
         // mark the config updated
         mapABInfo->configTime = lastConfigTime;
@@ -2969,7 +3040,7 @@ public:
         AutoBalanceInflectionPointSettings inflectionPointSettings = getInflectionPointSettings(instanceMap, creature->IsDungeonBoss());
 
         // Generate the default multiplier
-        float defaultMultiplier = GetDefaultMultiplier(instanceMap, inflectionPointSettings);
+        float defaultMultiplier = getDefaultMultiplier(instanceMap, inflectionPointSettings);
 
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
@@ -3362,7 +3433,10 @@ public:
                                     (uint8)(mapABInfo->avgCreatureLevel+0.5f),
                                     mapABInfo->isLevelScalingEnabled ? std::string("->") + std::to_string(mapABInfo->highestPlayerLevel) + std::string(" (Level Scaling Enabled)") : std::string(" (Level Scaling Disabled)")
                                     );
-            handler->PSendSysMessage("World damage multiplifer: %.3f", mapABInfo->worldDamageMultiplier);
+            handler->PSendSysMessage("World health|damage multiplier: %.3f | %.3f",
+                                    mapABInfo->worldHealthMultiplier,
+                                    mapABInfo->worldDamageMultiplier
+                                    );
             handler->PSendSysMessage("Original Creature Level Range: %u - %u (Avg: %.2f)",
                                     mapABInfo->lowestCreatureLevel,
                                     mapABInfo->highestCreatureLevel,
