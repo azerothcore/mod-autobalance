@@ -300,6 +300,8 @@ AutoBalance.playerCountDifficultyOffset=0
 #        Health | Mana | Armor | Damage
 #           Adjusts the StatModifier for the appropriate stat. Affected by the Global StatModifier above.
 #
+#           NOTE: "Damage" affects both creature damage and world damage.
+#
 #           Default: 1.0
 #
 #        Boss.Global | Boss.Health | Boss.Mana | Boss.Armor | Boss.Damage
@@ -812,7 +814,7 @@ AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance="189 500"
 #        to have stats as near possible to the official ones.
 #
 #        Default:     1 (1 = ON, 0 = OFF)
-AutoBalance.LevelScaling.EndGameBoost = 1
+AutoBalance.LevelScaling.EndGameBoost = 0
 
 ##########################
 #

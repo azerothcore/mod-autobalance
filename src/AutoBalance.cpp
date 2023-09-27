@@ -157,7 +157,7 @@ public:
     uint8 lfgMaxLevel = 80;
 
     uint8 worldMultiplierTargetLevel = 1;
-    float worldDamageMultiplier = 1.0f;
+    float worldDamageHealingMultiplier = 1.0f;
     float worldHealthMultiplier = 1.0f;
 
     bool enabled = false;
@@ -219,8 +219,36 @@ enum ScalingMethod {
 
 enum BaseValueType {
     AUTOBALANCE_HEALTH,
-    AUTOBALANCE_DAMAGE
+    AUTOBALANCE_DAMAGE_HEALING
 };
+
+// create a static list of spell IDs that cost health to cast. I will provide the spell IDs, use 5 examples.
+static std::list<uint32> spellIdsThatSpendPlayerHealth =
+{
+    45529,      // Blood Tap
+    2687,       // Bloodrage
+    27869,      // Dark Rune
+    16666,      // Demonic Rune
+    755,        // Health Funnel (Rank 1)
+    3698,       // Health Funnel (Rank 2)
+    3699,       // Health Funnel (Rank 3)
+    3700,       // Health Funnel (Rank 4)
+    11693,      // Health Funnel (Rank 5)
+    11694,      // Health Funnel (Rank 6)
+    11695,      // Health Funnel (Rank 7)
+    27259,      // Health Funnel (Rank 8)
+    47856,      // Health Funnel (Rank 9)
+    1454,       // Life Tap (Rank 1)
+    1455,       // Life Tap (Rank 2)
+    1456,       // Life Tap (Rank 3)
+    11687,      // Life Tap (Rank 4)
+    11688,      // Life Tap (Rank 5)
+    11689,      // Life Tap (Rank 6)
+    27222,      // Life Tap (Rank 7)
+    57946,      // Life Tap (Rank 8)
+    29858       // Soulshatter
+};
+
 
 // The map values correspond with the .AutoBalance.XX.Name entries in the configuration file.
 static std::map<int, int> forcedCreatureIds;
@@ -1153,7 +1181,6 @@ float getWorldMultiplier(Map* map, BaseValueType baseValueType)
 
     // create some data variables
     InstanceMap* instanceMap = (InstanceMap*)map;
-    uint32 mapId = instanceMap->GetEntry()->MapID;
     uint8 avgMapCreatureLevelRounded = (uint8)(mapABInfo->avgCreatureLevel + 0.5f);
 
     // get the inflection point settings for this map
@@ -1257,7 +1284,7 @@ float getWorldMultiplier(Map* map, BaseValueType baseValueType)
                 );
             }
             else if (
-                baseValueType == BaseValueType::AUTOBALANCE_DAMAGE &&
+                baseValueType == BaseValueType::AUTOBALANCE_DAMAGE_HEALING &&
                 instanceMap->GetMaxPlayers() <= 5 &&
                 mapABInfo->worldMultiplierTargetLevel >= 75 &&
                 avgMapCreatureLevelRounded < 75
@@ -1290,7 +1317,7 @@ float getWorldMultiplier(Map* map, BaseValueType baseValueType)
     else
     {
         mapABInfo->worldMultiplierTargetLevel = avgMapCreatureLevelRounded;
-        LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being outside the skip range.", map->GetMapName(), avgMapCreatureLevelRounded);
+        LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being inside the skip range.", map->GetMapName(), avgMapCreatureLevelRounded);
     }
 
     LOG_DEBUG("module.AutoBalance", "getWorldMultiplier: Map {} ({}->{}) final {} multiplier is {}.",
@@ -1461,33 +1488,33 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                 if (!summoner)
                 {
                     creatureABInfo->UnmodifiedLevel = mapABInfo->avgCreatureLevel;
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) is not owned by a summoner.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) is not owned by a summoner.", creature->GetName(), creature->GetLevel());
                 }
                 else
                 {
                     Creature* summonerCreature = summoner->ToCreature();
                     AutoBalanceCreatureInfo *summonerABInfo=summonerCreature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-                    if (summonerABInfo->UnmodifiedLevel > 0)
+                    if (summonerABInfo->UnmodifiedLevel != summoner->GetLevel())
                     {
                         creatureABInfo->UnmodifiedLevel = summonerABInfo->UnmodifiedLevel;
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({}->{})", creature->GetName(), creatureABInfo->UnmodifiedLevel, summonerCreature->GetName(), summonerABInfo->UnmodifiedLevel, summonerCreature->GetLevel());
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({}->{})", creature->GetName(), creature->GetLevel(), summonerCreature->GetName(), summonerABInfo->UnmodifiedLevel, summonerCreature->GetLevel());
                     }
                     else
                     {
                         creatureABInfo->UnmodifiedLevel = summonerCreature->GetLevel();
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({})", creature->GetName(), creatureABInfo->UnmodifiedLevel, summonerCreature->GetName(), summonerCreature->GetLevel());
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({})", creature->GetName(), creature->GetLevel(), summonerCreature->GetName(), summonerCreature->GetLevel());
                     }
                 }
             }
             else
             {
                 creatureABInfo->UnmodifiedLevel = mapABInfo->avgCreatureLevel;
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) does not have a summoner.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) does not have a summoner.", creature->GetName(), creature->GetLevel());
             }
 
             // if this is a summon, we shouldn't track it in any list and it does not contribute to the average level
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreature::AddCreatureToMapData(): Summoned creature {} ({}) will not affect the map's stats.", creature->GetName(), creature->GetLevel());
             return;
 
         }
@@ -1576,8 +1603,8 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                 {
                     Player* playerHandle = playerIteration->GetSource();
 
-                    // if this player matches the player we're supposed to skip, skip
-                    if (playerHandle == playerToExcludeFromChecks)
+                    // if this player matches the player we're supposed to skip or is a Game Master, skip
+                    if (playerHandle == playerToExcludeFromChecks || playerHandle->IsGameMaster())
                     {
                         continue;
                     }
@@ -1602,7 +1629,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                         Player* playerHandle = playerIteration->GetSource();
 
                         // if this player matches the player we're supposed to skip, skip
-                        if (playerHandle == playerToExcludeFromChecks)
+                        if (playerHandle == playerToExcludeFromChecks || playerHandle->IsGameMaster())
                         {
                             continue;
                         }
@@ -1699,8 +1726,8 @@ void UpdateMapPlayerStats(Map* map, bool adjustPlayerCount = true)
     // if there are players on the map
     if (!playerList.IsEmpty())
     {
-        uint8 highestPlayerLevel = 0;
-        uint8 lowestPlayerLevel = 0;
+        uint8 highestPlayerLevel = 1;
+        uint8 lowestPlayerLevel = 1;
 
         // iterate through the players and update the highest and lowest player levels
         for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
@@ -1714,9 +1741,10 @@ void UpdateMapPlayerStats(Map* map, bool adjustPlayerCount = true)
                 if (playerHandle->getLevel() < lowestPlayerLevel || lowestPlayerLevel == 0)
                     lowestPlayerLevel = playerHandle->getLevel();
             }
-            mapABInfo->highestPlayerLevel = highestPlayerLevel;
-            mapABInfo->lowestPlayerLevel = lowestPlayerLevel;
         }
+
+        mapABInfo->highestPlayerLevel = highestPlayerLevel;
+        mapABInfo->lowestPlayerLevel = lowestPlayerLevel;
 
         LOG_DEBUG("module.AutoBalance", "UpdateMapPlayerStats(): Map {} player level range: {} - {}.", map->GetMapName(), mapABInfo->lowestPlayerLevel, mapABInfo->highestPlayerLevel);
     }
@@ -1792,8 +1820,8 @@ void UpdateMapDataIfNeeded(Map* map)
             LOG_DEBUG("module.AutoBalance", "UpdateMapLevelIfNeeded(): Map {} scaling is enabled. Map level is now {} (highest player level).", map->GetMapName(), mapABInfo->mapLevel);
         }
 
-        // Update World Damage multiplier
-        mapABInfo->worldDamageMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_DAMAGE);
+        // Update World Damage or Healing multiplier
+        mapABInfo->worldDamageHealingMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_DAMAGE_HEALING);
 
         // Update World Health multiplier
         mapABInfo->worldHealthMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_HEALTH);
@@ -2396,29 +2424,92 @@ class AutoBalance_UnitScript : public UnitScript
     {
     }
 
-    uint32 DealDamage(Unit* AttackerUnit, Unit *playerVictim, uint32 damage, DamageEffectType /*damagetype*/) override
+    bool debug_damage_and_healing = true;
+
+    void OnHeal(Unit* source, Unit* target, uint32& amount) override
     {
-        return _Modifer_DealDamage(playerVictim, AttackerUnit, damage);
+        // bool debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER))
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::OnHeal(): BEFORE: {} +{} {}", source->GetName(), amount, target->GetName());
+
+        //amount = _Modify_Damage_Healing(receiver, healer, amount);
+
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::OnHeal(): AFTER: {} +{} {}", source->GetName(), amount, target->GetName());
     }
 
-    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* /*spellInfo*/) override
+    void OnDamage(Unit* source, Unit* target, uint32& amount) override
     {
-        damage = _Modifer_DealDamage(target, attacker, damage);
+        // bool debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER))
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::OnDamage(): BEFORE: {} -{} {}", source->GetName(), amount, target->GetName());
+
+        // amount = _Modify_Damage(source, target, amount);
+
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::OnDamage(): AFTER: {} -{} {}", source->GetName(), amount, target->GetName());
     }
 
-    void ModifySpellDamageTaken(Unit* target, Unit* attacker, int32& damage, SpellInfo const* /*spellInfo*/) override
+    uint32 DealDamage(Unit* source, Unit* target, uint32 amount, DamageEffectType /*damagetype*/) override
     {
-        damage = _Modifer_DealDamage(target, attacker, damage);
+        // bool debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER))
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::DealDamage(): BEFORE: {} -{} {}", source->GetName(), amount, target->GetName());
+
+        // amount = _Modify_Damage(source, target, amount);
+
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::DealDamage(): AFTER: {} -{} {}", source->GetName(), amount, target->GetName());
+
+        return amount;
     }
 
-    void ModifyMeleeDamage(Unit* target, Unit* attacker, uint32& damage) override
+    void ModifyPeriodicDamageAurasTick(Unit* target, Unit* source, uint32& amount, SpellInfo const* /*spellInfo*/) override
     {
-        damage = _Modifer_DealDamage(target, attacker, damage);
+        // bool debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER))
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifyPeriodicDamageAurasTick(): BEFORE: {} -{} {}", source->GetName(), amount, target->GetName());
+
+        amount = _Modify_Damage_Healing(target, source, amount * -1) * -1;
+
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifyPeriodicDamageAurasTick(): AFTER: {} -{} {}", source->GetName(), amount, target->GetName());
     }
 
-    void ModifyHealReceived(Unit* target, Unit* attacker, uint32& damage, SpellInfo const* /*spellInfo*/) override
+    void ModifySpellDamageTaken(Unit* target, Unit* source, int32& amount, SpellInfo const* /*spellInfo*/) override
     {
-        damage = _Modifer_DealDamage(target, attacker, damage);
+        // bool debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER))
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifySpellDamageTaken(): BEFORE: {} -{} {}", source->GetName(), amount, target->GetName());
+
+        amount = _Modify_Damage_Healing(target, source, amount * -1) * -1;
+
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifySpellDamageTaken(): AFTER: {} -{} {}", source->GetName(), amount, target->GetName());
+    }
+
+    void ModifyMeleeDamage(Unit* target, Unit* source, uint32& amount) override
+    {
+        // bool debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER))
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifyMeleeDamage(): BEFORE: {} -{} {}", source->GetName(), amount, target->GetName());
+
+        amount = _Modify_Damage_Healing(target, source, amount * -1) * -1;
+
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifyMeleeDamage(): AFTER: {} -{} {}", source->GetName(), amount, target->GetName());
+    }
+
+    void ModifyHealReceived(Unit* target, Unit* source, uint32& amount, SpellInfo const* /*spellInfo*/) override
+    {
+        // bool debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER))
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifyHealReceived(): BEFORE: {} -{} {}", source->GetName(), amount, target->GetName());
+
+        amount = _Modify_Damage_Healing(target, source, amount);
+
+        if (debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::ModifyHealReceived(): AFTER: {} -{} {}", source->GetName(), amount, target->GetName());
     }
 
     void OnAuraApply(Unit* unit, Aura* aura) override {
@@ -2437,46 +2528,130 @@ class AutoBalance_UnitScript : public UnitScript
         }
     }
 
-    uint32 _Modifer_DealDamage(Unit* target, Unit* attacker, uint32 damage)
+    uint32 _Modify_Damage_Healing(Unit* target, Unit* source, int32 value)
     {
-        // check that we're enabled globally, else return the original damage
-        if (!EnableGlobal)
-            return damage;
+        //
+        // Pre-flight Checks
+        //
 
-        // make sure we have an attacker, that its not a player, and that the attacker is in the world, else return the original damage
-        if (!attacker || attacker->GetTypeId() == TYPEID_PLAYER || !attacker->IsInWorld())
-            return damage;
+        bool debug = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER));
 
-        // make sure we're in an instance, else return the original damage
+        // make sure the source and target are in an instance, else return the original damage
         if (
             !(
-                (target->GetMap()->IsDungeon() && attacker->GetMap()->IsDungeon()) ||
-                (target->GetMap()->IsBattleground() && attacker->GetMap()->IsBattleground())
+                (source->GetMap()->IsDungeon() && target->GetMap()->IsDungeon()) ||
+                (source->GetMap()->IsBattleground() && target->GetMap()->IsBattleground())
             )
            )
-            return damage;
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Not in an instance, returning original value.");
+            return value;
+        }
+
+        // check that we're enabled globally, else return the original value
+        if (!EnableGlobal)
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): EnableGlobal is false, returning original value.");
+            return value;
+        }
+
+        // make sure we have a source and that the source is in the world, else return the original value
+        if (!source || !source->IsInWorld())
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source does not exist in the world, returning original value.");
+            return value;
+        }
 
         // get the map's info to see if we're enabled
+        AutoBalanceMapInfo *sourceMapInfo = source->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
         AutoBalanceMapInfo *targetMapInfo = target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-        AutoBalanceMapInfo *attackerMapInfo = attacker->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
         // if either the target or the attacker's maps are not enabled, return the original damage
-        if (!targetMapInfo->enabled || !attackerMapInfo->enabled)
-            return damage;
+        if (!sourceMapInfo->enabled || !targetMapInfo->enabled)
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source or Target's map is not enabled, returning original value.");
+            return value;
+        }
 
-        // get the current creature's damage multiplier
-        float damageMultiplier = attacker->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->DamageMultiplier;
+        //
+        // Source and Target Checking
+        //
 
-        // if it's the default of 1.0, return the original damage
-        if (damageMultiplier == 1)
-            return damage;
+        // if the source is a player and they are healing themselves, return the original value
+        if (source->GetTypeId() == TYPEID_PLAYER && source->GetGUID() == target->GetGUID() && value >= 0)
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source is a player that is self-healing, returning original value.");
+            return value;
+        }
+        // if the source is a player and they are damaging themselves, log to debug but continue
+        else if (source->GetTypeId() == TYPEID_PLAYER && source->GetGUID() == target->GetGUID() && value < 0)
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source is a player that is self-damaging, continuing.");
+        }
+        // if the source is a player and they are damaging unit that is friendly, log to debug but continue
+        else if (source->GetTypeId() == TYPEID_PLAYER && target->IsFriendlyTo(source) && value < 0)
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source is a player that is damaging a friendly unit, continuing.");
+        }
+        // if the source is a player under any other condition, return the original value
+        else if (source->GetTypeId() == TYPEID_PLAYER)
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source is a player, returning original value.");
+            return value;
+        }
 
-        // if the attacker is under the control of the player, return the original damage
-        if ((attacker->IsHunterPet() || attacker->IsPet() || attacker->IsSummon()) && attacker->IsControlledByPlayer())
-            return damage;
+        // if the source is under the control of the player, return the original damage
+        if ((source->IsHunterPet() || source->IsPet() || source->IsSummon()) && source->IsControlledByPlayer())
+        {
+            if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source is a pet or summon, returning original value.");
+            return value;
+        }
+
+        //
+        // Multiplier calculation
+        //
+        float damageMultiplier = 1.0f;
+
+        // if the source is a player AND the target is that same player AND the value is damage (negative), use the map's multiplier
+        if (source->GetTypeId() == TYPEID_PLAYER && source->GetGUID() == target->GetGUID() && value < 0)
+        {
+            damageMultiplier = sourceMapInfo->worldDamageHealingMultiplier;
+            if (debug) LOG_DEBUG("module.AutoBalance",
+                "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source is a player and the target is that same player, using the map's multiplier: {}",
+                damageMultiplier
+            );
+        }
+        // if the target is a player AND the value is healing (positive), use the map's damage multiplier
+        else if (target->GetTypeId() == TYPEID_PLAYER && value >= 0)
+        {
+            damageMultiplier = targetMapInfo->worldDamageHealingMultiplier;
+            if (debug) LOG_DEBUG("module.AutoBalance",
+                "AutoBalance_UnitScript::_Modify_Damage_Healing(): Target for healing is a player, using the map's multiplier: {}",
+                damageMultiplier
+            );
+        }
+        // if the target is a player AND the source is not a creature, use the map's multiplier
+        else if (target->GetTypeId() == TYPEID_PLAYER && source->GetTypeId() != TYPEID_UNIT && value < 0)
+        {
+            damageMultiplier = targetMapInfo->worldDamageHealingMultiplier;
+            if (debug) LOG_DEBUG("module.AutoBalance",
+                "AutoBalance_UnitScript::_Modify_Damage_Healing(): Target is a player and the source is not a creature, using the map's damage multiplier: {}",
+                damageMultiplier
+            );
+        }
+        // otherwise, use the source creature's damage multiplier
+        else
+        {
+            damageMultiplier = source->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->DamageMultiplier;
+            if (debug) LOG_DEBUG("module.AutoBalance",
+                "AutoBalance_UnitScript::_Modify_Damage_Healing(): Using the source creature's damage multiplier: {}",
+                damageMultiplier
+            );
+        }
 
         // we are good to go, return the original damage times the multiplier
-        return damage * damageMultiplier;
+        if (debug) LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Returning modified damage: {} * {} = {}", value, damageMultiplier, value * damageMultiplier);
+        return value * damageMultiplier;
     }
 
     uint32 _Modifier_CCDuration(Unit* target, Unit* caster, Aura* aura)
@@ -2540,6 +2715,19 @@ class AutoBalance_UnitScript : public UnitScript
             return originalDuration;
         }
     }
+};
+
+class AutoBalance_GameObjectScript : public AllGameObjectScript
+{
+    public:
+    AutoBalance_GameObjectScript()
+        : AllGameObjectScript("AutoBalance_GameObjectScript")
+        {}
+
+        void OnGameObjectModifyHealth(GameObject* go, Unit* attackerOrHealer, int32& change, SpellInfo const* spellInfo) override
+        {
+
+        }
 };
 
 
@@ -2801,7 +2989,7 @@ public:
             return false;
 
         // if this is a non-relevant creature, skip
-        if ((creature->IsCritter() && creature->GetLevel() <= 5) || creature->IsTotem() || creature->IsTrigger())
+        if ((creature->IsCritter() && creature->GetLevel() <= 5) || creature->IsTotem())
             return false;
 
         // get (or create) the creature and map's info
@@ -2916,7 +3104,7 @@ public:
             return;
 
         // if this is a non-relevant creature, make no changes
-        if ((creature->IsCritter() && creature->GetLevel() <= 5) || creature->IsTotem() || creature->IsTrigger())
+        if ((creature->IsCritter() && creature->GetLevel() <= 5) || creature->IsTotem())
             return;
 
         // grab creature and map data
@@ -2956,7 +3144,6 @@ public:
         CreatureTemplate const *creatureTemplate = creature->GetCreatureTemplate();
 
         InstanceMap* instanceMap = ((InstanceMap*)sMapMgr->FindMap(creature->GetMapId(), creature->GetInstanceId()));
-        uint32 mapId = instanceMap->GetEntry()->MapID;
         uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
 
         // check to see if the creature is in the forced num players list
@@ -3023,7 +3210,7 @@ public:
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being outside the skip range.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being inside the skip range.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             creatureABInfo->selectedLevel = creatureABInfo->UnmodifiedLevel;
         }
 
@@ -3435,7 +3622,7 @@ public:
                                     );
             handler->PSendSysMessage("World health|damage multiplier: %.3f | %.3f",
                                     mapABInfo->worldHealthMultiplier,
-                                    mapABInfo->worldDamageMultiplier
+                                    mapABInfo->worldDamageHealingMultiplier
                                     );
             handler->PSendSysMessage("Original Creature Level Range: %u - %u (Avg: %.2f)",
                                     mapABInfo->lowestCreatureLevel,
@@ -3540,6 +3727,7 @@ void AddAutoBalanceScripts()
     new AutoBalance_WorldScript();
     new AutoBalance_PlayerScript();
     new AutoBalance_UnitScript();
+    new AutoBalance_GameObjectScript();
     new AutoBalance_AllCreatureScript();
     new AutoBalance_AllMapScript();
     new AutoBalance_CommandScript();
