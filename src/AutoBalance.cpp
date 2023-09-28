@@ -2433,7 +2433,7 @@ class AutoBalance_UnitScript : public UnitScript
             int32 adjustedAmount = !spellInfo->IsPositive() ? amount * -1 : amount;
             
             // uncomment to debug this hook
-            bool _debug_damage_and_healing = ((source && source->GetTypeId() == TYPEID_PLAYER) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
             
             if (_debug_damage_and_healing) _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
 
@@ -2452,7 +2452,7 @@ class AutoBalance_UnitScript : public UnitScript
             int32 adjustedAmount = !spellInfo->IsPositive() ? amount * -1 : amount;
             
             // uncomment to debug this hook
-            bool _debug_damage_and_healing = ((source && source->GetTypeId() == TYPEID_PLAYER) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
             
             if (_debug_damage_and_healing) _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
 
@@ -2470,7 +2470,7 @@ class AutoBalance_UnitScript : public UnitScript
             int32 adjustedAmount = amount * -1;
             
             // uncomment to debug this hook
-            bool _debug_damage_and_healing = ((source && source->GetTypeId() == TYPEID_PLAYER) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
             
             if (_debug_damage_and_healing) _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, "BEFORE:", "Melee");
 
@@ -2486,7 +2486,7 @@ class AutoBalance_UnitScript : public UnitScript
             // healing is always positive, no need for any sign flip
             
             // uncomment to debug this hook
-            bool _debug_damage_and_healing = ((source && source->GetTypeId() == TYPEID_PLAYER) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
             
             if (_debug_damage_and_healing) _Debug_Output("ModifyHealReceived", target, source, amount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
 
@@ -2516,7 +2516,7 @@ class AutoBalance_UnitScript : public UnitScript
         }
 
     private:
-        bool _debug_damage_and_healing = false; // defaults to false, overwritten in each function
+        [[maybe_unused]] bool _debug_damage_and_healing = false; // defaults to false, overwritten in each function
 
         void _Debug_Output(std::string function_name, Unit* target, Unit* source, int32 amount, std::string prefix = "", std::string spell_name = "Unknown Spell", uint32 spell_id = 0)
         {
@@ -2549,7 +2549,7 @@ class AutoBalance_UnitScript : public UnitScript
             //
 
             // uncomment to debug this function
-            bool _debug_damage_and_healing = ((source && source->GetTypeId() == TYPEID_PLAYER) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
 
             // check that we're enabled globally, else return the original value
             if (!EnableGlobal)
@@ -2584,8 +2584,8 @@ class AutoBalance_UnitScript : public UnitScript
                 return amount;
             }
 
-            // make sure we have a source and that the source is in the world, else return the original value
-            if (!source || !source->IsInWorld())
+            // make sure that the source is in the world, else return the original value
+            if (!source->IsInWorld())
             {
                 if (_debug_damage_and_healing)
                     LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source does not exist in the world, returning original value of {}.", amount);
@@ -2593,12 +2593,12 @@ class AutoBalance_UnitScript : public UnitScript
                 return amount;
             }
 
-            // get the map's info to see if we're enabled
-            AutoBalanceMapInfo *sourceMapInfo = source->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-            AutoBalanceMapInfo *targetMapInfo = target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+            // get the maps' info
+            AutoBalanceMapInfo *sourceMapABInfo = source->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+            AutoBalanceMapInfo *targetMapABInfo = target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            // if either the target or the attacker's maps are not enabled, return the original damage
-            if (!sourceMapInfo->enabled || !targetMapInfo->enabled)
+            // if either the target or the source's maps are not enabled, return the original damage
+            if (!sourceMapABInfo->enabled || !targetMapABInfo->enabled)
             {
                 if (_debug_damage_and_healing)
                     LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing(): Source or Target's map is not enabled, returning original value of {}.", amount);
@@ -2657,7 +2657,7 @@ class AutoBalance_UnitScript : public UnitScript
             // if the source is a player AND the target is that same player AND the value is damage (negative), use the map's multiplier
             if (source->GetTypeId() == TYPEID_PLAYER && source->GetGUID() == target->GetGUID() && amount < 0)
             {
-                damageMultiplier = sourceMapInfo->worldDamageHealingMultiplier;
+                damageMultiplier = sourceMapABInfo->worldDamageHealingMultiplier;
                 if (_debug_damage_and_healing)
                 {
                     LOG_DEBUG("module.AutoBalance.Damage",
@@ -2667,9 +2667,10 @@ class AutoBalance_UnitScript : public UnitScript
                 }
             }
             // if the target is a player AND the value is healing (positive), use the map's damage multiplier
+            // (player to player healing was already eliminated in the Source and Target Checking section)
             else if (target->GetTypeId() == TYPEID_PLAYER && amount >= 0)
             {
-                damageMultiplier = targetMapInfo->worldDamageHealingMultiplier;
+                damageMultiplier = targetMapABInfo->worldDamageHealingMultiplier;
                 if (_debug_damage_and_healing)
                 {
                     LOG_DEBUG("module.AutoBalance.Damage",
@@ -2681,7 +2682,7 @@ class AutoBalance_UnitScript : public UnitScript
             // if the target is a player AND the source is not a creature, use the map's multiplier
             else if (target->GetTypeId() == TYPEID_PLAYER && source->GetTypeId() != TYPEID_UNIT && amount < 0)
             {
-                damageMultiplier = targetMapInfo->worldDamageHealingMultiplier;
+                damageMultiplier = targetMapABInfo->worldDamageHealingMultiplier;
                 if (_debug_damage_and_healing)
                 {
                     LOG_DEBUG("module.AutoBalance.Damage",
@@ -2782,60 +2783,116 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
 
         void OnGameObjectModifyHealth(GameObject* target, Unit* source, int32& amount, SpellInfo const* spellInfo) override
         {
+            // uncomment to debug this hook
             bool _debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer()));
-            if (_debug_damage_and_healing)
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_GameObjectScript::OnGameObjectModifyHealth(): BEFORE: {} {} {} ({})", source->GetName(), amount, target->GetName(), spellInfo->SpellName[0]);
+            
+            if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
 
+            // modify the amount
             amount = _Modify_GameObject_Damage_Healing(target, source, amount);
 
-            if (_debug_damage_and_healing)
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_GameObjectScript::OnGameObjectModifyHealth(): AFTER: {} {} {} ({})", source->GetName(), amount, target->GetName(), spellInfo->SpellName[0]);
+            if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
         }
 
     private:
 
-        bool _debug_damage_and_healing = false; // defaults to false, overwritten in each function
+        [[maybe_unused]] bool _debug_damage_and_healing = false; // defaults to false, overwritten in each function
 
+        void _Debug_Output(std::string function_name, GameObject* target, Unit* source, int32 amount, std::string prefix = "", std::string spell_name = "Unknown Spell", uint32 spell_id = 0)
+        {
+            if (target && source && amount)
+            {
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}(): {} {} {} {} ({} - {})", function_name, prefix, source->GetName(), amount, target->GetName(), spell_name, spell_id);
+            }
+            else if (target && source)
+            {
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}(): {} {} 0 {} ({} - {})", function_name, prefix, source->GetName(), target->GetName(), spell_name, spell_id);
+            }
+            else if (target && amount)
+            {
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}(): {} ?? {} {} ({} - {})", function_name, prefix, amount, target->GetName(), spell_name, spell_id);
+            } 
+            else if (target)
+            {
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}(): {} ?? ?? {} ({} - {})", function_name, prefix, target->GetName(), spell_name, spell_id);
+            } 
+            else
+            {
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}(): {} W? T? F? ({} - {})", function_name, prefix, spell_name, spell_id);
+            }
+        }
+        
         int32 _Modify_GameObject_Damage_Healing(GameObject* target, Unit* source, int32 amount)
         {
             //
             // Pre-flight Checks
             //
 
-            // bool _debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || target->GetTypeId() == TYPEID_PLAYER));
+            // uncomment to debug this function
+            bool _debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer()));
 
             // check that we're enabled globally, else return the original value
             if (!EnableGlobal)
             {
-                if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_UnitScript::_Modify_Damage_Healing(): EnableGlobal is false, returning original value.");
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_GameObject_Damage_Healing(): EnableGlobal is false, returning original value of {}.", amount);
 
                 return amount;
             }
 
-            // if the source is gone (logged off? despawned?), use the map's multipliers as a fallback
-            // short-circuit returned here to keep from null calls later on
-            if (!source)
+            // make sure the target is in an instance, else return the original damage
+            if (!(target->GetMap()->IsDungeon() || target->GetMap()->IsBattleground()))
             {
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_GameObject_Damage_Healing(): Target is not in an instance, returning original value of {}.", amount);
+
                 return amount;
             }
 
-            return amount;
+            // make sure the target is in the world, else return the original value
+            if (!target->IsInWorld())
+            {
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_GameObject_Damage_Healing(): Target does not exist in the world, returning original value of {}.", amount);
 
-        }
+                return amount;
+            }
 
-        int32 _Calculate_Amount_For_GameObject (GameObject* target, int32 amount)
-        {
             // get the map's info
-            AutoBalanceMapInfo *targetMapInfo = target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-            float healthMultiplier = targetMapInfo->worldDamageHealingMultiplier;
+            AutoBalanceMapInfo *targetMapABInfo = target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            uint32 origMaxHealth = target->GetGOValue()->Building.MaxHealth;
+            // if the target's map is not enabled, return the original damage
+            if (!targetMapABInfo->enabled)
+            {
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_GameObject_Damage_Healing(): Target's map is not enabled, returning original value of {}.", amount);
 
+                return amount;
+            }
 
+            //
+            // Multiplier calculation
+            //
+            
+            // calculate the new damage amount using the map's World Health Multiplier
+            int32 newAmount = _Calculate_Amount_For_GameObject(target, amount, targetMapABInfo->worldHealthMultiplier);
+
+            if (_debug_damage_and_healing)
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_GameObject_Damage_Healing(): Returning modified damage: {} -> {}", amount, newAmount);
+
+            return newAmount;
         }
 
+        int32 _Calculate_Amount_For_GameObject (GameObject* target, int32 amount, float multiplier)
+        {
+            // since it would be very complicated to reduce the real health of destructible game objects, instead we will
+            // adjust the damage to them as though their health were scaled. Damage will usually be dealt by vehicles and
+            // other non-player sources, so this effect shouldn't be as noticable as if we applied it to the player.
+            uint32 realMaxHealth = target->GetGOValue()->Building.MaxHealth;
 
+            uint32 scaledMaxHealth = realMaxHealth * multiplier;
+            float percentDamageOfScaledMaxHealth = (float)amount / (float)scaledMaxHealth;
+
+            uint32 scaledAmount = realMaxHealth * percentDamageOfScaledMaxHealth;
+
+            return scaledAmount;
+        }
 };
 
 
