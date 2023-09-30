@@ -572,7 +572,7 @@ bool ShouldMapBeEnabled(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}) - Not enabled for the base map without an Instance Map",
                       map->GetMapName(),
                       map->GetId(),
-                      map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string("")
+                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
             );
             return false;
         }
@@ -583,7 +583,7 @@ bool ShouldMapBeEnabled(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because GetMaxPlayers < 1",
                       map->GetMapName(),
                       map->GetId(),
-                      map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                       instanceMap->GetMaxPlayers(),
                       instanceMap->IsHeroic() ? "Heroic" : "Normal"
             );
@@ -596,7 +596,7 @@ bool ShouldMapBeEnabled(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because the map ID is disabled via configuration",
                       map->GetMapName(),
                       map->GetId(),
-                      map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                       instanceMap->GetMaxPlayers(),
                       instanceMap->IsHeroic() ? "Heroic" : "Normal"
             );
@@ -661,7 +661,7 @@ bool ShouldMapBeEnabled(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Enabled for AutoBalancing",
                       map->GetMapName(),
                       map->GetId(),
-                      map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                       instanceMap->GetMaxPlayers(),
                       instanceMap->IsHeroic() ? "Heroic" : "Normal"
             );
@@ -671,7 +671,7 @@ bool ShouldMapBeEnabled(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because its size and difficulty are disabled via configuration",
                       map->GetMapName(),
                       map->GetId(),
-                      map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                       instanceMap->GetMaxPlayers(),
                       instanceMap->IsHeroic() ? "Heroic" : "Normal"
             );
@@ -684,7 +684,7 @@ bool ShouldMapBeEnabled(Map* map)
         LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}) - Not enabled because we're not in an instance",
                     map->GetMapName(),
                     map->GetId(),
-                    map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string("")
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
         );
         return false;
         
@@ -1411,7 +1411,7 @@ void LoadMapSettings(Map* map)
     LOG_DEBUG("module.AutoBalance", "AutoBalance::LoadMapSettings: Loading settings for map {} ({}{}, {}-player {}).", 
         map->GetMapName(),
         map->GetId(),
-        map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
         instanceMap->GetMaxPlayers(),
         instanceMap->IsHeroic() ? "Heroic" : "Normal"
     );
@@ -1445,7 +1445,7 @@ void LoadMapSettings(Map* map)
     LOG_DEBUG("module.AutoBalance", "AutoBalance::LoadMapSettings: Map {} ({}{}, {}-player {}) has a minimum player count of {}.", 
         map->GetMapName(),
         map->GetId(),
-        map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
         instanceMap->GetMaxPlayers(),
         instanceMap->IsHeroic() ? "Heroic" : "Normal",
         mapABInfo->minPlayers
@@ -1486,7 +1486,7 @@ void LoadMapSettings(Map* map)
         LOG_ERROR("module.AutoBalance", "AutoBalance::LoadMapSettings: Unable to determine dynamic scaling floor and ceiling for instance {} ({}{}, {}-player {}).", 
             map->GetMapName(),
             map->GetId(),
-            map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
             instanceMap->GetMaxPlayers(),
             instanceMap->IsHeroic() ? "Heroic" : "Normal"
         );
@@ -1560,24 +1560,53 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                 if (!summoner)
                 {
                     creatureABInfo->UnmodifiedLevel = mapABInfo->avgCreatureLevel;
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData(): Summoned creature {} ({}) is not owned by a summoner.", creature->GetName(), creature->GetLevel());
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData(): Summoned creature {} ({}) is not owned by a summoner. Original level is {}.", 
+                                creature->GetName(), 
+                                creature->GetLevel()
+                    );
                 }
                 else
                 {
                     Creature* summonerCreature = summoner->ToCreature();
                     AutoBalanceCreatureInfo *summonerABInfo=summonerCreature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-                    if (summonerABInfo->UnmodifiedLevel != summoner->GetLevel())
+                    // if the creature level is within the expected range of NPC levels (as defined by the LFG min and max) for this map, use the creature's spawned level
+                    if (creature->GetLevel() >= ((float)mapABInfo->lfgMinLevel * .85f) && creature->GetLevel() <= ((float)mapABInfo->lfgMaxLevel * 1.15f))
                     {
-                        //creatureABInfo->UnmodifiedLevel = summonerABInfo->UnmodifiedLevel;
                         creatureABInfo->UnmodifiedLevel = creature->GetLevel();
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({}->{})", creature->GetName(), creature->GetLevel(), summonerCreature->GetName(), summonerABInfo->UnmodifiedLevel, summonerCreature->GetLevel());
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData(): Summoned creature {} ({}) is owned by {} ({}). Creature level is within the expected range of NPC levels for this map. Summon original level set to {}.", 
+                                    creature->GetName(), 
+                                    creature->GetLevel(), 
+                                    summonerCreature->GetName(), 
+                                    creatureABInfo->UnmodifiedLevel,
+                                    creature->GetLevel()
+                        );
                     }
+                    // if the summoner is outside the expected range of NPC levels (as defined by the LFG min and max) for this map, use the creature's spawned level
+                    else if (summonerABInfo->UnmodifiedLevel < ((float)mapABInfo->lfgMinLevel * .85f) || summonerABInfo->UnmodifiedLevel > ((float)mapABInfo->lfgMaxLevel * 1.15f))
+                    {
+                        creatureABInfo->UnmodifiedLevel = creature->GetLevel();
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData(): Summoned creature {} ({}) is owned by {} ({}). Summoner is outside the expected range of NPC levels for this map. Summon original level set to {}.", 
+                                    creature->GetName(), 
+                                    creature->GetLevel(), 
+                                    summonerCreature->GetName(), 
+                                    creatureABInfo->UnmodifiedLevel,
+                                    creature->GetLevel()
+                        );
+                    }
+
+                    // if the summoner level is reasonable, the summon inherits the summoner's pre-scaled level as its pre-scaled level
                     else
                     {
-                        //creatureABInfo->UnmodifiedLevel = summonerCreature->GetLevel();
-                        creatureABInfo->UnmodifiedLevel = creature->GetLevel();
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData(): Summoned creature {} ({}) owned by {} ({})", creature->GetName(), creature->GetLevel(), summonerCreature->GetName(), summonerCreature->GetLevel());
+                        creatureABInfo->UnmodifiedLevel = summonerABInfo->UnmodifiedLevel;
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData(): Summoned creature {} ({}) is owned by {} ({}{}). It will inherit it's owner's original level value of {}.", 
+                                    creature->GetName(), 
+                                    creature->GetLevel(), 
+                                    summonerCreature->GetName(), 
+                                    summonerABInfo->UnmodifiedLevel, 
+                                    summonerCreature->GetLevel() != summonerABInfo->UnmodifiedLevel ? "->" + std::to_string(summonerCreature->GetLevel()) : "", 
+                                    summonerABInfo->UnmodifiedLevel
+                        );
                     }
                 }
             }
@@ -1848,7 +1877,7 @@ void UpdateMapPlayerStats(Map* map, bool adjustPlayerCount = true)
         LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats(): Map {} ({}{}, {}-player {}) player level range: {} - {}.", 
             map->GetMapName(),
             map->GetId(),
-            map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
             instanceMap->GetMaxPlayers(),
             instanceMap->IsHeroic() ? "Heroic" : "Normal",
             mapABInfo->lowestPlayerLevel, 
@@ -1887,7 +1916,7 @@ void UpdateMapDataIfNeeded(Map* map)
         LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded(): Map {} ({}{}) config is out of date ({} != {}) and will be updated.",
                   map->GetMapName(),
                   map->GetId(),
-                  map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                  map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                   mapABInfo->configTime,
                   lastConfigTime
         );
@@ -1903,7 +1932,7 @@ void UpdateMapDataIfNeeded(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded(): Map {} ({}{}) config time updated to {}.", 
                         map->GetMapName(),
                         map->GetId(),
-                        map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                         mapABInfo->configTime
             );
 
@@ -1928,7 +1957,7 @@ void UpdateMapDataIfNeeded(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded(): Map {} ({}{}, {}-player {}) scaling is disabled. Map level is now {} (original).", 
                 map->GetMapName(),
                 map->GetId(),
-                map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                 map->ToInstanceMap()->GetMaxPlayers(),
                 map->ToInstanceMap()->IsHeroic() ? "Heroic" : "Normal", 
                 mapABInfo->mapLevel
@@ -1943,7 +1972,7 @@ void UpdateMapDataIfNeeded(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded(): Map {} ({}{}, {}-player {}) scaling is enabled. Map level is now {} (average creature level).", 
                 map->GetMapName(),
                 map->GetId(),
-                map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                 map->ToInstanceMap()->GetMaxPlayers(),
                 map->ToInstanceMap()->IsHeroic() ? "Heroic" : "Normal", 
                 mapABInfo->mapLevel
@@ -1957,7 +1986,7 @@ void UpdateMapDataIfNeeded(Map* map)
             LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded(): Map {} ({}{}, {}-player {}) scaling is enabled. Map level is now {} (highest player level).",
                 map->GetMapName(),
                 map->GetId(),
-                map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string(""),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                 map->ToInstanceMap()->GetMaxPlayers(),
                 map->ToInstanceMap()->IsHeroic() ? "Heroic" : "Normal", 
                 mapABInfo->mapLevel
@@ -3045,7 +3074,7 @@ class AutoBalance_AllMapScript : public AllMapScript
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}{})",
                 map->GetMapName(),
                 map->GetId(),
-                map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string("")
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
             );
 
             // clear out any previously-recorded data
@@ -3069,7 +3098,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 player->GetName(),
                 map->GetMapName(),
                 map->GetId(),
-                map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string("")
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
             );
 
             if (!map->IsDungeon())
@@ -3152,7 +3181,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 player->GetName(),
                 map->GetMapName(),
                 map->GetId(),
-                map->GetInstanceId() ? std::string("-") + std::to_string(map->GetInstanceId()) : std::string("")
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
             );
 
             if (!EnableGlobal)
@@ -3280,8 +3309,8 @@ public:
                         creature->GetLevel(),
                         creatureMap->GetMapName(),
                         creatureMap->GetId(),
-                        instanceMap ? std::string("-") + std::to_string(instanceMap->GetId()) : std::string(""),
-                        instanceMap ? std::string(", ") + std::to_string(instanceMap->GetMaxPlayers()) + std::string("-player") : "",
+                        instanceMap ? "-" + std::to_string(instanceMap->GetId()) : "",
+                        instanceMap ? ", " + std::to_string(instanceMap->GetMaxPlayers()) + "-player" : "",
                         instanceMap ? instanceMap->IsHeroic() ? " Heroic" : " Normal" : ""
             );
 
@@ -3305,8 +3334,8 @@ public:
                         creature->GetLevel(),
                         creatureMap->GetMapName(),
                         creatureMap->GetId(),
-                        instanceMap ? std::string("-") + std::to_string(instanceMap->GetId()) : std::string(""),
-                        instanceMap ? std::string(", ") + std::to_string(instanceMap->GetMaxPlayers()) + std::string("-player") : "",
+                        instanceMap ? "-" + std::to_string(instanceMap->GetId()) : "",
+                        instanceMap ? ", " + std::to_string(instanceMap->GetMaxPlayers()) + "-player" : "",
                         instanceMap ? instanceMap->IsHeroic() ? " Heroic" : " Normal" : ""
             );
         }
@@ -3332,8 +3361,8 @@ public:
                         creature->GetLevel(),
                         baseMap->GetMapName(),
                         baseMap->GetId(),
-                        instanceMap ? std::string("-") + std::to_string(instanceMap->GetInstanceId()) : std::string(""),
-                        instanceMap ? std::string(", ") + std::to_string(instanceMap->GetMaxPlayers()) + std::string("-player") : "",
+                        instanceMap ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+                        instanceMap ? ", " + std::to_string(instanceMap->GetMaxPlayers()) + "-player" : "",
                         instanceMap ? instanceMap->IsHeroic() ? " Heroic" : " Normal" : ""
             );
         
@@ -3526,8 +3555,8 @@ public:
                       creature->GetLevel(),
                       baseMap ? baseMap->GetMapName() : "Unknown",
                       baseMap ? std::to_string(baseMap->GetId()) : "Unknown",
-                      instanceMap ? std::string("-") + std::to_string(instanceMap->GetId()) : std::string(""),
-                      instanceMap ? std::string(", ") + std::to_string(instanceMap->GetMaxPlayers()) + std::string("-player") : "",
+                      instanceMap ? "-" + std::to_string(instanceMap->GetId()) : "",
+                      instanceMap ? ", " + std::to_string(instanceMap->GetMaxPlayers()) + "-player" : "",
                       instanceMap ? instanceMap->IsHeroic() ? " Heroic" : " Normal" : ""
             );
             return;
@@ -4089,7 +4118,7 @@ public:
             handler->PSendSysMessage("LFG Range: Lvl %u - %u (Target: Lvl %u)", mapABInfo->lfgMinLevel, mapABInfo->lfgMaxLevel, mapABInfo->lfgTargetLevel);
             handler->PSendSysMessage("Map Level: %u%s",
                                     (uint8)(mapABInfo->avgCreatureLevel+0.5f),
-                                    mapABInfo->isLevelScalingEnabled && mapABInfo->enabled ? std::string("->") + std::to_string(mapABInfo->highestPlayerLevel) + std::string(" (Level Scaling Enabled)") : std::string(" (Level Scaling Disabled)")
+                                    mapABInfo->isLevelScalingEnabled && mapABInfo->enabled ? "->" + std::to_string(mapABInfo->highestPlayerLevel) + " (Level Scaling Enabled)" : " (Level Scaling Disabled)"
                                     );
             handler->PSendSysMessage("World health|damage multiplier: %.3f | %.3f",
                                     mapABInfo->worldHealthMultiplier,
@@ -4131,7 +4160,7 @@ public:
         handler->PSendSysMessage("%s (%u%s%s), %s",
                                   target->GetName(),
                                   creatureABInfo->UnmodifiedLevel,
-                                  creatureABInfo->UnmodifiedLevel != target->GetLevel() ? std::string("->") + std::to_string(creatureABInfo->selectedLevel) : "",
+                                  creatureABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
                                   target->IsDungeonBoss() ? " | Boss" : "",
                                   creatureABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
         handler->PSendSysMessage("Health multiplier: %.3f", creatureABInfo->HealthMultiplier);
