@@ -117,35 +117,35 @@ public:
 
     uint64_t configTime = 1;
 
-    uint32 instancePlayerCount = 0;
+    uint32 instancePlayerCount = 0;                 // the last config time that this creature was updated
     uint8 selectedLevel = 0;
-    // this is used to detect creatures that update their entry
-    uint32 entry = 0;
 
-    float DamageMultiplier = 1.0f;
-    float ScaledDamageMultiplier = 1.0f;
+    uint32 entry = 0;                               // TODO: see if this is still needed. Creature entry ID
 
-    float HealthMultiplier = 1.0f;
-    float ScaledHealthMultiplier = 1.0f;
+    float DamageMultiplier = 1.0f;                  // per-player damage multiplier (no level scaling)
+    float ScaledDamageMultiplier = 1.0f;            // per-player and level scaling damage multiplier
 
-    float ManaMultiplier = 1.0f;
-    float ScaledManaMultiplier = 1.0f;
+    float HealthMultiplier = 1.0f;                  // per-player health multiplier (no level scaling)
+    float ScaledHealthMultiplier = 1.0f;            // per-player and level scaling health multiplier
 
-    float ArmorMultiplier = 1.0f;
-    float ScaledArmorMultiplier = 1.0f;
+    float ManaMultiplier = 1.0f;                    // per-player mana multiplier (no level scaling)
+    float ScaledManaMultiplier = 1.0f;              // per-player and level scaling mana multiplier
 
-    float CCDurationMultiplier = 1.0f;
+    float ArmorMultiplier = 1.0f;                   // per-player armor multiplier (no level scaling)
+    float ScaledArmorMultiplier = 1.0f;             // per-player and level scaling armor multiplier
 
-    float XPModifier = 1.0f;
-    float MoneyModifier = 1.0f;
+    float CCDurationMultiplier = 1.0f;              // per-player crowd control duration multiplier (level scaling doesn't affect this)
 
-    uint8 UnmodifiedLevel = 0;
+    float XPModifier = 1.0f;                        // per-player XP modifier (level scaling provided by normal XP distribution)
+    float MoneyModifier = 1.0f;                     // per-player money modifier (no level scaling)
 
-    bool isActive = false;
-    bool wasAliveNowDead = false;
-    bool isInCreatureList = false;
-    bool isBrandNew = false;
-    bool skipMe = false;
+    uint8 UnmodifiedLevel = 0;                      // original the level of the creature as determined by the game
+
+    bool isActive = false;                          // whether or not the current creature is affecting map stats. May change as conditions change.
+    bool wasAliveNowDead = false;                   // whether or not the creature was alive and is now dead
+    bool isInCreatureList = false;                  // whether or not the creature is in the map's creature list
+    bool isBrandNew = false;                        // whether or not the creature is brand new to the map (hasn't been added to the world yet)
+    bool skipMe = false;                            // whether or not the creature should be skipped because it is not relevant for scaling
 };
 
 class AutoBalanceMapInfo : public DataMap::Base
@@ -153,37 +153,45 @@ class AutoBalanceMapInfo : public DataMap::Base
 public:
     AutoBalanceMapInfo() {}
 
-    uint64_t configTime = 1;
+    uint64_t configTime = 1;                        // the last config time that this map was updated
 
-    uint32 playerCount = 0;
-    uint32 adjustedPlayerCount = 0;
-    uint32 minPlayers = 1;
+    uint32 playerCount = 0;                         // the actual number of players
+    uint32 adjustedPlayerCount = 0;                 // the number of players for the purposes of scaling
+    uint32 minPlayers = 1;                          // as set in the config
 
-    uint8 mapLevel = 0;
-    uint8 lowestPlayerLevel = 0;
-    uint8 highestPlayerLevel = 0;
+    uint8 mapLevel = 0;                             // calculated from the avgCreatureLevel
+    uint8 lowestPlayerLevel = 0;                    // the lowest-level player in the map
+    uint8 highestPlayerLevel = 0;                   // the highest-level player in the map
 
-    uint8 lfgMinLevel = 0;
-    uint8 lfgTargetLevel = 80;
-    uint8 lfgMaxLevel = 80;
+    uint8 lfgMinLevel = 0;                          // the minimum level for the map according to LFG
+    uint8 lfgTargetLevel = 80;                      // the target level for the map according to LFG
+    uint8 lfgMaxLevel = 80;                         // the maximum level for the map according to LFG
 
-    uint8 worldMultiplierTargetLevel = 1;
-    float worldDamageHealingMultiplier = 1.0f;
-    float worldHealthMultiplier = 1.0f;
+    uint8 worldMultiplierTargetLevel = 1;           // the level of the pseudo-creature that the world modifiers scale to
+    float worldDamageHealingMultiplier = 1.0f;      // the damage/healing multiplier for the world (damage/healing not from a creature)
+    float worldHealthMultiplier = 1.0f;             // the health multiplier for any destructible buildings in the map
 
-    bool enabled = false;
+    bool enabled = false;                           // should AutoBalance make any changes to this map or its creatures?
 
-    std::vector<Creature*> allMapCreatures;
-    uint8 highestCreatureLevel = 0;
-    uint8 lowestCreatureLevel = 0;
-    float avgCreatureLevel;
-    uint32 activeCreatureCount = 0;
+    std::vector<Creature*> allMapCreatures;         // all creatures in the map, active and non-active
+    std::vector<Player*> allMapPlayers;             // all players that are currently in the map
+    std::vector<Player*> inCombatPlayers;           // all players that are currently in combat in the map
 
-    bool isLevelScalingEnabled;
-    int levelScalingSkipHigherLevels, levelScalingSkipLowerLevels;
-    int levelScalingDynamicCeiling, levelScalingDynamicFloor;
+    uint8 combatLockedAdjustedPlayers = 0;          // the minimum value for adjustedPlayerCount while at least one player in the map is in combat
+                                                    // can go up while combat continues, but can't go down until inCombatPlayers is empty
 
-    uint prevMapLevel = 0; // used to reduce calculations when they are not necessary
+    uint8 highestCreatureLevel = 0;                 // the highest-level creature in the map
+    uint8 lowestCreatureLevel = 0;                  // the lowest-level creature in the map
+    float avgCreatureLevel;                         // the average level of all active creatures in the map (continuously updated)
+    uint32 activeCreatureCount = 0;                 // the number of active creatures in the map
+
+    bool isLevelScalingEnabled;                     // only used for `.ab mapstats` display
+    uint8 levelScalingSkipHigherLevels;             // used to determine if this map should scale or not
+    uint8 levelScalingSkipLowerLevels;              // used to determine if this map should scale or not
+    uint8 levelScalingDynamicCeiling;               // how many levels MORE than the highestPlayerLevel creature should be scaled to
+    uint8 levelScalingDynamicFloor;                 // how many levels LESS than the highestPlayerLevel creature should be scaled to
+
+    uint prevMapLevel = 0;                          // used to reduce calculations when they are not necessary
 };
 
 class AutoBalanceStatModifiers : public DataMap::Base
