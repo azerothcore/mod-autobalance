@@ -564,25 +564,25 @@ bool hasLevelScalingDistanceCheckOverride(uint32 dungeonId)
 
 bool ShouldMapBeEnabled(Map* map)
 {
-    if (map->IsDungeon() || map->IsRaid())
+    if (map->IsDungeon())
     {
         // if globally disabled, return false
         if (!EnableGlobal)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}-\?\?) - Not enabled because EnableGlobal is false",
-                      map->GetMapName(),
-                      map->GetId()
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}) - Not enabled because EnableGlobal is false",
+                        map->GetMapName(),
+                        map->GetId(),
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
             );
             return false;
         }
 
-        // get the current instance map
-        auto instanceMap = ((InstanceMap*)sMapMgr->FindMap(map->GetId(), map->GetInstanceId()));
+        InstanceMap* instanceMap = map->ToInstanceMap();
 
         // if there wasn't one, then we're not in an instance
         if (!instanceMap)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}) - Not enabled for the base map without an Instance Map",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}) - Not enabled for the base map without an Instance ID.",
                       map->GetMapName(),
                       map->GetId(),
                       map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
@@ -1627,7 +1627,7 @@ void LoadMapSettings(Map* map)
     }
 }
 
-void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Player* playerToExcludeFromChecks = nullptr, bool forceRecalculation = false)
+void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = true, Player* playerToExcludeFromChecks = nullptr, bool forceRecalculation = false)
 {
     // make sure we have a creature and that it's assigned to a map
     if (!creature || !creature->GetMap())
@@ -1645,7 +1645,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     // handle summoned creatures
     if (creature->IsSummon())
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Creature {} ({}) is a summon.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is a summon.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
         );
@@ -1657,7 +1657,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
             if (!summoner)
             {
                 creatureABInfo->UnmodifiedLevel = mapABInfo->avgCreatureLevel;
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) is not owned by a summoner. Original level is {}.",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) is not owned by a summoner. Original level is {}.",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel
                 );
@@ -1674,7 +1674,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                 )
                 {
                     // no change needed, just log
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) is owned by {} ({}). Summon level is within the expected range of NPC levels for this map. Summon original level set to {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) is owned by {} ({}). Summon level is within the expected range of NPC levels for this map. Summon original level set to {}.",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerCreature->GetName(),
@@ -1686,7 +1686,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                 else if (summonerABInfo->UnmodifiedLevel < (uint8)(((float)mapABInfo->lfgMinLevel * .85f)) || summonerABInfo->UnmodifiedLevel > (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f))
                 {
                     // no change needed, just log
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) is owned by {} ({}). Summoner is outside the expected range of NPC levels for this map. Summon original level set to {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) is owned by {} ({}). Summoner is outside the expected range of NPC levels for this map. Summon original level set to {}.",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerCreature->GetName(),
@@ -1699,7 +1699,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                 else
                 {
                     creatureABInfo->UnmodifiedLevel = summonerABInfo->UnmodifiedLevel;
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) is owned by {} ({}{}). It will inherit it's owner's original level value of {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) is owned by {} ({}{}). It will inherit it's owner's original level value of {}.",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerCreature->GetName(),
@@ -1717,7 +1717,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
             creature->ToTempSummon()->GetSummoner()->ToPlayer()
         )
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) is owned by player {}. Summon original level set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) is owned by player {}. Summon original level set to ({}).",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->ToTempSummon()->GetSummoner()->ToPlayer()->GetName(),
@@ -1727,7 +1727,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         else if (creature->IsCreatedByPlayer() || creature->IsPet() || creature->IsHunterPet() || creature->IsTotem())
         {
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) is a {} created by a player. Summon original level set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) is a {} created by a player. Summon original level set to ({}).",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->IsCreatedByPlayer() ? "creature" : creature->IsPet() ? "pet" : creature->IsHunterPet() ? "hunter pet" : "totem",
@@ -1736,7 +1736,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) does not have a summoner. Summon original level set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) does not have a summoner. Summon original level set to ({}).",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creatureABInfo->UnmodifiedLevel
@@ -1744,7 +1744,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         }
 
         // if this is a summon, we shouldn't track it in any list and it does not contribute to the average level
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: Summoned creature {} ({}) will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Summoned creature {} ({}) will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
     }
     // handle "special" creatures
@@ -1758,7 +1758,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         )
         {
             // no change needed, just log
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is a {} and is outside the expected NPC level for this map ({} < x < {}). Keeping original level of {}.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is a {} and is outside the expected NPC level for this map ({} < x < {}). Keeping original level of {}.",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->IsCritter() ? "critter" : creature->IsTotem() ? "totem" : "trigger",
@@ -1772,7 +1772,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
         {
             creatureABInfo->UnmodifiedLevel = mapABInfo->lfgTargetLevel;
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is a {} and is within the expected NPC level for this map ({} < x < {}). Keeping original level of {}.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is a {} and is within the expected NPC level for this map ({} < x < {}). Keeping original level of {}.",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->IsCritter() ? "critter" : creature->IsTotem() ? "totem" : "trigger",
@@ -1787,7 +1787,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     else
     {
         creatureABInfo->UnmodifiedLevel = creatureABInfo->UnmodifiedLevel;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) original level set to {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) original level set to {}.",
             creature->GetName(),
             creatureABInfo->UnmodifiedLevel,
             creatureABInfo->UnmodifiedLevel
@@ -1797,28 +1797,28 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     // if this is a creature controlled by the player, skip for stats
     if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is controlled by the player and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is controlled by the player and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
     }
 
     // if this is a non-relevant creature, skip for stats
     if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is a critter, totem, or trigger and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is a critter, totem, or trigger and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
     }
 
     // if the creature level is below 85% of the minimum LFG level, assume it's a flavor creature and shouldn't be tracked
     if (creatureABInfo->UnmodifiedLevel < (uint8)(((float)mapABInfo->lfgMinLevel * 0.85f) + 0.5f))
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is below 85% of the LFG min level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMinLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is below 85% of the LFG min level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMinLevel);
         return;
     }
 
     // if the creature level is above 125% of the maximum LFG level, assume it's a flavor creature or holiday boss and shouldn't be tracked
     if (creatureABInfo->UnmodifiedLevel > (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f))
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is above 115% of the LFG max level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMaxLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is above 115% of the LFG max level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMaxLevel);
         return;
     }
 
@@ -1830,7 +1830,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
     {
         mapABInfo->allMapCreatures.push_back(creature);
         creatureABInfo->isInCreatureList = true;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is creature #{} in the creature list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is creature #{} in the creature list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
     }
 
     // alter stats for the map if needed
@@ -1861,7 +1861,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                     (!creature->IsDungeonBoss())
                 )
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
                 isIncludedInMapStats = false;
             }
             else
@@ -1880,7 +1880,7 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
                     // if the creature is friendly and not a boss
                     if (creature->IsFriendlyTo(playerHandle) && !creature->IsDungeonBoss())
                     {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is friendly to {} - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is friendly to {} - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, playerHandle->GetName());
                         isIncludedInMapStats = false;
                         break;
                     }
@@ -1904,13 +1904,13 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
 
                         if (playerHandle->IsWithinDist(creature, 500))
                         {
-                            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is in range ({} world units) of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, distance, playerHandle->GetName());
+                            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is in range ({} world units) of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, distance, playerHandle->GetName());
                             isPlayerWithinDistance = true;
                             break;
                         }
                         else
                         {
-                            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is NOT in range ({} world units) of any player and is NOT considered active.", creature->GetName(), creature->GetLevel(), distance);
+                            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is NOT in range ({} world units) of any player and is NOT considered active.", creature->GetName(), creature->GetLevel(), distance);
                         }
                     }
 
@@ -1934,32 +1934,47 @@ void AddCreatureToMapData(Creature* creature, bool addToCreatureList = true, Pla
 
             // calculate the new average creature level
             float creatureCount = mapABInfo->activeCreatureCount;
+            float oldAvgCreatureLevel = mapABInfo->avgCreatureLevel;
             float newAvgCreatureLevel = (((float)mapABInfo->avgCreatureLevel * creatureCount) + (float)creatureABInfo->UnmodifiedLevel) / (creatureCount + 1.0f);
+
             mapABInfo->avgCreatureLevel = newAvgCreatureLevel;
 
             // increment the active creature counter
             mapABInfo->activeCreatureCount++;
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is included in map stats, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->UnmodifiedLevel, newAvgCreatureLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is included in map stats, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->UnmodifiedLevel, newAvgCreatureLevel);
 
-            // reset the last config time so that the map data will get updated
-            lastConfigTime = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) lastConfigTime reset to {}",
-                creature->GetName(),
-                creatureABInfo->UnmodifiedLevel,
-                lastConfigTime
-            );
+            // if the average creature level transitions from one whole number to the next, reset the map's config time so it will refresh
+            if (round(oldAvgCreatureLevel) != round(newAvgCreatureLevel))
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}{}) average creature level changes {}->{}. Resetting config time to force map recalculation.",
+                    instanceMap->GetMapName(),
+                    instanceMap->GetId(),
+                    instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+                    round(oldAvgCreatureLevel),
+                    round(newAvgCreatureLevel)
+                );
+
+                mapABInfo->configTime = 1;
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}{}) config time reset to ({}).",
+                    instanceMap->GetMapName(),
+                    instanceMap->GetId(),
+                    instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+                    mapABInfo->configTime
+                );
+            }
+
         }
         else if (isCreatureAlreadyInCreatureList)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: {} ({}) is NOT included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}) is NOT included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         }
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapData: There are {} active creatures.", mapABInfo->activeCreatureCount);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: There are {} active creatures.", mapABInfo->activeCreatureCount);
     }
 }
 
@@ -1993,6 +2008,25 @@ void UpdateMapPlayerStats(Map* map, bool adjustPlayerCount = true, Player* playe
     AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
     InstanceMap* instanceMap = map->ToInstanceMap();
+
+    // update the player count (unless we should specifically skip this step)
+    if (adjustPlayerCount)
+    {
+        mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
+    }
+
+    // start with the real player count
+    uint32 adjustedPlayerCount = mapABInfo->playerCount;
+
+    // if the adjusted player count is below the min players setting, adjust it
+    if (adjustedPlayerCount < mapABInfo->minPlayers)
+        adjustedPlayerCount = mapABInfo->minPlayers;
+
+    // adjust by the PlayerDifficultyOffset
+    adjustedPlayerCount += PlayerCountDifficultyOffset;
+
+    // store the adjusted player count in the map's info
+    mapABInfo->adjustedPlayerCount = adjustedPlayerCount;
 
     // get the map's player list
     Map::PlayerList const &playerList = map->GetPlayers();
@@ -2049,81 +2083,66 @@ void UpdateMapPlayerStats(Map* map, bool adjustPlayerCount = true, Player* playe
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) player level range: {} - {}.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has {} player(s) with level range ({})-({}). Difficulty is {} player(s).",
                 map->GetMapName(),
                 map->GetId(),
                 map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                 instanceMap->GetMaxPlayers(),
                 instanceMap->IsHeroic() ? "Heroic" : "Normal",
+                mapABInfo->playerCount,
                 mapABInfo->lowestPlayerLevel,
-                mapABInfo->highestPlayerLevel
+                mapABInfo->highestPlayerLevel,
+                mapABInfo->adjustedPlayerCount
             );
         }
     }
-
-    // update the player count (unless we should specifically skip this step)
-    if (adjustPlayerCount)
-    {
-        mapABInfo->playerCount = map->GetPlayersCountExceptGMs();
-    }
-
-    // start with the real player count
-    uint32 adjustedPlayerCount = mapABInfo->playerCount;
-
-    // if the adjusted player count is below the min players setting, adjust it
-    if (adjustedPlayerCount < mapABInfo->minPlayers)
-        adjustedPlayerCount = mapABInfo->minPlayers;
-
-    // adjust by the PlayerDifficultyOffset
-    adjustedPlayerCount += PlayerCountDifficultyOffset;
-
-    // store the adjusted player count in the map's info
-    mapABInfo->adjustedPlayerCount = adjustedPlayerCount;
 }
 
-void UpdateMapDataIfNeeded(Map* map, bool forceDataUpdate = false)
+void UpdateMapDataIfNeeded(Map* map)
 {
     // get map data
     AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
     // if map needs update
-    if (mapABInfo->configTime != lastConfigTime || forceDataUpdate)
+    if (mapABInfo->configTime != lastConfigTime)
     {
-        if (forceDataUpdate)
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) will be updated (forced).",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                    mapABInfo->configTime,
-                    lastConfigTime
-            );
-        }
-        else
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) config is out of date ({} != {}) and will be updated.",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                    mapABInfo->configTime,
-                    lastConfigTime
-            );
-        }
-
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) config is out of date ({} != {}) and will be updated.",
+                map->GetMapName(),
+                map->GetId(),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                mapABInfo->configTime,
+                lastConfigTime
+        );
 
         // should the map be enabled?
-        mapABInfo->enabled = ShouldMapBeEnabled(map);
+        bool newEnabled = ShouldMapBeEnabled(map);
+
+        // if this is a transition between enabled states, reset the map's config time so it will refresh
+        if (mapABInfo->enabled != newEnabled)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) enabled state changes {}->{}. Resetting map config time to (1) to force map recalculation.",
+                map->GetMapName(),
+                map->GetId(),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                mapABInfo->enabled ? "ENABLED" : "DISABLED",
+                newEnabled ? "ENABLED" : "DISABLED"
+            );
+
+            mapABInfo->configTime = 1;
+        }
+
+        // update the enabled state
+        mapABInfo->enabled = newEnabled;
 
         if (!mapABInfo->enabled)
         {
             // mark the config updated to prevent checking the disabled map repeatedly
             mapABInfo->configTime = lastConfigTime;
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Config time for Map {} ({}{}) updated to ({}).",
-                        map->GetMapName(),
-                        map->GetId(),
-                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                        mapABInfo->configTime
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) is disabled. Skipping data updates.",
+                map->GetMapName(),
+                map->GetId(),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
             );
 
             return;
@@ -2230,13 +2249,13 @@ void UpdateMapDataIfNeeded(Map* map, bool forceDataUpdate = false)
     }
     else
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) config is up to date ({} == {}).",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                    mapABInfo->configTime,
-                    lastConfigTime
-        );
+        // LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) config is up to date ({} == {}).",
+        //             map->GetMapName(),
+        //             map->GetId(),
+        //             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+        //             mapABInfo->configTime,
+        //             lastConfigTime
+        // );
     }
 }
 
@@ -3335,7 +3354,27 @@ class AutoBalance_AllMapScript : public AllMapScript
                     );
                 }
 
-                if (!map->GetInstanceId())
+                if (map->GetInstanceId())
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}{}) is an instance of a map. Loading initial map data.",
+                        map->GetMapName(),
+                        map->GetId(),
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+                    );
+                    UpdateMapDataIfNeeded(map);
+
+                    // provide a concise summary of the map data we collected
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}{}) LFG levels {}-{} (target {}). {} for AutoBalancing.",
+                        map->GetMapName(),
+                        map->GetId(),
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                        mapABInfo->lfgMinLevel ? std::to_string(mapABInfo->lfgMinLevel) : "?",
+                        mapABInfo->lfgMaxLevel ? std::to_string(mapABInfo->lfgMaxLevel) : "?",
+                        mapABInfo->lfgTargetLevel ? std::to_string(mapABInfo->lfgTargetLevel) : "?",
+                        mapABInfo->enabled ? "Enabled" : "Disabled"
+                    );
+                }
+                else
                 {
                     LOG_DEBUG(
                         "module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}) is an instance base map.",
@@ -3374,7 +3413,13 @@ class AutoBalance_AllMapScript : public AllMapScript
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
             // Update the map's data, forced
-            UpdateMapDataIfNeeded(map, true);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Forcing map data update for {} ({}{})",
+                map->GetMapName(),
+                map->GetId(),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+            );
+            mapABInfo->configTime = 1;
+            UpdateMapDataIfNeeded(map);
 
             // recalculate the zone's level stats
             mapABInfo->highestCreatureLevel = 0;
@@ -3385,7 +3430,13 @@ class AutoBalance_AllMapScript : public AllMapScript
             // see which existing creatures are active
             for (std::vector<Creature*>::iterator creatureIterator = mapABInfo->allMapCreatures.begin(); creatureIterator != mapABInfo->allMapCreatures.end(); ++creatureIterator)
             {
-                AddCreatureToMapData(*creatureIterator, false, nullptr, true);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: {} ({}{}) config time reset to (1), considering for creature list.",
+                    map->GetMapName(),
+                    map->GetId(),
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+                );
+                ((Creature*)*creatureIterator)->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->configTime = 1;
+                AddCreatureToMapCreatureList(*creatureIterator, false, nullptr, true);
             }
 
             if (PlayerChangeNotify && mapABInfo->enabled)
@@ -3460,8 +3511,8 @@ class AutoBalance_AllMapScript : public AllMapScript
             // get the map's info
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-            // Update the map's level if it is out of date
-            UpdateMapDataIfNeeded(map);
+            // // Update the map's data if it is out of date
+            // UpdateMapDataIfNeeded(map);
 
             // recalculate the zone's level stats
             mapABInfo->highestCreatureLevel = 0;
@@ -3472,7 +3523,14 @@ class AutoBalance_AllMapScript : public AllMapScript
             // see which existing creatures are active
             for (std::vector<Creature*>::iterator creatureIterator = mapABInfo->allMapCreatures.begin(); creatureIterator != mapABInfo->allMapCreatures.end(); ++creatureIterator)
             {
-                AddCreatureToMapData(*creatureIterator, false, player, true);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: {} ({}{}) config time reset to (1), considering for creature list.",
+                    map->GetMapName(),
+                    map->GetId(),
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+                );
+                ((Creature*)*creatureIterator)->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->configTime = 1;
+
+                AddCreatureToMapCreatureList(*creatureIterator, false, player, true);
             }
 
             bool areAnyPlayersInCombat = false;
@@ -3517,17 +3575,24 @@ class AutoBalance_AllMapScript : public AllMapScript
                 else
                 {
                     mapABInfo->playerCount = map->GetPlayersCountExceptGMs() - 1;
-                    mapABInfo->adjustedPlayerCount = mapABInfo->playerCount - 1;
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player left, new player count is {}. Difficulty set to {} player(s). ",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player {} left the instance, new player count is {}.",
+                        player->GetName(),
                         mapABInfo->playerCount,
                         mapABInfo->adjustedPlayerCount
                     );
                 }
             }
 
-            // updates the player count, player levels for the map (but don't re-count players)
-            UpdateMapPlayerStats(map, false);
+            // we don't want to update player stats because the player hasn't actually left the map yet
+            // instead, we reset the map's config time so that it is updated at the earliest moment after the player actually leaves
+            mapABInfo->configTime = 1;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player left, resetting config time for map {} ({}{}) to (1).",
+                map->GetMapName(),
+                map->GetId(),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+            );
 
+            // Notify remaining players in the instance that a player left
             if (PlayerChangeNotify && !player->IsGameMaster() && !areAnyPlayersInCombat && mapABInfo->enabled)
             {
                 if (map->GetEntry()->IsDungeon() && player)
@@ -3541,10 +3606,10 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (mapPlayer && mapPlayer != player)
                             {
                                 ChatHandler chatHandle = ChatHandler(mapPlayer->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance.|r",
                                     player->GetName().c_str(),
-                                    mapABInfo->playerCount,
-                                    mapABInfo->adjustedPlayerCount);
+                                    mapABInfo->playerCount
+                                    );
                             }
                         }
                     }
@@ -3593,7 +3658,7 @@ public:
                 return;
             }
 
-            // Update the map's data if it is out of date (just before changing anything)
+            // Update the map's data if it is out of date (just before changing the map's creature list)
             UpdateMapDataIfNeeded(creature->GetMap());
 
             Map* creatureMap = creature->GetMap();
@@ -3613,7 +3678,10 @@ public:
             creatureABInfo->UnmodifiedLevel = level;
 
             // add the creature to the map's tracking list
-            AddCreatureToMapData(creature);
+            AddCreatureToMapCreatureList(creature);
+
+            // Update the map's data if it is out of date (just after changing the map's creature list)
+            UpdateMapDataIfNeeded(creature->GetMap());
 
             // do an initial modification run of the creature, but don't update the level yet
             ModifyCreatureAttributes(creature);
@@ -3626,9 +3694,6 @@ public:
                         creatureABInfo->UnmodifiedLevel,
                         creatureABInfo->selectedLevel
             );
-
-            // Update the map's data if it is out of date (just after changing anything)
-            UpdateMapDataIfNeeded(creature->GetMap());
 
             // unmark this creature as brand new so that it will be processed further on next OnCreatureUpdate
             creatureABInfo->isBrandNew = false;
@@ -3703,6 +3768,23 @@ public:
 
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override
     {
+        // update the map if the creature is in an instance and the map is out of date
+        if (
+            creature &&
+            creature->GetMap() &&
+            creature->GetMap()->IsDungeon() &&
+            creature->GetMap()->GetInstanceId() &&
+            creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo")->configTime != lastConfigTime
+        )
+        {
+            UpdateMapDataIfNeeded(creature->GetMap());
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Map {} ({}{}) is out of date and needs updating.",
+                        creature->GetMap()->GetMapName(),
+                        creature->GetMap()->GetId(),
+                        creature->GetMap()->GetInstanceId() ? "-" + std::to_string(creature->GetMap()->GetInstanceId()) : ""
+            );
+        }
+
         // If the config is out of date and the creature was reset, run modify against it
         if (ResetCreatureIfNeeded(creature))
         {
