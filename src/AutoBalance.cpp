@@ -2507,6 +2507,63 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             );
         }
 
+        // if this was triggered by a global config update, redetect players
+        if (mapABInfo->globalConfigTime < globalConfigTime)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) will recount players in the map.",
+                        map->GetMapName(),
+                        map->GetId(),
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+            );
+
+            // clear the map's player list
+            mapABInfo->allMapPlayers.clear();
+
+            // clear the map's in-combat player list
+            mapABInfo->inCombatPlayers.clear();
+
+            // reset the combat locked adjusted players
+            mapABInfo->combatLockedAdjustedPlayers = 0;
+
+            // get the map's player list
+            Map::PlayerList const &playerList = map->GetPlayers();
+
+            // re-count the players in the dungeon
+            for (Map::PlayerList::const_iterator playerIteration = playerList.begin(); playerIteration != playerList.end(); ++playerIteration)
+            {
+                Player* thisPlayer = playerIteration->GetSource();
+
+                // if this player doesn't exist for some reason, bail out
+                if (!thisPlayer)
+                {
+                    LOG_INFO("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Player {} ({}) does not exist anymore",
+                                thisPlayer->GetName(),
+                                thisPlayer->getLevel()
+                    );
+                    continue;
+                }
+                // if this player is a Game Master, skip
+                else if (thisPlayer->IsGameMaster())
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Player {} ({}) is a Game Master and is not added to the player list.",
+                                thisPlayer->GetName(),
+                                thisPlayer->getLevel()
+                    );
+                    continue;
+                }
+
+                // add the player to the map's player list
+                AddPlayerToMap(map, thisPlayer);
+
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Player {} ({}) added to the map's player list.",
+                            thisPlayer->GetName(),
+                            thisPlayer->getLevel()
+                );
+            }
+
+            // map's player count will be updated in UpdateMapPlayerStats below
+        }
+
         // global config is out of date
         if (mapABInfo->globalConfigTime < globalConfigTime)
         {
@@ -3995,7 +4052,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 // else
                 {
                     mapABInfo->playerCount = mapABInfo->allMapPlayers.size();
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player {} left the instance, new player count is {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player {} left the instance.",
                         player->GetName(),
                         mapABInfo->playerCount,
                         mapABInfo->adjustedPlayerCount
@@ -4016,10 +4073,11 @@ class AutoBalance_AllMapScript : public AllMapScript
                             if (thisPlayer && thisPlayer != player)
                             {
                                 ChatHandler chatHandle = ChatHandler(thisPlayer->GetSession());
-                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance.|r",
+                                chatHandle.PSendSysMessage("|cffFF0000 [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
                                     player->GetName().c_str(),
-                                    mapABInfo->playerCount
-                                    );
+                                    mapABInfo->playerCount,
+                                    mapABInfo->adjustedPlayerCount
+                                );
                             }
                         }
                     }
