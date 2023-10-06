@@ -807,6 +807,64 @@ uint32 getBaseExpansionValueForLevel(const uint32 baseValues[3], uint8 targetLev
     return getBaseExpansionValueForLevel(floatBaseValues, targetLevel);
 }
 
+bool isBossOrBossSummon(Creature* creature)
+{
+    // no creature? not a boss
+    if (!creature)
+    {
+        LOG_INFO("module.AutoBalance", "AutoBalance::isBossOrBossSummon: Creature is null.");
+        return false;
+    }
+
+    // if this creature is a boss, return true
+    if (creature->IsDungeonBoss() || creature->isWorldBoss())
+    {
+        return true;
+    }
+
+    // if this creature is a summon of a boss, return true
+    if (
+        creature->IsSummon() &&
+        creature->ToTempSummon() &&
+        creature->ToTempSummon()->GetSummoner() &&
+        creature->ToTempSummon()->GetSummoner()->ToCreature()
+        )
+    {
+        Creature* summoner = creature->ToTempSummon()->GetSummoner()->ToCreature();
+
+        if (summoner)
+        {
+            if (summoner->IsDungeonBoss() || summoner->isWorldBoss())
+            {
+                // LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}{}) is a summon of BOSS {}({}{})",
+                //             creature->GetName(),
+                //             creature->GetEntry(),
+                //             creature->GetInstanceId() ? "-" + std::to_string(creature->GetInstanceId()) : "",
+                //             summoner->GetName(),
+                //             summoner->GetEntry(),
+                //             summoner->GetInstanceId() ? "-" + std::to_string(summoner->GetInstanceId()) : ""
+                // );
+                return true;
+            }
+            else
+            {
+                // LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}{}) is a summon of NON-BOSS {}({}{})",
+                //             creature->GetName(),
+                //             creature->GetEntry(),
+                //             creature->GetInstanceId() ? "-" + std::to_string(creature->GetInstanceId()) : "",
+                //             summoner->GetName(),
+                //             summoner->GetEntry(),
+                //             summoner->GetInstanceId() ? "-" + std::to_string(summoner->GetInstanceId()) : ""
+                // );
+                return false;
+            }
+        }
+    }
+
+    // not a boss
+    return false;
+}
+
 bool isCreatureRelevant(Creature* creature) {
     // if the creature is gone, return
     if (!creature)
@@ -975,11 +1033,10 @@ bool isCreatureRelevant(Creature* creature) {
     }
 
     // survived to here, creature is relevant
-    // LOG_DEBUG below is executed every Creature update for every world creature, enable carefully
-    // LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is relevant.",
-    //             creature->GetName(),
-    //             creatureABInfo->UnmodifiedLevel
-    // );
+    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is relevant. Marked for processing.",
+                creature->GetName(),
+                creatureABInfo->UnmodifiedLevel
+    );
     creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_TRUE;
     return true;
 
@@ -1229,7 +1286,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
         switch (maxNumberOfPlayers)
         {
             case 1 ... 5:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierHeroic_Boss_Global;
                     statModifiers.health = StatModifierHeroic_Boss_Health;
@@ -1253,7 +1310,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             case 6 ... 10:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid10MHeroic_Boss_Global;
                     statModifiers.health = StatModifierRaid10MHeroic_Boss_Health;
@@ -1277,7 +1334,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             case 11 ... 25:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid25MHeroic_Boss_Global;
                     statModifiers.health = StatModifierRaid25MHeroic_Boss_Health;
@@ -1301,7 +1358,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             default:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaidHeroic_Boss_Global;
                     statModifiers.health = StatModifierRaidHeroic_Boss_Health;
@@ -1330,7 +1387,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
         switch (maxNumberOfPlayers)
         {
             case 1 ... 5:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifier_Boss_Global;
                     statModifiers.health = StatModifier_Boss_Health;
@@ -1354,7 +1411,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             case 6 ... 10:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid10M_Boss_Global;
                     statModifiers.health = StatModifierRaid10M_Boss_Health;
@@ -1378,7 +1435,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             case 11 ... 15:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid15M_Boss_Global;
                     statModifiers.health = StatModifierRaid15M_Boss_Health;
@@ -1402,7 +1459,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             case 16 ... 20:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid20M_Boss_Global;
                     statModifiers.health = StatModifierRaid20M_Boss_Health;
@@ -1426,7 +1483,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             case 21 ... 25:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid25M_Boss_Global;
                     statModifiers.health = StatModifierRaid25M_Boss_Health;
@@ -1450,7 +1507,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             case 26 ... 40:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid40M_Boss_Global;
                     statModifiers.health = StatModifierRaid40M_Boss_Health;
@@ -1474,7 +1531,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                 }
                 break;
             default:
-                if (creature && creature->IsDungeonBoss())
+                if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid_Boss_Global;
                     statModifiers.health = StatModifierRaid_Boss_Health;
@@ -1501,7 +1558,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
 
     // Per-Map Overrides
     // AutoBalance.StatModifier.Boss.PerInstance
-    if (creature && creature->IsDungeonBoss() && hasStatModifierBossOverride(mapId))
+    if (creature && isBossOrBossSummon(creature) && hasStatModifierBossOverride(mapId))
     {
         AutoBalanceStatModifiers* myStatModifierBossOverrides = &statModifierBossOverrides[mapId];
 
@@ -2209,7 +2266,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                     creature->HasNpcFlag(UNIT_NPC_FLAG_REPAIR) ||
                     creature->HasUnitFlag(UNIT_FLAG_IMMUNE_TO_PC) ||
                     creature->HasUnitFlag(UNIT_FLAG_NOT_SELECTABLE)) &&
-                    (!creature->IsDungeonBoss())
+                    (!isBossOrBossSummon(creature))
                 )
             {
                 LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
@@ -2229,7 +2286,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                     }
 
                     // if the creature is friendly and not a boss
-                    if (creature->IsFriendlyTo(thisPlayer) && !creature->IsDungeonBoss())
+                    if (creature->IsFriendlyTo(thisPlayer) && !isBossOrBossSummon(creature))
                     {
                         LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is friendly to {} - do not include in map stats.",
                             creature->GetName(),
@@ -4658,7 +4715,7 @@ public:
         CreatureBaseStats const* newCreatureBaseStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->selectedLevel, creatureTemplate->unit_class);
 
         // Inflection Point
-        AutoBalanceInflectionPointSettings inflectionPointSettings = getInflectionPointSettings(instanceMap, creature->IsDungeonBoss());
+        AutoBalanceInflectionPointSettings inflectionPointSettings = getInflectionPointSettings(instanceMap, isBossOrBossSummon(creature));
 
         // Generate the default multiplier
         float defaultMultiplier = getDefaultMultiplier(instanceMap, inflectionPointSettings);
@@ -5530,7 +5587,7 @@ public:
                                   target->GetName(),
                                   creatureABInfo->UnmodifiedLevel,
                                   !creatureABInfo->skipMe && creatureABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
-                                  target->IsDungeonBoss() ? " | Boss" : "",
+                                  isBossOrBossSummon(target) ? " | Boss" : "",
                                   creatureABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
         // level scaled
         if (creatureABInfo->UnmodifiedLevel != target->GetLevel())
