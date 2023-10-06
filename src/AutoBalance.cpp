@@ -585,6 +585,9 @@ bool ShouldMapBeEnabled(Map* map)
 {
     if (map->IsDungeon())
     {
+        // get the map's info
+        AutoBalanceMapInfo *mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+
         // if globally disabled, return false
         if (!EnableGlobal)
         {
@@ -619,6 +622,20 @@ bool ShouldMapBeEnabled(Map* map)
                       instanceMap->GetMaxPlayers(),
                       instanceMap->IsHeroic() ? "Heroic" : "Normal"
             );
+            return false;
+        }
+
+        // if the map has no players in the player list, then disabled
+        if (!mapABInfo->playerCount)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because there are no non-GM players in the map",
+                      map->GetMapName(),
+                      map->GetId(),
+                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                      instanceMap->GetMaxPlayers(),
+                      instanceMap->IsHeroic() ? "Heroic" : "Normal"
+            );
+
             return false;
         }
 
@@ -949,7 +966,7 @@ bool isCreatureRelevant(Creature* creature) {
     if ((creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() < 100))
     {
         creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a non-relevant creature, no changes. Marked for skip.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a non-relevant critter, no changes. Marked for skip.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
         );
@@ -2369,80 +2386,74 @@ void UpdateMapPlayerStats(Map* map, bool adjustPlayerCount = true, Player* playe
 
     // store the adjusted player count in the map's info
     mapABInfo->adjustedPlayerCount = adjustedPlayerCount;
-    // LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has a difficulty setting of {} player(s).",
-    //     map->GetMapName(),
-    //     map->GetId(),
-    //     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-    //     instanceMap->GetMaxPlayers(),
-    //     instanceMap->IsHeroic() ? "Heroic" : "Normal",
-    //     mapABInfo->adjustedPlayerCount
-    // );
 
-    // if there are players on the map
-    if (mapABInfo->allMapPlayers.size() && map->IsDungeon())
+    // if this isn't a dungeon instance, just bail out immediately
+    if (!map->IsDungeon() || !map->GetInstanceId())
     {
-        uint8 highestPlayerLevel = 0;
-        uint8 lowestPlayerLevel = 80;
+        return;
+    }
 
-        // iterate through the players and update the highest and lowest player levels
-        for (std::vector<Player*>::const_iterator playerIterator = mapABInfo->allMapPlayers.begin(); playerIterator != mapABInfo->allMapPlayers.end(); ++playerIterator)
+    uint8 highestPlayerLevel = 0;
+    uint8 lowestPlayerLevel = 80;
+
+    // iterate through the players and update the highest and lowest player levels
+    for (std::vector<Player*>::const_iterator playerIterator = mapABInfo->allMapPlayers.begin(); playerIterator != mapABInfo->allMapPlayers.end(); ++playerIterator)
+    {
+        Player* thisPlayer = *playerIterator;
+
+        if (thisPlayer && !thisPlayer->IsGameMaster())
         {
-            Player* thisPlayer = *playerIterator;
-
-            if (thisPlayer && !thisPlayer->IsGameMaster())
+            if (thisPlayer == playerToIgnore)
             {
-                if (thisPlayer == playerToIgnore)
-                {
-                    // LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Player {} ({}) is the player to ignore. Skipping for player level calculations.",
-                    //             thisPlayer->GetName(),
-                    //             thisPlayer->getLevel());
-                    continue;
-                }
+                // LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Player {} ({}) is the player to ignore. Skipping for player level calculations.",
+                //             thisPlayer->GetName(),
+                //             thisPlayer->getLevel());
+                continue;
+            }
 
-                if (thisPlayer->getLevel() > highestPlayerLevel || highestPlayerLevel == 0)
-                {
-                    highestPlayerLevel = thisPlayer->getLevel();
-                }
+            if (thisPlayer->getLevel() > highestPlayerLevel || highestPlayerLevel == 0)
+            {
+                highestPlayerLevel = thisPlayer->getLevel();
+            }
 
-                if (thisPlayer->getLevel() < lowestPlayerLevel || lowestPlayerLevel == 0)
-                {
-                    lowestPlayerLevel = thisPlayer->getLevel();
-                }
+            if (thisPlayer->getLevel() < lowestPlayerLevel || lowestPlayerLevel == 0)
+            {
+                lowestPlayerLevel = thisPlayer->getLevel();
             }
         }
+    }
 
-        mapABInfo->highestPlayerLevel = highestPlayerLevel;
-        mapABInfo->lowestPlayerLevel = lowestPlayerLevel;
+    mapABInfo->highestPlayerLevel = highestPlayerLevel;
+    mapABInfo->lowestPlayerLevel = lowestPlayerLevel;
 
-        if (!highestPlayerLevel)
-        {
-            mapABInfo->highestPlayerLevel = mapABInfo->lfgTargetLevel;
-            mapABInfo->lowestPlayerLevel = mapABInfo->lfgTargetLevel;
+    if (!highestPlayerLevel)
+    {
+        mapABInfo->highestPlayerLevel = mapABInfo->lfgTargetLevel;
+        mapABInfo->lowestPlayerLevel = mapABInfo->lfgTargetLevel;
 
-            // no non-GM players on the map, disable it
-            mapABInfo->enabled = false;
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has no non-GM players. Disabling (potentially temporarily).",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                instanceMap->GetMaxPlayers(),
-                instanceMap->IsHeroic() ? "Heroic" : "Normal"
-            );
-        }
-        else
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has {} player(s) with level range ({})-({}). Difficulty is {} player(s).",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                instanceMap->GetMaxPlayers(),
-                instanceMap->IsHeroic() ? "Heroic" : "Normal",
-                mapABInfo->playerCount,
-                mapABInfo->lowestPlayerLevel,
-                mapABInfo->highestPlayerLevel,
-                mapABInfo->adjustedPlayerCount
-            );
-        }
+        // no non-GM players on the map, disable it
+        mapABInfo->enabled = false;
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has no non-GM players. Disabling (potentially temporarily).",
+            map->GetMapName(),
+            map->GetId(),
+            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+            instanceMap->GetMaxPlayers(),
+            instanceMap->IsHeroic() ? "Heroic" : "Normal"
+        );
+    }
+    else
+    {
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has {} player(s) with level range ({})-({}). Difficulty is {} player(s).",
+            map->GetMapName(),
+            map->GetId(),
+            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+            instanceMap->GetMaxPlayers(),
+            instanceMap->IsHeroic() ? "Heroic" : "Normal",
+            mapABInfo->playerCount,
+            mapABInfo->lowestPlayerLevel,
+            mapABInfo->highestPlayerLevel,
+            mapABInfo->adjustedPlayerCount
+        );
     }
 }
 
@@ -3884,15 +3895,6 @@ class AutoBalance_AllMapScript : public AllMapScript
             if (!map->IsDungeon())
                 return;
 
-            if (player->IsGameMaster())
-            {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player {} is a GM and will not be added to the map's player list.",
-                    player->GetName()
-                );
-                return;
-            }
-
-
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player {} enters {} ({}{})",
@@ -4563,12 +4565,12 @@ public:
 
             // handle "special" creatures
             // note that these already passed a more complex check above
-            if (creature->IsTrigger() || creature->IsTotem() || (creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() <= 100))
+            if (creature->IsTotem() || (creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() <= 100))
             {
                 LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is a {} that will not be level scaled, but will have modifiers set.",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
-                            creature->IsTrigger() ? "trigger" : creature->IsTotem() ? "totem" : "critter"
+                            creature->IsTotem() ? "totem" : "critter"
                 );
 
                 selectedLevel = creatureABInfo->UnmodifiedLevel;
@@ -5441,12 +5443,12 @@ public:
         if (player->GetMap()->IsDungeon())
         {
             handler->PSendSysMessage("---");
-            handler->PSendSysMessage("Map: ID %u-%u | %s (%u-player %s)%s",
-                                    player->GetMapId(),
-                                    player->GetInstanceId(),
+            handler->PSendSysMessage("%s (%u-player %s) | ID %u-%u%s",
                                     player->GetMap()->GetMapName(),
                                     player->GetMap()->ToInstanceMap()->GetMaxPlayers(),
                                     player->GetMap()->ToInstanceMap()->IsHeroic() ? "Heroic" : "Normal",
+                                    player->GetMapId(),
+                                    player->GetInstanceId(),
                                     mapABInfo->enabled ? "" : " | AutoBalance DISABLED");
             handler->PSendSysMessage("Players on map: %u (Lvl %u - %u)",
                                     mapABInfo->playerCount,
