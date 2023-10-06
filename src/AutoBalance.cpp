@@ -5516,6 +5516,12 @@ public:
             handler->SetSentErrorMessage(true);
             return false;
         }
+        else if (!target->GetMap()->IsDungeon())
+        {
+            handler->PSendSysMessage("That target is not in an instance.");
+            handler->SetSentErrorMessage(true);
+            return false;
+        }
 
         AutoBalanceCreatureInfo *creatureABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
