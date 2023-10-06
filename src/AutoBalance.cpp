@@ -53,6 +53,22 @@
 
 using namespace Acore::ChatCommands;
 
+enum ScalingMethod {
+    AUTOBALANCE_SCALING_FIXED,
+    AUTOBALANCE_SCALING_DYNAMIC
+};
+
+enum BaseValueType {
+    AUTOBALANCE_HEALTH,
+    AUTOBALANCE_DAMAGE_HEALING
+};
+
+enum Relevance {
+    AUTOBALANCE_RELEVANCE_FALSE,
+    AUTOBALANCE_RELEVANCE_TRUE,
+    AUTOBALANCE_RELEVANCE_UNCHECKED
+};
+
 ABScriptMgr* ABScriptMgr::instance()
 {
     static ABScriptMgr instance;
@@ -146,6 +162,8 @@ public:
     bool isInCreatureList = false;                  // whether or not the creature is in the map's creature list
     bool isBrandNew = false;                        // whether or not the creature is brand new to the map (hasn't been added to the world yet)
     bool skipMe = false;                            // whether or not the creature should be skipped because it is not relevant for scaling
+
+    Relevance relevance = AUTOBALANCE_RELEVANCE_UNCHECKED;  // whether or not the creature is relevant for scaling
 };
 
 class AutoBalanceMapInfo : public DataMap::Base
@@ -230,16 +248,6 @@ public:
     int skipLower;
     int ceiling;
     int floor;
-};
-
-enum ScalingMethod {
-    AUTOBALANCE_SCALING_FIXED,
-    AUTOBALANCE_SCALING_DYNAMIC
-};
-
-enum BaseValueType {
-    AUTOBALANCE_HEALTH,
-    AUTOBALANCE_DAMAGE_HEALING
 };
 
 uint64_t GetCurrentTime()
@@ -801,21 +809,33 @@ bool isCreatureRelevant(Creature* creature) {
         return false;
     }
 
-    // get or create the creature's info
-    Map* creatureMap = creature->GetMap();
-    InstanceMap* instanceMap = creatureMap->ToInstanceMap();
+    // get the creature's info
     AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-    // if this creature has been marked for skip previously, skip
-    if (creatureABInfo->skipMe)
+    // if this creature has been already been evaluated, just return the previous evaluation
+    if (creatureABInfo->relevance == AUTOBALANCE_RELEVANCE_FALSE)
     {
         return false;
     }
+    else if (creatureABInfo->relevance == AUTOBALANCE_RELEVANCE_TRUE)
+    {
+        return true;
+    }
+
+    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: First-time evaluating creature {} ({})",
+                creature->GetName(),
+                creatureABInfo->UnmodifiedLevel
+    );
+
+    // get the creature's map's info
+    Map* creatureMap = creature->GetMap();
+    AutoBalanceMapInfo *mapABInfo=creatureMap->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    InstanceMap* instanceMap = creatureMap->ToInstanceMap();
 
     // if this creature is in the dungeon's base map, make no changes
     if (!(instanceMap))
     {
-        creatureABInfo->skipMe = true;
+        creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is in the base map, no changes. Marked for skip.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
@@ -826,7 +846,7 @@ bool isCreatureRelevant(Creature* creature) {
     // if this is a pet or summon controlled by the player, make no changes
     if ((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer())
     {
-        creatureABInfo->skipMe = true;
+        creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a pet or summon controlled by the player, no changes. Marked for skip.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
@@ -835,28 +855,100 @@ bool isCreatureRelevant(Creature* creature) {
         return false;
     }
 
-    // if this is a player temporary summon, make no changes
+    // if this is a player temporary summon (that isn't actively trying to kill the players), make no changes
     if (
         creature->ToTempSummon() &&
         creature->ToTempSummon()->GetSummoner() &&
-        creature->ToTempSummon()->GetSummoner()->ToPlayer() &&
-        creature->IsFriendlyTo(creature->ToTempSummon()->GetSummoner()->ToPlayer())
+        creature->ToTempSummon()->GetSummoner()->ToPlayer()
     )
     {
-        creatureABInfo->skipMe = true;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a player temporary summoned ally, no changes. Marked for skip.",
-            creature->GetName(),
-            creatureABInfo->UnmodifiedLevel
-        );
+        // if this creature is hostile to any non-charmed player, it should be scaled
+        bool isHostileToAnyValidPlayer = false;
+        TempSummon* creatureTempSummon = creature->ToTempSummon();
+        Player* summonerPlayer = creatureTempSummon->GetSummoner()->ToPlayer();
 
-        return false;
+        for (std::vector<Player*>::const_iterator playerIterator = mapABInfo->allMapPlayers.begin(); playerIterator != mapABInfo->allMapPlayers.end(); ++playerIterator)
+        {
+            Player* thisPlayer = *playerIterator;
+
+            // is this a valid player?
+            if (!thisPlayer->IsGameMaster() &&
+                !thisPlayer->IsCharmed() &&
+                !thisPlayer->IsHostileToPlayers() &&
+                !thisPlayer->IsHostileTo(summonerPlayer) &&
+                thisPlayer->IsAlive()
+            )
+            {
+                // if this is a guardian and the owner is not hostile to this player, skip
+                if
+                (
+                    creatureTempSummon->IsGuardian() &&
+                    !thisPlayer->IsHostileTo(summonerPlayer)
+                )
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a guardian of player {}, who is not hostile to valid player {}.",
+                                creature->GetName(),
+                                creatureABInfo->UnmodifiedLevel,
+                                summonerPlayer->GetName(),
+                                thisPlayer->GetName()
+                    );
+
+                    continue;
+                }
+                // special case for totems?
+                else if
+                (
+                    creature->IsTotem() &&
+                    !thisPlayer->IsHostileTo(summonerPlayer)
+                )
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a totem of player {}, who is not hostile to valid player {}.",
+                                creature->GetName(),
+                                creatureABInfo->UnmodifiedLevel,
+                                summonerPlayer->GetName(),
+                                thisPlayer->GetName()
+                    );
+
+                    continue;
+                }
+
+                // if the creature is hostile to this valid player,
+                // unfortunately, `creature->IsHostileTo(thisPlayer)` returns true for cases when it is not actually hostile
+                else if (
+                    thisPlayer->isTargetableForAttack(true, creature)
+                )
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a player temporary summon hostile to valid player {}.",
+                                creature->GetName(),
+                                creatureABInfo->UnmodifiedLevel,
+                                thisPlayer->GetName()
+                    );
+
+                    isHostileToAnyValidPlayer = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isHostileToAnyValidPlayer)
+        {
+            // since no players are hostile to this creature, it should not be scaled
+            creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is player-summoned and non-hostile, no changes. Marked for skip.",
+                creature->GetName(),
+                creatureABInfo->UnmodifiedLevel
+            );
+
+            return false;
+        }
+
     }
 
     // if this is a critter
     // level and health checks for some nasty level 1 critters in some encounters
     if ((creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() < 100))
     {
-        creatureABInfo->skipMe = true;
+        creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a non-relevant creature, no changes. Marked for skip.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
@@ -866,6 +958,12 @@ bool isCreatureRelevant(Creature* creature) {
     }
 
     // survived to here, creature is relevant
+    // LOG_DEBUG below is executed every Creature update for every world creature, enable carefully
+    // LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is relevant.",
+    //             creature->GetName(),
+    //             creatureABInfo->UnmodifiedLevel
+    // );
+    creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_TRUE;
     return true;
 
 }
@@ -1058,16 +1156,51 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
     return AutoBalanceInflectionPointSettings(inflectionValue, curveFloor, curveCeiling);
 }
 
-AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* creature = nullptr)
+void getStatModifiersDebug(Map *map, Creature *creature, std::string message)
 {
+    // if we have a creature, include that in the output
+    if (creature)
+    {
+        // get the creature's info
+        AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | {} ({}{}) | {}",
+                    map->GetMapName(),
+                    map->GetId(),
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                    creature->GetName(),
+                    creatureABInfo->UnmodifiedLevel,
+                    creatureABInfo->selectedLevel ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
+                    message
+        );
+    }
+    // if no creature was provided, remove that from the output
+    else
+    {
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | {}",
+                    map->GetMapName(),
+                    map->GetId(),
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                    message
+        );
+    }
+}
+
+AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullptr)
+{
+    // get the instance's InstanceMap
+    InstanceMap* instanceMap = map->ToInstanceMap();
+
     // map variables
     uint32 maxNumberOfPlayers = instanceMap->GetMaxPlayers();
-    uint32 mapId = instanceMap->GetEntry()->MapID;
+    uint32 mapId = map->GetId();
 
     // get the creature's info if a creature was specified
     AutoBalanceCreatureInfo* creatureABInfo = nullptr;
     if (creature)
+    {
         creatureABInfo = creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+    }
 
     // this will be the return value
     AutoBalanceStatModifiers statModifiers;
@@ -1078,11 +1211,7 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
     {
         switch (maxNumberOfPlayers)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
+            case 1 ... 5:
                 if (creature && creature->IsDungeonBoss())
                 {
                     statModifiers.global = StatModifierHeroic_Boss_Global;
@@ -1091,6 +1220,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierHeroic_Boss_Armor;
                     statModifiers.damage = StatModifierHeroic_Boss_Damage;
                     statModifiers.ccduration = StatModifierHeroic_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "1 to 5 Player Heroic Boss");
                 }
                 else
                 {
@@ -1100,9 +1231,11 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierHeroic_Armor;
                     statModifiers.damage = StatModifierHeroic_Damage;
                     statModifiers.ccduration = StatModifierHeroic_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "1 to 5 Player Heroic");
                 }
                 break;
-            case 10:
+            case 6 ... 10:
                 if (creature && creature->IsDungeonBoss())
                 {
                     statModifiers.global = StatModifierRaid10MHeroic_Boss_Global;
@@ -1111,6 +1244,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid10MHeroic_Boss_Armor;
                     statModifiers.damage = StatModifierRaid10MHeroic_Boss_Damage;
                     statModifiers.ccduration = StatModifierRaid10MHeroic_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "10 Player Heroic Boss");
                 }
                 else
                 {
@@ -1120,9 +1255,11 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid10MHeroic_Armor;
                     statModifiers.damage = StatModifierRaid10MHeroic_Damage;
                     statModifiers.ccduration = StatModifierRaid10MHeroic_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "10 Player Heroic");
                 }
                 break;
-            case 25:
+            case 11 ... 25:
                 if (creature && creature->IsDungeonBoss())
                 {
                     statModifiers.global = StatModifierRaid25MHeroic_Boss_Global;
@@ -1131,6 +1268,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid25MHeroic_Boss_Armor;
                     statModifiers.damage = StatModifierRaid25MHeroic_Boss_Damage;
                     statModifiers.ccduration = StatModifierRaid25MHeroic_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "25 Player Heroic Boss");
                 }
                 else
                 {
@@ -1140,6 +1279,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid25MHeroic_Armor;
                     statModifiers.damage = StatModifierRaid25MHeroic_Damage;
                     statModifiers.ccduration = StatModifierRaid25MHeroic_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "25 Player Heroic");
                 }
                 break;
             default:
@@ -1151,6 +1292,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaidHeroic_Boss_Armor;
                     statModifiers.damage = StatModifierRaidHeroic_Boss_Damage;
                     statModifiers.ccduration = StatModifierRaidHeroic_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "?? Player Heroic Boss");
                 }
                 else
                 {
@@ -1160,6 +1303,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaidHeroic_Armor;
                     statModifiers.damage = StatModifierRaidHeroic_Damage;
                     statModifiers.ccduration = StatModifierRaidHeroic_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "?? Player Heroic");
                 }
         }
     }
@@ -1167,11 +1312,7 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
     {
         switch (maxNumberOfPlayers)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
+            case 1 ... 5:
                 if (creature && creature->IsDungeonBoss())
                 {
                     statModifiers.global = StatModifier_Boss_Global;
@@ -1180,6 +1321,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifier_Boss_Armor;
                     statModifiers.damage = StatModifier_Boss_Damage;
                     statModifiers.ccduration = StatModifier_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "1 to 5 Player Normal Boss");
                 }
                 else
                 {
@@ -1189,9 +1332,11 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifier_Armor;
                     statModifiers.damage = StatModifier_Damage;
                     statModifiers.ccduration = StatModifier_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "1 to 5 Player Normal");
                 }
                 break;
-            case 10:
+            case 6 ... 10:
                 if (creature && creature->IsDungeonBoss())
                 {
                     statModifiers.global = StatModifierRaid10M_Boss_Global;
@@ -1200,6 +1345,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid10M_Boss_Armor;
                     statModifiers.damage = StatModifierRaid10M_Boss_Damage;
                     statModifiers.ccduration = StatModifierRaid10M_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "10 Player Normal Boss");
                 }
                 else
                 {
@@ -1209,9 +1356,59 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid10M_Armor;
                     statModifiers.damage = StatModifierRaid10M_Damage;
                     statModifiers.ccduration = StatModifierRaid10M_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "10 Player Normal");
                 }
                 break;
-            case 25:
+            case 11 ... 15:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid15M_Boss_Global;
+                    statModifiers.health = StatModifierRaid15M_Boss_Health;
+                    statModifiers.mana = StatModifierRaid15M_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid15M_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid15M_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid15M_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "15 Player Normal Boss");
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid15M_Global;
+                    statModifiers.health = StatModifierRaid15M_Health;
+                    statModifiers.mana = StatModifierRaid15M_Mana;
+                    statModifiers.armor = StatModifierRaid15M_Armor;
+                    statModifiers.damage = StatModifierRaid15M_Damage;
+                    statModifiers.ccduration = StatModifierRaid15M_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "15 Player Normal");
+                }
+                break;
+            case 16 ... 20:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid20M_Boss_Global;
+                    statModifiers.health = StatModifierRaid20M_Boss_Health;
+                    statModifiers.mana = StatModifierRaid20M_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid20M_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid20M_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid20M_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "20 Player Normal Boss");
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid20M_Global;
+                    statModifiers.health = StatModifierRaid20M_Health;
+                    statModifiers.mana = StatModifierRaid20M_Mana;
+                    statModifiers.armor = StatModifierRaid20M_Armor;
+                    statModifiers.damage = StatModifierRaid20M_Damage;
+                    statModifiers.ccduration = StatModifierRaid20M_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "20 Player Normal");
+                }
+                break;
+            case 21 ... 25:
                 if (creature && creature->IsDungeonBoss())
                 {
                     statModifiers.global = StatModifierRaid25M_Boss_Global;
@@ -1220,6 +1417,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid25M_Boss_Armor;
                     statModifiers.damage = StatModifierRaid25M_Boss_Damage;
                     statModifiers.ccduration = StatModifierRaid25M_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "25 Player Normal Boss");
                 }
                 else
                 {
@@ -1229,6 +1428,32 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid25M_Armor;
                     statModifiers.damage = StatModifierRaid25M_Damage;
                     statModifiers.ccduration = StatModifierRaid25M_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "25 Player Normal");
+                }
+                break;
+            case 26 ... 40:
+                if (creature && creature->IsDungeonBoss())
+                {
+                    statModifiers.global = StatModifierRaid40M_Boss_Global;
+                    statModifiers.health = StatModifierRaid40M_Boss_Health;
+                    statModifiers.mana = StatModifierRaid40M_Boss_Mana;
+                    statModifiers.armor = StatModifierRaid40M_Boss_Armor;
+                    statModifiers.damage = StatModifierRaid40M_Boss_Damage;
+                    statModifiers.ccduration = StatModifierRaid40M_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "40 Player Normal Boss");
+                }
+                else
+                {
+                    statModifiers.global = StatModifierRaid40M_Global;
+                    statModifiers.health = StatModifierRaid40M_Health;
+                    statModifiers.mana = StatModifierRaid40M_Mana;
+                    statModifiers.armor = StatModifierRaid40M_Armor;
+                    statModifiers.damage = StatModifierRaid40M_Damage;
+                    statModifiers.ccduration = StatModifierRaid40M_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "40 Player Normal");
                 }
                 break;
             default:
@@ -1240,6 +1465,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid_Boss_Armor;
                     statModifiers.damage = StatModifierRaid_Boss_Damage;
                     statModifiers.ccduration = StatModifierRaid_Boss_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "?? Player Normal Boss");
                 }
                 else
                 {
@@ -1249,6 +1476,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
                     statModifiers.armor = StatModifierRaid_Armor;
                     statModifiers.damage = StatModifierRaid_Damage;
                     statModifiers.ccduration = StatModifierRaid_CCDuration;
+
+                    getStatModifiersDebug(map, creature, "?? Player Normal");
                 }
         }
     }
@@ -1265,6 +1494,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
         if (myStatModifierBossOverrides->armor != -1)       { statModifiers.armor =       myStatModifierBossOverrides->armor;       }
         if (myStatModifierBossOverrides->damage != -1)      { statModifiers.damage =      myStatModifierBossOverrides->damage;      }
         if (myStatModifierBossOverrides->ccduration != -1)  { statModifiers.ccduration =  myStatModifierBossOverrides->ccduration;  }
+
+        getStatModifiersDebug(map, creature, "Boss Per-Instance Override");
     }
     // AutoBalance.StatModifier.PerInstance
     else if (hasStatModifierOverride(mapId))
@@ -1277,6 +1508,8 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
         if (myStatModifierOverrides->armor != -1)       { statModifiers.armor =       myStatModifierOverrides->armor;       }
         if (myStatModifierOverrides->damage != -1)      { statModifiers.damage =      myStatModifierOverrides->damage;      }
         if (myStatModifierOverrides->ccduration != -1)  { statModifiers.ccduration =  myStatModifierOverrides->ccduration;  }
+
+        getStatModifiersDebug(map, creature, "Per-Instance Override");
     }
 
     // Per-creature modifiers applied last
@@ -1291,6 +1524,40 @@ AutoBalanceStatModifiers getStatModifiers (InstanceMap* instanceMap, Creature* c
         if (myCreatureOverrides->armor != -1)       { statModifiers.armor =       myCreatureOverrides->armor;       }
         if (myCreatureOverrides->damage != -1)      { statModifiers.damage =      myCreatureOverrides->damage;      }
         if (myCreatureOverrides->ccduration != -1)  { statModifiers.ccduration =  myCreatureOverrides->ccduration;  }
+
+        getStatModifiersDebug(map, creature, "Per-Creature Override");
+    }
+
+    if (creature)
+    {
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | {} ({}{}) | Stat Modifiers = global: {} | health: {} | mana: {} | armor: {} | damage: {} | ccduration: {}",
+                    map->GetMapName(),
+                    map->GetId(),
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                    creature->GetName(),
+                    creatureABInfo->UnmodifiedLevel,
+                    creatureABInfo->selectedLevel ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
+                    statModifiers.global,
+                    statModifiers.health,
+                    statModifiers.mana,
+                    statModifiers.armor,
+                    statModifiers.damage,
+                    statModifiers.ccduration
+        );
+    }
+    else
+    {
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | Stat Modifiers = global: {} | health: {} | mana: {} | armor: {} | damage: {} | ccduration: {}",
+                    map->GetMapName(),
+                    map->GetId(),
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                    statModifiers.global,
+                    statModifiers.health,
+                    statModifiers.mana,
+                    statModifiers.armor,
+                    statModifiers.damage,
+                    statModifiers.ccduration
+        );
     }
 
     return statModifiers;
@@ -1492,26 +1759,52 @@ float getWorldMultiplier(Map* map, BaseValueType baseValueType)
 
         LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} base is {}.",
             map->GetMapName(),
-            mapABInfo->highestPlayerLevel,
+            mapABInfo->worldMultiplierTargetLevel,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
             newBaseValue
         );
 
         // update the world multiplier accordingly
         worldMultiplier *= newBaseValue / originalBaseValue;
+
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}{}) final {} multiplier is {}.",
+                map->GetMapName(),
+                mapABInfo->worldMultiplierTargetLevel,
+                mapABInfo->worldMultiplierTargetLevel,
+                baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+                worldMultiplier
+        );
     }
     else
     {
         mapABInfo->worldMultiplierTargetLevel = avgMapCreatureLevelRounded;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled or the instance's average creature level being inside the skip range.", map->GetMapName(), avgMapCreatureLevelRounded);
-    }
 
-    LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}->{}) final {} multiplier is {}.",
-              map->GetMapName(), avgMapCreatureLevelRounded,
-              mapABInfo->highestPlayerLevel,
-              baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
-              worldMultiplier
-    );
+        // level scaling is disabled
+        if (!LevelScaling)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled. Map level set to avgCreatureLevel ({}).",
+                map->GetMapName(),
+                mapABInfo->worldMultiplierTargetLevel,
+                mapABInfo->worldMultiplierTargetLevel
+            );
+        }
+        // inside the level skip range
+        else
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to being inside the level skip range. Map level set to avgCreatureLevel ({}).",
+                map->GetMapName(),
+                mapABInfo->worldMultiplierTargetLevel,
+                mapABInfo->worldMultiplierTargetLevel
+            );
+        }
+
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) final {} multiplier is {}.",
+                map->GetMapName(),
+                mapABInfo->worldMultiplierTargetLevel,
+                baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+                worldMultiplier
+        );
+    }
 
     return worldMultiplier;
 }
@@ -1694,7 +1987,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                 )
                 {
                     // no change needed, just log
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is owned by {} ({}). Summon level is within the expected range of NPC levels for this map. Summon original level set to {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is owned by {} ({}). Summon level is within the expected range of NPC levels for this map. Summon original level set to ({}).",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerCreature->GetName(),
@@ -1706,7 +1999,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                 else if (summonerABInfo->UnmodifiedLevel < (uint8)(((float)mapABInfo->lfgMinLevel * .85f)) || summonerABInfo->UnmodifiedLevel > (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f))
                 {
                     // no change needed, just log
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is owned by {} ({}). Summoner is outside the expected range of NPC levels for this map. Summon original level set to {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is owned by {} ({}). Summoner is outside the expected range of NPC levels for this map. Summon original level set to ({}).",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerCreature->GetName(),
@@ -1740,26 +2033,8 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
         {
             Player* summoner = creature->ToTempSummon()->GetSummoner()->ToPlayer();
 
-            // summon is friendly to the player
-            if (!creature->IsHostileTo(summoner) ||
-                creature->IsFriendlyTo(summoner) ||
-                (creature->IsGuardian() && creature->GetGuardianPet()->GetGuardianPet()->GetOwnerGUID() == summoner->GetGUID())
-            )
-            {
-                uint8 newLevel = std::min(summoner->GetLevel(), creature->GetCreatureTemplate()->maxlevel);
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is an ally owned by player {} ({}). Summon original level set to {} level ({}).",
-                            creature->GetName(),
-                            creatureABInfo->UnmodifiedLevel,
-                            summoner->GetName(),
-                            summoner->GetLevel(),
-                            newLevel == summoner->GetLevel() ? "player's" : "creature template's max",
-                            newLevel
-                );
-                creatureABInfo->UnmodifiedLevel = newLevel;
-
-            }
-            // summon is hostile to the player
-            else
+            // is this creature relevant?
+            if (isCreatureRelevant(creature))
             {
                 LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is an enemy owned by player {} ({}). Summon original level set to ({}).",
                             creature->GetName(),
@@ -1768,6 +2043,20 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                             summoner->GetLevel(),
                             creatureABInfo->UnmodifiedLevel
                 );
+            }
+            // summon is not relevant
+            else
+            {
+                uint8 newLevel = std::min(summoner->GetLevel(), creature->GetCreatureTemplate()->maxlevel);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is an ally owned by player {} ({}). Summon original level set to ({}) level ({}).",
+                            creature->GetName(),
+                            creatureABInfo->UnmodifiedLevel,
+                            summoner->GetName(),
+                            summoner->GetLevel(),
+                            newLevel == summoner->GetLevel() ? "player's" : "creature template's max",
+                            newLevel
+                );
+                creatureABInfo->UnmodifiedLevel = newLevel;
             }
         }
         // pets and totems
@@ -1833,7 +2122,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     else
     {
         creatureABInfo->UnmodifiedLevel = creatureABInfo->UnmodifiedLevel;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) original level set to {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) original level set to ({}).",
             creature->GetName(),
             creatureABInfo->UnmodifiedLevel,
             creatureABInfo->UnmodifiedLevel
@@ -1991,7 +2280,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
             // increment the active creature counter
             mapABInfo->activeCreatureCount++;
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is included in map stats, adjusting avgCreatureLevel to {}", creature->GetName(), creatureABInfo->UnmodifiedLevel, newAvgCreatureLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is included in map stats, adjusting avgCreatureLevel to ({})", creature->GetName(), creatureABInfo->UnmodifiedLevel, newAvgCreatureLevel);
 
             // if the average creature level transitions from one whole number to the next, reset the map's config time so it will refresh
             if (round(oldAvgCreatureLevel) != round(newAvgCreatureLevel))
@@ -3918,8 +4207,6 @@ public:
         // If the config is out of date and the creature was reset, run modify against it
         if (creatureABInfo->isBrandNew || ResetCreatureIfNeeded(creature))
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
-
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) | Entry ID: {} | Spawn ID: {}",
                         creature->GetName(),
                         creature->GetLevel(),
@@ -4314,7 +4601,7 @@ public:
             return;
 
         // Stat Modifiers
-        AutoBalanceStatModifiers statModifiers = getStatModifiers(instanceMap, creature);
+        AutoBalanceStatModifiers statModifiers = getStatModifiers(map, creature);
         float statMod_global        = statModifiers.global;
         float statMod_health        = statModifiers.health;
         float statMod_mana          = statModifiers.mana;
@@ -4338,19 +4625,31 @@ public:
         float healthMultiplier = defaultMultiplier * statMod_global * statMod_health;
         float scaledHealthMultiplier;
 
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | HealthMultiplier: ({}) = defaultMultiplier ({}) * statMod_global ({}) * statMod_health ({})",
+                    creature->GetName(),
+                    creatureABInfo->selectedLevel,
+                    healthMultiplier,
+                    defaultMultiplier,
+                    statMod_global,
+                    statMod_health
+        );
+
         // Can't be less than MinHPModifier
         if (healthMultiplier <= MinHPModifier)
         {
             healthMultiplier = MinHPModifier;
+
+            LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | HealthMultiplier: ({}) - capped to MinHPModifier ({})",
+                        creature->GetName(),
+                        creatureABInfo->selectedLevel,
+                        healthMultiplier,
+                        MinHPModifier
+            );
         }
 
         // set the non-level-scaled health multiplier on the creature's AB info
         creatureABInfo->HealthMultiplier = healthMultiplier;
-        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | HealthMultiplier: ({})",
-                    creature->GetName(),
-                    creatureABInfo->selectedLevel,
-                    creatureABInfo->HealthMultiplier
-        );
+
 
         // only level scale health if level scaling is enabled and the creature level has been altered
         if (LevelScaling && creatureABInfo->selectedLevel != creatureABInfo->UnmodifiedLevel)
@@ -4441,14 +4740,6 @@ public:
                         origHealth,
                         creatureABInfo->HealthMultiplier
             );
-
-            LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | newFinalHealth ({}) = origHealth ({}) * HealthMultiplier ({})",
-                        creature->GetName(),
-                        creatureABInfo->UnmodifiedLevel,
-                        newFinalHealth,
-                        origHealth,
-                        creatureABInfo->HealthMultiplier
-            );
         }
 
         //
@@ -4462,10 +4753,26 @@ public:
         float manaMultiplier = defaultMultiplier * statMod_global * statMod_mana;
         float scaledManaMultiplier;
 
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | ManaMultiplier: ({}) = defaultMultiplier ({}) * statMod_global ({}) * statMod_mana ({})",
+                    creature->GetName(),
+                    creatureABInfo->selectedLevel,
+                    manaMultiplier,
+                    defaultMultiplier,
+                    statMod_global,
+                    statMod_mana
+        );
+
         // Can't be less than MinManaModifier
         if (manaMultiplier <= MinManaModifier)
         {
             manaMultiplier = MinManaModifier;
+
+            LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | ManaMultiplier: ({}) - capped to MinManaModifier ({})",
+                        creature->GetName(),
+                        creatureABInfo->selectedLevel,
+                        manaMultiplier,
+                        MinManaModifier
+            );
         }
 
         // if the creature doesn't have mana, set the multiplier to 0.0
@@ -4584,13 +4891,17 @@ public:
         float armorMultiplier = defaultMultiplier * statMod_global * statMod_armor;
         float scaledArmorMultiplier;
 
-        // set the non-level-scaled armor multiplier on the creature's AB info
-        creatureABInfo->ArmorMultiplier = armorMultiplier;
-        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | armorMultiplier: ({})",
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | armorMultiplier: ({}) = defaultMultiplier ({}) * statMod_global ({}) * statMod_armor ({})",
                     creature->GetName(),
                     creatureABInfo->selectedLevel,
-                    armorMultiplier
+                    armorMultiplier,
+                    defaultMultiplier,
+                    statMod_global,
+                    statMod_armor
         );
+
+        // set the non-level-scaled armor multiplier on the creature's AB info
+        creatureABInfo->ArmorMultiplier = armorMultiplier;
 
         // only level scale armor if level scaling is enabled and the creature level has been altered
         if (LevelScaling && creatureABInfo->selectedLevel != creatureABInfo->UnmodifiedLevel)
@@ -4683,10 +4994,26 @@ public:
         float damageMultiplier = defaultMultiplier * statMod_global * statMod_damage;
         float scaledDamageMultiplier;
 
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | DamageMultiplier: ({}) = defaultMultiplier ({}) * statMod_global ({}) * statMod_damage ({})",
+                    creature->GetName(),
+                    creatureABInfo->selectedLevel,
+                    damageMultiplier,
+                    defaultMultiplier,
+                    statMod_global,
+                    statMod_damage
+        );
+
         // Can't be less than MinDamageModifier
         if (damageMultiplier <= MinDamageModifier)
         {
             damageMultiplier = MinDamageModifier;
+
+            LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | DamageMultiplier: ({}) - capped to MinDamageModifier ({})",
+                        creature->GetName(),
+                        creatureABInfo->selectedLevel,
+                        damageMultiplier,
+                        MinDamageModifier
+            );
         }
 
         // set the non-level-scaled damage multiplier on the creature's AB info
@@ -4764,6 +5091,7 @@ public:
         );
 
         float ccDurationMultiplier;
+
         if (statMod_ccDuration != -1.0f)
         {
             // calculate CC Duration from the default multiplier and the config settings
@@ -4794,6 +5122,14 @@ public:
                         creatureABInfo->selectedLevel
             );
         }
+
+        LOG_DEBUG("module.AutoBalance.StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | ccDurationMultiplier: ({}) = defaultMultiplier ({}) * statMod_ccDuration ({})",
+                    creature->GetName(),
+                    creatureABInfo->selectedLevel,
+                    ccDurationMultiplier,
+                    defaultMultiplier,
+                    statMod_ccDuration
+        );
 
         //
         //  Apply New Values
