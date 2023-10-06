@@ -2451,10 +2451,34 @@ void AddPlayerToMap(Map* map, Player* player)
     // get map data
     AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
-    // if this player is already in the map's player list, skip
-    if (std::find(mapABInfo->allMapPlayers.begin(), mapABInfo->allMapPlayers.end(), player) != mapABInfo->allMapPlayers.end())
+
+    if (!player)
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) is already in the map's player list.", player->GetName(), player->getLevel());
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Map {} ({}{}) | Player does not exist.",
+            map->GetMapName(),
+            map->GetId(),
+            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+        );
+        return;
+    }
+    // player is a GM
+    else if (player->IsGameMaster())
+    {
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Map {} ({}{}) | Game Master ({}) will not be added to the player list.",
+            map->GetMapName(),
+            map->GetId(),
+            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+            player->GetName()
+        );
+        return;
+    }
+    // if this player is already in the map's player list, skip
+    else if (std::find(mapABInfo->allMapPlayers.begin(), mapABInfo->allMapPlayers.end(), player) != mapABInfo->allMapPlayers.end())
+    {
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) is already in the map's player list.",
+            player->GetName(),
+            player->getLevel()
+        );
         return;
     }
 
@@ -2533,32 +2557,8 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             {
                 Player* thisPlayer = playerIteration->GetSource();
 
-                // if this player doesn't exist for some reason, bail out
-                if (!thisPlayer)
-                {
-                    LOG_INFO("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Player {} ({}) does not exist anymore",
-                                thisPlayer->GetName(),
-                                thisPlayer->getLevel()
-                    );
-                    continue;
-                }
-                // if this player is a Game Master, skip
-                else if (thisPlayer->IsGameMaster())
-                {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Player {} ({}) is a Game Master and is not added to the player list.",
-                                thisPlayer->GetName(),
-                                thisPlayer->getLevel()
-                    );
-                    continue;
-                }
-
-                // add the player to the map's player list
+                // (conditionally) add the player to the map's player list
                 AddPlayerToMap(map, thisPlayer);
-
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Player {} ({}) added to the map's player list.",
-                            thisPlayer->GetName(),
-                            thisPlayer->getLevel()
-                );
             }
 
             // map's player count will be updated in UpdateMapPlayerStats below
@@ -3885,7 +3885,13 @@ class AutoBalance_AllMapScript : public AllMapScript
                 return;
 
             if (player->IsGameMaster())
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player {} is a GM and will not be added to the map's player list.",
+                    player->GetName()
+                );
                 return;
+            }
+
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
