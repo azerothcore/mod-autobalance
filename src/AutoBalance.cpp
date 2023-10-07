@@ -69,6 +69,11 @@ enum Relevance {
     AUTOBALANCE_RELEVANCE_UNCHECKED
 };
 
+enum Damage_Healing_Debug_Phase {
+    AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE,
+    AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER
+};
+
 ABScriptMgr* ABScriptMgr::instance()
 {
     static ABScriptMgr instance;
@@ -256,6 +261,8 @@ uint64_t GetCurrentTime()
 }
 
 // spell IDs that spend player health
+// player abilities don't actually appear to be caught by `ModifySpellDamageTaken`,
+// but I'm leaving them here in case they ever DO get caught by it
 static std::list<uint32> spellIdsThatSpendPlayerHealth =
 {
     45529,      // Blood Tap
@@ -3418,17 +3425,18 @@ class AutoBalance_UnitScript : public UnitScript
             // if the spell is positive (healing or other) we keep it the same
             int32 adjustedAmount = !spellInfo->IsPositive() ? amount * -1 : amount;
 
-            // uncomment to debug this hook
+            // only debug if the source or target is a player
             bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
+            if (_debug_damage_and_healing) _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
 
             // set amount to the absolute value of the function call
             // the provided amount doesn't indicate whether it's a positive or negative value
-            adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount);
+            adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount, spellInfo ? spellInfo->Id : 0);
             amount = abs(adjustedAmount);
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
+            if (_debug_damage_and_healing) _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
         }
 
         void ModifySpellDamageTaken(Unit* target, Unit* source, int32& amount, SpellInfo const* spellInfo) override
@@ -3437,17 +3445,18 @@ class AutoBalance_UnitScript : public UnitScript
             // if the spell is positive (healing or other) we keep it the same
             int32 adjustedAmount = !spellInfo->IsPositive() ? amount * -1 : amount;
 
-            // uncomment to debug this hook
+            // only debug if the source or target is a player
             bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
+            if (_debug_damage_and_healing) _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
 
             // set amount to the absolute value of the function call
             // the provided amount doesn't indicate whether it's a positive or negative value
-            adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount);
+            adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount, spellInfo ? spellInfo->Id : 0);
             amount = abs(adjustedAmount);
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
+            if (_debug_damage_and_healing) _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
         }
 
         void ModifyMeleeDamage(Unit* target, Unit* source, uint32& amount) override
@@ -3455,35 +3464,38 @@ class AutoBalance_UnitScript : public UnitScript
             // melee damage is always negative, so we need to flip the sign
             int32 adjustedAmount = amount * -1;
 
-            // uncomment to debug this hook
+            // only debug if the source or target is a player
             bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, "BEFORE:", "Melee");
+            if (_debug_damage_and_healing) _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, "Melee");
 
             // set amount to the absolute value of the function call
             adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount);
             amount = abs(adjustedAmount);
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, "AFTER:", "Melee");
+            if (_debug_damage_and_healing) _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, "Melee");
         }
 
         void ModifyHealReceived(Unit* target, Unit* source, uint32& amount, SpellInfo const* spellInfo) override
         {
             // healing is always positive, no need for any sign flip
 
-            // uncomment to debug this hook
+            // only debug if the source or target is a player
             bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifyHealReceived", target, source, amount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
+            if (_debug_damage_and_healing) _Debug_Output("ModifyHealReceived", target, source, amount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
 
-            amount = _Modify_Damage_Healing(target, source, amount);
+            amount = _Modify_Damage_Healing(target, source, amount, spellInfo ? spellInfo->Id : 0);
 
-            if (_debug_damage_and_healing) _Debug_Output("ModifyHealReceived", target, source, amount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
+            if (_debug_damage_and_healing) _Debug_Output("ModifyHealReceived", target, source, amount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
         }
 
         void OnAuraApply(Unit* unit, Aura* aura) override {
-            // uncomment to debug this hook
+            // only debug if the source or target is a player
             bool _debug_damage_and_healing = (unit && unit->GetTypeId() == TYPEID_PLAYER);
+            _debug_damage_and_healing = (unit && unit->GetMap()->GetInstanceId());
 
             // Only if this aura has a duration
             if (aura->GetDuration() > 0 || aura->GetMaxDuration() > 0)
@@ -3504,38 +3516,44 @@ class AutoBalance_UnitScript : public UnitScript
     private:
         [[maybe_unused]] bool _debug_damage_and_healing = false; // defaults to false, overwritten in each function
 
-        void _Debug_Output(std::string function_name, Unit* target, Unit* source, int32 amount, std::string prefix = "", std::string spell_name = "Unknown Spell", uint32 spell_id = 0)
+        void _Debug_Output(std::string function_name, Unit* target, Unit* source, int32 amount, Damage_Healing_Debug_Phase phase, std::string spell_name = "Unknown Spell", uint32 spell_id = 0)
         {
+            if (phase == AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE)
+            {
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance:: {}", SPACER);
+            }
+
             if (target && source && amount)
             {
-                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} {} {} {} ({} - {})", function_name, prefix, source->GetName(), amount, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} {} {} {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", source->GetName(), amount, target->GetName(), spell_name, spell_id);
             }
             else if (target && source)
             {
-                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} {} 0 {} ({} - {})", function_name, prefix, source->GetName(), target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} {} 0 {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", source->GetName(), target->GetName(), spell_name, spell_id);
             }
             else if (target && amount)
             {
-                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} ?? {} {} ({} - {})", function_name, prefix, amount, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} ?? {} {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", amount, target->GetName(), spell_name, spell_id);
             }
             else if (target)
             {
-                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} ?? ?? {} ({} - {})", function_name, prefix, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} ?? ?? {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", target->GetName(), spell_name, spell_id);
             }
             else
             {
-                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} W? T? F? ({} - {})", function_name, prefix, spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::{}: {} W? T? F? ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", spell_name, spell_id);
             }
         }
 
-        int32 _Modify_Damage_Healing(Unit* target, Unit* source, int32 amount)
+        int32 _Modify_Damage_Healing(Unit* target, Unit* source, int32 amount, int32 spellId = 0)
         {
             //
             // Pre-flight Checks
             //
 
-            // uncomment to debug this function
+            // only debug if the source or target is a player
             bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
+            _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
             // check that we're enabled globally, else return the original value
             if (!EnableGlobal)
@@ -3546,7 +3564,7 @@ class AutoBalance_UnitScript : public UnitScript
                 return amount;
             }
 
-            // if the source is gone (logged off? despawned?), use the same target and source
+            // if the source is gone (logged off? despawned?), use the same target and source.
             // hacky, but better than crashing or having the damage go to 1.0x
             if (!source)
             {
@@ -3559,8 +3577,8 @@ class AutoBalance_UnitScript : public UnitScript
             // make sure the source and target are in an instance, else return the original damage
             if (!(source->GetMap()->IsDungeon() && target->GetMap()->IsDungeon()))
             {
-                if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Not in an instance, returning original value of {}.", amount);
+                //if (_debug_damage_and_healing)
+                //    LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Not in an instance, returning original value of {}.", amount);
 
                 return amount;
             }
@@ -3602,6 +3620,24 @@ class AutoBalance_UnitScript : public UnitScript
             // if the source is a player and they are damaging themselves, log to debug but continue
             else if (source->GetTypeId() == TYPEID_PLAYER && source->GetGUID() == target->GetGUID() && amount < 0)
             {
+                // if the spell used is in our list of spells to ignore, return the original value
+                if
+                (
+                    spellId &&
+                    std::find
+                    (
+                        spellIdsThatSpendPlayerHealth.begin(),
+                        spellIdsThatSpendPlayerHealth.end(),
+                        spellId
+                    ) != spellIdsThatSpendPlayerHealth.end()
+                )
+                {
+                    if (_debug_damage_and_healing)
+                        LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-damaging with a spell that is ignored, returning original value of {}.", amount);
+
+                    return amount;
+                }
+
                 if (_debug_damage_and_healing)
                     LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-damaging, continuing.");
             }
@@ -3625,7 +3661,7 @@ class AutoBalance_UnitScript : public UnitScript
             if ((source->IsHunterPet() || source->IsPet() || source->IsSummon()) && source->IsControlledByPlayer())
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a pet or summon, returning original value of {}.", amount);
+                    LOG_DEBUG("module.AutoBalance.Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player-controlled pet or summon, returning original value of {}.", amount);
 
                 return amount;
             }
@@ -4330,6 +4366,8 @@ public:
         // If the config is out of date and the creature was reset, run modify against it
         if (creatureABInfo->isBrandNew || ResetCreatureIfNeeded(creature))
         {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
+
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) | Entry ID: {} | Spawn ID: {}",
                         creature->GetName(),
                         creature->GetLevel(),
