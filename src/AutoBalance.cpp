@@ -209,7 +209,7 @@ public:
     float avgCreatureLevel = 0;                     // the average level of all active creatures in the map (continuously updated)
     uint32 activeCreatureCount = 0;                 // the number of active creatures in the map
 
-    bool isLevelScalingEnabled = false;             // only used for `.ab mapstats` display
+    bool isLevelScalingEnabled = false;             // whether level scaling is enabled on this map
     uint8 levelScalingSkipHigherLevels;             // used to determine if this map should scale or not
     uint8 levelScalingSkipLowerLevels;              // used to determine if this map should scale or not
     uint8 levelScalingDynamicCeiling;               // how many levels MORE than the highestPlayerLevel creature should be scaled to
@@ -635,7 +635,7 @@ bool ShouldMapBeEnabled(Map* map)
         // if the map has no players in the player list, then disabled
         if (!mapABInfo->playerCount)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because there are no non-GM players in the map",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because there are no non-GM players in the map.",
                       map->GetMapName(),
                       map->GetId(),
                       map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -649,7 +649,7 @@ bool ShouldMapBeEnabled(Map* map)
         // if the Dungeon is disabled via configuration, do not enable it
         if (isDungeonInDisabledDungeonIds(map->GetId()))
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because the map ID is disabled via configuration",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because the map ID is disabled via configuration.",
                       map->GetMapName(),
                       map->GetId(),
                       map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -1848,9 +1848,8 @@ float getWorldMultiplier(Map* map, BaseValueType baseValueType)
         // update the world multiplier accordingly
         worldMultiplier *= newBaseValue / originalBaseValue;
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}{}) final {} multiplier is {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) final {} multiplier is {}.",
                 map->GetMapName(),
-                mapABInfo->worldMultiplierTargetLevel,
                 mapABInfo->worldMultiplierTargetLevel,
                 baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
                 worldMultiplier
@@ -1863,7 +1862,7 @@ float getWorldMultiplier(Map* map, BaseValueType baseValueType)
         // level scaling is disabled
         if (!LevelScaling)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled. Map level set to avgCreatureLevel ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled. World multiplier target level set to avgCreatureLevel ({}).",
                 map->GetMapName(),
                 mapABInfo->worldMultiplierTargetLevel,
                 mapABInfo->worldMultiplierTargetLevel
@@ -1872,7 +1871,7 @@ float getWorldMultiplier(Map* map, BaseValueType baseValueType)
         // inside the level skip range
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to being inside the level skip range. Map level set to avgCreatureLevel ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to being inside the level skip range. World multiplier target level set to avgCreatureLevel ({}).",
                 map->GetMapName(),
                 mapABInfo->worldMultiplierTargetLevel,
                 mapABInfo->worldMultiplierTargetLevel
@@ -2595,6 +2594,15 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
     // if map needs update
     if (force || mapABInfo->globalConfigTime < globalConfigTime || mapABInfo->mapConfigTime < mapABInfo->globalConfigTime)
     {
+
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) globalConfigTime = ({}) | mapConfigTime = ({})",
+                    map->GetMapName(),
+                    map->GetId(),
+                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                    mapABInfo->globalConfigTime,
+                    mapABInfo->mapConfigTime
+        );
+
         // update forced
         if (force)
         {
@@ -2606,9 +2614,21 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             );
         }
 
+        // some tracking variables
+        bool isGlobalConfigOutOfDate = mapABInfo->globalConfigTime < globalConfigTime;
+        bool isMapConfigOutOfDate = mapABInfo->mapConfigTime < globalConfigTime;
+
         // if this was triggered by a global config update, redetect players
-        if (mapABInfo->globalConfigTime < globalConfigTime)
+        if (isGlobalConfigOutOfDate)
         {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) global config is out of date ({} < {}) and will be updated.",
+                        map->GetMapName(),
+                        map->GetId(),
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                        mapABInfo->globalConfigTime,
+                        globalConfigTime
+            );
+
             LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) will recount players in the map.",
                         map->GetMapName(),
                         map->GetId(),
@@ -2639,27 +2659,15 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             // map's player count will be updated in UpdateMapPlayerStats below
         }
 
-        // global config is out of date
-        if (mapABInfo->globalConfigTime < globalConfigTime)
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) global config is out of date ({} < {}) and will be updated.",
-                        map->GetMapName(),
-                        map->GetId(),
-                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                        mapABInfo->globalConfigTime,
-                        globalConfigTime
-            );
-        }
-
         // map config is out of date
-        if (mapABInfo->mapConfigTime < mapABInfo->globalConfigTime)
+        if (isMapConfigOutOfDate)
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) map config is out of date ({} < {}) and will be updated.",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                         mapABInfo->mapConfigTime,
-                        mapABInfo->globalConfigTime
+                        globalConfigTime
             );
         }
 
@@ -2775,16 +2783,16 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             }
         }
 
-        // World multipliers only need to be updated if the mapLevel has changed
-        if (mapABInfo->prevMapLevel != mapABInfo->mapLevel)
+        // World multipliers only need to be updated if the mapLevel has changed OR if the map config is out of date
+        if (mapABInfo->prevMapLevel != mapABInfo->mapLevel || isMapConfigOutOfDate)
         {
-            // Update World Damage or Healing multiplier
-            // Used for scaling damage and healing between players and/or units
-            mapABInfo->worldDamageHealingMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_DAMAGE_HEALING);
-
             // Update World Health multiplier
             // Used for scaling damage against destructible game objects
             mapABInfo->worldHealthMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_HEALTH);
+
+            // Update World Damage or Healing multiplier
+            // Used for scaling damage and healing between players and/or non-creatures
+            mapABInfo->worldDamageHealingMultiplier = getWorldMultiplier(map, BaseValueType::AUTOBALANCE_DAMAGE_HEALING);
         }
 
         // mark the config updated
@@ -4383,13 +4391,6 @@ public:
                 );
                 creatureABInfo->isBrandNew = false;
             }
-            else
-            {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) is reset to its original stats.",
-                            creature->GetName(),
-                            creature->GetLevel()
-                );
-            }
 
             // Update the map's data if it is out of date
             UpdateMapDataIfNeeded(creature->GetMap());
@@ -4443,6 +4444,14 @@ public:
         if (creatureABInfo->mapConfigTime < mapABInfo->mapConfigTime)
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
+
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) | Entry ID: {} | Spawn ID: {}",
+                        creature->GetName(),
+                        creature->GetLevel(),
+                        creature->GetEntry(),
+                        creature->GetSpawnId()
+            );
+
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) map config time is out of date ({} < {}). Resetting creature before modify.",
                         creature->GetName(),
                         creature->GetLevel(),
@@ -4509,6 +4518,11 @@ public:
             creatureABInfo->isInCreatureList = isInCreatureList;
 
             // damage and ccduration are handled using AutoBalanceCreatureInfo data only
+
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) is reset to its original stats.",
+                        creature->GetName(),
+                        creature->GetLevel()
+            );
 
             // return true to indicate that the creature was reset
             return true;
