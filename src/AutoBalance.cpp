@@ -814,7 +814,7 @@ uint32 getBaseExpansionValueForLevel(const uint32 baseValues[3], uint8 targetLev
     return getBaseExpansionValueForLevel(floatBaseValues, targetLevel);
 }
 
-bool isBossOrBossSummon(Creature* creature)
+bool isBossOrBossSummon(Creature* creature, bool log = false)
 {
     // no creature? not a boss
     if (!creature)
@@ -826,8 +826,18 @@ bool isBossOrBossSummon(Creature* creature)
     // if this creature is a boss, return true
     if (creature->IsDungeonBoss() || creature->isWorldBoss())
     {
+        if (log)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}{}) is a BOSS.",
+                        creature->GetName(),
+                        creature->GetEntry(),
+                        creature->GetInstanceId() ? "-" + std::to_string(creature->GetInstanceId()) : ""
+            );
+        }
+
         return true;
     }
+
 
     // if this creature is a summon of a boss, return true
     if (
@@ -843,32 +853,43 @@ bool isBossOrBossSummon(Creature* creature)
         {
             if (summoner->IsDungeonBoss() || summoner->isWorldBoss())
             {
-                // LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}{}) is a summon of BOSS {}({}{})",
-                //             creature->GetName(),
-                //             creature->GetEntry(),
-                //             creature->GetInstanceId() ? "-" + std::to_string(creature->GetInstanceId()) : "",
-                //             summoner->GetName(),
-                //             summoner->GetEntry(),
-                //             summoner->GetInstanceId() ? "-" + std::to_string(summoner->GetInstanceId()) : ""
-                // );
+                if (log)
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}) is a summon of BOSS {}({}).",
+                                creature->GetName(),
+                                creature->GetEntry(),
+                                summoner->GetName(),
+                                summoner->GetEntry()
+                    );
+                }
+
                 return true;
             }
             else
             {
-                // LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}{}) is a summon of NON-BOSS {}({}{})",
-                //             creature->GetName(),
-                //             creature->GetEntry(),
-                //             creature->GetInstanceId() ? "-" + std::to_string(creature->GetInstanceId()) : "",
-                //             summoner->GetName(),
-                //             summoner->GetEntry(),
-                //             summoner->GetInstanceId() ? "-" + std::to_string(summoner->GetInstanceId()) : ""
-                // );
+                if (log)
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}) is a summon of NON-BOSS {}({}).",
+                                creature->GetName(),
+                                creature->GetEntry(),
+                                summoner->GetName(),
+                                summoner->GetEntry()
+                    );
+                }
                 return false;
             }
         }
     }
 
     // not a boss
+    if (log)
+    {
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::isBossOrBossSummon: {} ({}) is NOT a BOSS.",
+                    creature->GetName(),
+                    creature->GetEntry()
+        );
+    }
+
     return false;
 }
 
@@ -4210,7 +4231,7 @@ public:
         if (creatureMap && creatureMap->IsDungeon())
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) | Entry ID: {} | Spawn ID: {}",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) | Entry ID: ({}) | Spawn ID: ({})",
                         creature->GetName(),
                         level,
                         creature->GetEntry(),
@@ -4325,7 +4346,7 @@ public:
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureRemoveWorld: Creature {} ({}) | Entry ID: {} | Spawn ID: {}",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureRemoveWorld: Creature {} ({}) | Entry ID: ({}) | Spawn ID: ({})",
                         creature->GetName(),
                         creature->GetLevel(),
                         creature->GetEntry(),
@@ -4376,7 +4397,7 @@ public:
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) | Entry ID: {} | Spawn ID: {}",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) | Entry ID: ({}) | Spawn ID: ({})",
                         creature->GetName(),
                         creature->GetLevel(),
                         creature->GetEntry(),
@@ -4445,7 +4466,7 @@ public:
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) | Entry ID: {} | Spawn ID: {}",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) | Entry ID: ({}) | Spawn ID: ({})",
                         creature->GetName(),
                         creature->GetLevel(),
                         creature->GetEntry(),
@@ -4774,6 +4795,9 @@ public:
 
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
+
+        // Debug for boss detection
+        isBossOrBossSummon(creature, true);
 
         // Stat Modifiers
         AutoBalanceStatModifiers statModifiers = getStatModifiers(map, creature);
