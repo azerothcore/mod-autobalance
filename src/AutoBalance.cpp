@@ -1749,19 +1749,50 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
 
     // Generate the default multiplier before level scaling
     // This value is only based on the adjusted number of players in the instance
-    float worldMultiplier = getDefaultMultiplier(map, inflectionPointSettings);
+    float worldMultiplier = 1.0f;
+    float defaultMultiplier = getDefaultMultiplier(map, inflectionPointSettings);
 
     LOG_DEBUG("module.AutoBalance",
-        "AutoBalance::getWorldMultiplier: Map {} ({}) starting {} multiplier for {} player(s) before level scaling: {}.",
+        "AutoBalance::getWorldMultiplier: Map {} ({}) {} | defaultMultiplier ({}) = getDefaultMultiplier(map, inflectionPointSettings)",
         map->GetMapName(),
         avgMapCreatureLevelRounded,
         baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
-        mapABInfo->adjustedPlayerCount,
-        worldMultiplier
+        defaultMultiplier
+    );
+
+    // multiply by the appropriate stat modifiers
+    AutoBalanceStatModifiers statModifiers = getStatModifiers(map);
+
+    if (baseValueType == BaseValueType::AUTOBALANCE_HEALTH) // health
+    {
+        worldMultiplier = defaultMultiplier * statModifiers.global * statModifiers.health;
+    }
+    else // damage
+    {
+        worldMultiplier = defaultMultiplier * statModifiers.global * statModifiers.damage;
+    }
+
+    LOG_DEBUG("module.AutoBalance",
+        "AutoBalance::getWorldMultiplier: Map {} ({}) {} | worldMultiplier ({}) = defaultMultiplier ({}) * statModifiers.global ({}) * statModifiers.{} ({})",
+        map->GetMapName(),
+        avgMapCreatureLevelRounded,
+        baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+        worldMultiplier,
+        defaultMultiplier,
+        statModifiers.global,
+        baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+        baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? statModifiers.health : statModifiers.damage
     );
 
     // store the unscaled multiplier
     worldMultipliers.unscaled = worldMultiplier;
+
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} | multiplier before level scaling = ({}).",
+            map->GetMapName(),
+            avgMapCreatureLevelRounded,
+            baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+            worldMultiplier
+    );
 
     // only scale based on level if level scaling is enabled and the instance's average creature level is not within the skip range
     if (LevelScaling &&
@@ -1772,7 +1803,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
         )
     {
         mapABInfo->worldMultiplierTargetLevel = mapABInfo->highestPlayerLevel;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} level will be scaled to {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} | level will be scaled to {}.",
             map->GetMapName(),
             avgMapCreatureLevelRounded,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
@@ -1801,7 +1832,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
             );
         }
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} base is {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} | base is {}.",
             map->GetMapName(),
             avgMapCreatureLevelRounded,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
@@ -1826,8 +1857,9 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
             );
         }
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} base is {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}->{}) {} | base is {}.",
             map->GetMapName(),
+            avgMapCreatureLevelRounded,
             mapABInfo->worldMultiplierTargetLevel,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
             newBaseValue
@@ -1836,8 +1868,20 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
         // update the world multiplier accordingly
         worldMultiplier *= newBaseValue / originalBaseValue;
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) final {} multiplier is {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}->{}) {} | worldMultiplier ({}) = worldMultiplier ({}) * newBaseValue ({}) / originalBaseValue ({})",
+            map->GetMapName(),
+            mapABInfo->avgCreatureLevel,
+            mapABInfo->worldMultiplierTargetLevel,
+            baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
+            worldMultiplier,
+            worldMultiplier,
+            newBaseValue,
+            originalBaseValue
+        );
+
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}->{}) {} multiplier after level scaling = ({}).",
                 map->GetMapName(),
+                avgMapCreatureLevelRounded,
                 mapABInfo->worldMultiplierTargetLevel,
                 baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
                 worldMultiplier
@@ -1866,7 +1910,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
             );
         }
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) final {} multiplier is {}.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} multiplier after level scaling = ({}).",
                 map->GetMapName(),
                 mapABInfo->worldMultiplierTargetLevel,
                 baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
@@ -2257,7 +2301,9 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     // exception for if forceRecalculation is true (used on player enter/exit to recalculate map stats)
     if (isCreatureAlreadyInCreatureList && !forceRecalculation)
     {
-        isIncludedInMapStats = false;
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        return;
+
     }
 
     if (mapABInfo->playerCount)
@@ -2381,17 +2427,8 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                 );
             }
 
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: There are ({}) creatures included (active) in map stats.", mapABInfo->activeCreatureCount);
         }
-        else if (isCreatureAlreadyInCreatureList)
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
-        }
-        else
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is NOT included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
-        }
-
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: There are {} active creatures.", mapABInfo->activeCreatureCount);
     }
 }
 
@@ -2417,6 +2454,12 @@ void RemoveCreatureFromMapData(Creature* creature)
                 // decrement the active creature counter if they were considered active
                 if (creatureABInfo->isActive)
                 {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Creature {} ({}) is no longer active. There are {} active creatures left.",
+                        creature->GetName(),
+                        creature->GetLevel(),
+                        mapABInfo->activeCreatureCount - 1
+                    );
+
                     mapABInfo->activeCreatureCount--;
                 }
 
@@ -5717,14 +5760,14 @@ public:
             // World Damage and Healing Multiplier
             if (mapABInfo->worldDamageHealingMultiplier != mapABInfo->scaledWorldDamageHealingMultiplier)
             {
-                handler->PSendSysMessage("World damage and healing multiplier: %.3f -> %.3f",
+                handler->PSendSysMessage("World hostile damage and healing multiplier: %.3f -> %.3f",
                         mapABInfo->worldDamageHealingMultiplier,
                         mapABInfo->scaledWorldDamageHealingMultiplier
                         );
             }
             else
             {
-                handler->PSendSysMessage("World damage and healing multiplier: %.3f",
+                handler->PSendSysMessage("World hostile damage and healing multiplier: %.3f",
                         mapABInfo->worldDamageHealingMultiplier
                         );
             }
