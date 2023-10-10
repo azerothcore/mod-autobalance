@@ -206,10 +206,8 @@ public:
 
     std::vector<Creature*> allMapCreatures;         // all creatures in the map, active and non-active
     std::vector<Player*> allMapPlayers;             // all players that are currently in the map
-    std::vector<Player*> inCombatPlayers;           // all players that are currently in combat in the map
 
-    uint8 combatPlayerCountMin = 0;                 // the minimum value of playerCount while at least one player in the map is in combat
-                                                    // can go up while combat continues, but can't go down until inCombatPlayers is empty
+    bool combatLocked = false;                      // whether or not the map is combat locked
 
     uint8 highestCreatureLevel = 0;                 // the highest-level creature in the map
     uint8 lowestCreatureLevel = 0;                  // the lowest-level creature in the map
@@ -2472,6 +2470,12 @@ void RemoveCreatureFromMapData(Creature* creature)
 
 void UpdateMapPlayerStats(Map* map)
 {
+    // if this isn't a dungeon instance, just bail out immediately
+    if (!map->IsDungeon() || !map->GetInstanceId())
+    {
+        return;
+    }
+
     // get the map's info
     AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
     InstanceMap* instanceMap = map->ToInstanceMap();
@@ -2479,37 +2483,21 @@ void UpdateMapPlayerStats(Map* map)
     // update the player count
     mapABInfo->playerCount = mapABInfo->allMapPlayers.size();
 
-    // start with the real player count OR the combatPlayerCountMin, whichever is higher
-    if (mapABInfo->playerCount < mapABInfo->combatPlayerCountMin)
+    // only change the adjustedPlayerCount if combat is unlocked
+    if (!mapABInfo->combatLocked)
     {
-        mapABInfo->playerCount = mapABInfo->combatPlayerCountMin;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) | Player count ({}) is less than combatPlayerCountMin ({}). Using combatPlayerCountMin ({}).",
-            map->GetMapName(),
-            map->GetId(),
-            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-            instanceMap->GetMaxPlayers(),
-            instanceMap->IsHeroic() ? "Heroic" : "Normal",
-            mapABInfo->playerCount,
-            mapABInfo->combatPlayerCountMin,
-            mapABInfo->combatPlayerCountMin
-        );
-    }
-    uint32 adjustedPlayerCount = std::max(mapABInfo->playerCount, mapABInfo->combatPlayerCountMin);
+        // start with the actual player count
+        uint32 adjustedPlayerCount = mapABInfo->playerCount;
 
-    // if the adjusted player count is below the min players setting, adjust it
-    if (adjustedPlayerCount < mapABInfo->minPlayers)
-        adjustedPlayerCount = mapABInfo->minPlayers;
+        // if the adjusted player count is below the min players setting, adjust it
+        if (adjustedPlayerCount < mapABInfo->minPlayers)
+            adjustedPlayerCount = mapABInfo->minPlayers;
 
-    // adjust by the PlayerDifficultyOffset
-    adjustedPlayerCount += PlayerCountDifficultyOffset;
+        // adjust by the PlayerDifficultyOffset
+        adjustedPlayerCount += PlayerCountDifficultyOffset;
 
-    // store the adjusted player count in the map's info
-    mapABInfo->adjustedPlayerCount = adjustedPlayerCount;
-
-    // if this isn't a dungeon instance, just bail out immediately
-    if (!map->IsDungeon() || !map->GetInstanceId())
-    {
-        return;
+        // store the adjusted player count in the map's info
+        mapABInfo->adjustedPlayerCount = adjustedPlayerCount;
     }
 
     uint8 highestPlayerLevel = 0;
@@ -2631,9 +2619,6 @@ bool RemovePlayerFromMap(Map* map, Player* player)
     // update the map's player stats
     UpdateMapPlayerStats(map);
 
-    // update combatPlayerCountMin
-    update_combatPlayerCountMin(map);
-
     return true;
 }
 
@@ -2689,12 +2674,6 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             // clear the map's player list
             mapABInfo->allMapPlayers.clear();
 
-            // clear the map's in-combat player list
-            mapABInfo->inCombatPlayers.clear();
-
-            // reset the combat locked adjusted players
-            mapABInfo->combatPlayerCountMin = 0;
-
             // get the map's player list
             Map::PlayerList const &playerList = map->GetPlayers();
 
@@ -2703,19 +2682,15 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             {
                 Player* thisPlayer = playerIteration->GetSource();
 
-                // if the player is in combat, add them to the map's combat player list
+                // if the player is in combat, combat lock the map
                 if (thisPlayer->IsInCombat())
                 {
-                    mapABInfo->inCombatPlayers.push_back(thisPlayer);
-                    mapABInfo->combatPlayerCountMin++;
-
-                    LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | Player {} ({}) is in combat. Combat player count increased to ({}).",
+                    mapABInfo->combatLocked = true;
+                    LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | Player {} is in combat. Map is combat locked.",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                        thisPlayer->GetName(),
-                        thisPlayer->getLevel(),
-                        mapABInfo->combatPlayerCountMin
+                        thisPlayer->GetName()
                     );
                 }
 
@@ -3511,37 +3486,18 @@ class AutoBalance_PlayerScript : public PlayerScript
                 return;
             }
 
-            // if the player is already in combat, no work to do
-            if (std::find(mapABInfo->inCombatPlayers.begin(), mapABInfo->inCombatPlayers.end(), player) != mapABInfo->inCombatPlayers.end())
+            // lock the current map
+            if (!mapABInfo->combatLocked)
             {
-                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | {} is already in the player in combat list.",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                    player->GetName());
+                mapABInfo->combatLocked = true;
 
-                return;
+                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | Locking difficulty due to {} entering combat.",
+                            map->GetMapName(),
+                            map->GetId(),
+                            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                            player->GetName()
+                );
             }
-
-            // add the player to the list of players in combat
-            mapABInfo->inCombatPlayers.push_back(player);
-            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | {} enters combat.",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                player->GetName()
-            );
-
-            // update combatPlayerCountMin
-            update_combatPlayerCountMin(map);
-
-            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | There are ({}) players in combat. combatPlayerCountMin is ({}).",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                mapABInfo->inCombatPlayers.size(),
-                mapABInfo->combatPlayerCountMin
-            );
         }
 
         virtual void OnPlayerLeaveCombat(Player* player) override
@@ -3564,82 +3520,39 @@ class AutoBalance_PlayerScript : public PlayerScript
                 return;
             }
 
-            // if the player is not in combat, no work to do
-            if (std::find(mapABInfo->inCombatPlayers.begin(), mapABInfo->inCombatPlayers.end(), player) == mapABInfo->inCombatPlayers.end())
+            // check to see if any of the other players are in combat
+            bool anyPlayersInCombat = false;
+            for (auto player : mapABInfo->allMapPlayers)
             {
-                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | {} is not in the player in combat list.",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                    player->GetName()
-                );
+                if (player->IsInCombat())
+                {
+                    anyPlayersInCombat = true;
 
-                return;
+                    LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | Player {} (and potentially others) are still in combat.",
+                                map->GetMapName(),
+                                map->GetId(),
+                                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                                player->GetName()
+                    );
+
+                    //break;
+                }
             }
 
-
-
-            // remove the player from the list of players in combat
-            mapABInfo->inCombatPlayers.erase(std::remove(mapABInfo->inCombatPlayers.begin(), mapABInfo->inCombatPlayers.end(), player), mapABInfo->inCombatPlayers.end());
-            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | {} leaves combat.",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                player->GetName()
-            );
-
-            // update combatPlayerCountMin
-            update_combatPlayerCountMin(map);
-
-            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | There are ({}) players in combat. combatPlayerCountMin is ({}).",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                mapABInfo->inCombatPlayers.size(),
-                mapABInfo->combatPlayerCountMin
-            );
-
-            // if combatCountMin is 0, recount the players
-            if (mapABInfo->combatPlayerCountMin == 0)
+            // if no players are in combat, unlock the map
+            if (!anyPlayersInCombat && mapABInfo->combatLocked)
             {
-                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | combatPlayerCountMin is (0). Recounting players.",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
-                );
-            }
-        }
+                mapABInfo->combatLocked = false;
 
-        const void update_combatPlayerCountMin(Map* map)
-        {
-            AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-
-            // if there are no players in combat, set the min to 0
-            if (mapABInfo->inCombatPlayers.size() == 0)
-            {
-                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::update_combatPlayerCountMin: Map {} ({}{}) | There are no players in combat. Setting combatPlayerCountMin to (0).",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | Unlocking difficulty as {} leaves combat.",
+                            map->GetMapName(),
+                            map->GetId(),
+                            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                            player->GetName()
                 );
 
-                mapABInfo->combatPlayerCountMin = 0;
-            }
-
-            // set the min to the number of players in combat OR the current min, whichever is greater
-            uint8 oldCombatPlayerCountMin = mapABInfo->combatPlayerCountMin;
-            mapABInfo->combatPlayerCountMin = std::max(((uint8)(mapABInfo->inCombatPlayers.size())), mapABInfo->combatPlayerCountMin);
-
-            // if the min has changed, log it
-            if (oldCombatPlayerCountMin != mapABInfo->combatPlayerCountMin)
-            {
-                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::update_combatPlayerCountMin: Map {} ({}{}) | combatPlayerCountMin transitions ({}->{}).",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                    oldCombatPlayerCountMin,
-                    mapABInfo->combatPlayerCountMin
-                );
+                // update the map's player stats
+                UpdateMapPlayerStats(map);
             }
         }
 };
@@ -4464,22 +4377,11 @@ class AutoBalance_AllMapScript : public AllMapScript
                             {
                                 ChatHandler chatHandle = ChatHandler(thisPlayer->GetSession());
 
-                                // If this player left while combat was in progress, and they are the first to do so, report out
-                                if (mapABInfo->playerCount == mapABInfo->combatPlayerCountMin - 1)
-                                {
-                                    chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance while combat was in progress. Difficulty locked at %u players until combat ends.|r",
-                                        player->GetName().c_str(),
-                                        mapABInfo->adjustedPlayerCount
-                                    );
-                                }
-                                else
-                                {
-                                    chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
-                                        player->GetName().c_str(),
-                                        mapABInfo->playerCount,
-                                        mapABInfo->adjustedPlayerCount
-                                    );
-                                }
+                                chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
+                                    player->GetName().c_str(),
+                                    mapABInfo->playerCount,
+                                    mapABInfo->adjustedPlayerCount
+                                );
                             }
                         }
                     }
@@ -5878,7 +5780,11 @@ public:
                                     );
 
             // Adjusted player count (multiple scenarios)
-            if (mapABInfo->playerCount < mapABInfo->minPlayers && !PlayerCountDifficultyOffset)
+            if (mapABInfo->combatLocked)
+            {
+                handler->PSendSysMessage("Adjusted Player Count: %u (Combat Locked)", mapABInfo->adjustedPlayerCount);
+            }
+            else if (mapABInfo->playerCount < mapABInfo->minPlayers && !PlayerCountDifficultyOffset)
             {
                 handler->PSendSysMessage("Adjusted Player Count: %u (Map Minimum)", mapABInfo->adjustedPlayerCount);
             }
