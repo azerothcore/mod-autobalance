@@ -299,7 +299,6 @@ static std::list<uint32> spellIdsThatSpendPlayerHealth =
 // spacer used for logging
 std::string SPACER = "------------------------------------------------";
 
-// The map values correspond with the .AutoBalance.XX.Name entries in the configuration file.
 static std::map<int, int> forcedCreatureIds;
 static std::list<uint32> disabledDungeonIds;
 
@@ -314,8 +313,7 @@ static std::map<uint32, AutoBalanceStatModifiers> statModifierBossOverrides;
 static std::map<uint32, AutoBalanceStatModifiers> statModifierCreatureOverrides;
 static std::map<uint8, AutoBalanceLevelScalingDynamicLevelSettings> levelScalingDynamicLevelOverrides;
 static std::map<uint32, uint32> levelScalingDistanceCheckOverrides;
-// cheaphack for difficulty server-wide.
-// Another value TODO in player class for the party leader's value to determine dungeon difficulty.
+
 static int8 PlayerCountDifficultyOffset;
 static bool LevelScaling;
 static int8 LevelScalingSkipHigherLevels, LevelScalingSkipLowerLevels;
@@ -721,7 +719,7 @@ bool ShouldMapBeEnabled(Map* map)
 
         if (sizeDifficultyEnabled)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Enabled for AutoBalancing",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}, {}-player {}) - Enabled for AutoBalancing.",
                       map->GetMapName(),
                       map->GetId(),
                       map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -731,7 +729,7 @@ bool ShouldMapBeEnabled(Map* map)
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because its size and difficulty are disabled via configuration",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}, {}-player {}) - Not enabled because its size and difficulty are disabled via configuration.",
                       map->GetMapName(),
                       map->GetId(),
                       map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -744,7 +742,7 @@ bool ShouldMapBeEnabled(Map* map)
     }
     else
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}) - Not enabled because the map is not an instance",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}) - Not enabled because the map is not an instance.",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
@@ -931,8 +929,9 @@ bool isCreatureRelevant(Creature* creature) {
     {
         return true;
     }
+    // otherwise the value is AUTOBALANCE_RELEVANCE_UNCHECKED, so it needs checking
 
-    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: First-time evaluating creature {} ({}).",
+    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {}({}) | First-time evaluating.",
                 creature->GetName(),
                 creatureABInfo->UnmodifiedLevel
     );
@@ -946,7 +945,7 @@ bool isCreatureRelevant(Creature* creature) {
     if (!(instanceMap))
     {
         creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is in the base map, no changes. Marked for skip.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is in the base map, no changes. Marked for skip.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
         );
@@ -957,7 +956,7 @@ bool isCreatureRelevant(Creature* creature) {
     if ((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer())
     {
         creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a pet or summon controlled by the player, no changes. Marked for skip.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is a pet or summon controlled by the player, no changes. Marked for skip.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
         );
@@ -996,7 +995,7 @@ bool isCreatureRelevant(Creature* creature) {
                     !thisPlayer->IsHostileTo(summonerPlayer)
                 )
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a guardian of player {}, who is not hostile to valid player {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is a guardian of player {}, who is not hostile to valid player {}.",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerPlayer->GetName(),
@@ -1012,7 +1011,7 @@ bool isCreatureRelevant(Creature* creature) {
                     !thisPlayer->IsHostileTo(summonerPlayer)
                 )
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a totem of player {}, who is not hostile to valid player {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is a totem of player {}, who is not hostile to valid player {}.",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerPlayer->GetName(),
@@ -1028,7 +1027,7 @@ bool isCreatureRelevant(Creature* creature) {
                     thisPlayer->isTargetableForAttack(true, creature)
                 )
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a player temporary summon hostile to valid player {}.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is a player temporary summon hostile to valid player {}.",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 thisPlayer->GetName()
@@ -1044,7 +1043,7 @@ bool isCreatureRelevant(Creature* creature) {
         {
             // since no players are hostile to this creature, it should not be scaled
             creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is player-summoned and non-hostile, no changes. Marked for skip.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is player-summoned and non-hostile, no changes. Marked for skip.",
                 creature->GetName(),
                 creatureABInfo->UnmodifiedLevel
             );
@@ -1059,7 +1058,7 @@ bool isCreatureRelevant(Creature* creature) {
     if ((creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() < 100))
     {
         creatureABInfo->relevance = AUTOBALANCE_RELEVANCE_FALSE;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is a non-relevant critter, no changes. Marked for skip.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is a non-relevant critter, no changes. Marked for skip.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
         );
@@ -1068,7 +1067,7 @@ bool isCreatureRelevant(Creature* creature) {
     }
 
     // survived to here, creature is relevant
-    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) is relevant. Marked for processing.",
+    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | is relevant. Marked for processing.",
                 creature->GetName(),
                 creatureABInfo->UnmodifiedLevel
     );
@@ -1273,7 +1272,7 @@ void getStatModifiersDebug(Map *map, Creature *creature, std::string message)
         // get the creature's info
         AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | {} ({}{}) | {}",
+        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: Map {} ({}{}) | Creature {} ({}{}) | {}",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -1286,7 +1285,7 @@ void getStatModifiersDebug(Map *map, Creature *creature, std::string message)
     // if no creature was provided, remove that from the output
     else
     {
-        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | {}",
+        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: Map {} ({}{}) | {}",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -1639,7 +1638,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
 
     if (creature)
     {
-        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | {} ({}{}) | Stat Modifiers = global: {} | health: {} | mana: {} | armor: {} | damage: {} | ccduration: {}",
+        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: Map {} ({}{}) | Creature {} ({}{}) | Stat Modifiers = global: {} | health: {} | mana: {} | armor: {} | damage: {} | ccduration: {}",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -1656,7 +1655,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
     }
     else
     {
-        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: {} ({}{}) | Stat Modifiers = global: {} | health: {} | mana: {} | armor: {} | damage: {} | ccduration: {}",
+        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance::getStatModifiers: Map {} ({}{}) | Stat Modifiers = global: {} | health: {} | mana: {} | armor: {} | damage: {} | ccduration: {}",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -1722,26 +1721,40 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
 
     // null check
     if (!map)
+    {
         return worldMultipliers;
+    }
 
     // if this isn't a dungeon, return defaults
     if (!(map->IsDungeon()))
+    {
         return worldMultipliers;
+    }
 
     // grab map data
     AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
     // if the map isn't enabled, return defaults
     if (!mapABInfo->enabled)
+    {
         return worldMultipliers;
+    }
 
     // if there are no players on the map, return defaults
     if (mapABInfo->allMapPlayers.size() == 0)
+    {
         return worldMultipliers;
+    }
+
+    // if creatures haven't been counted yet, return defaults
+    if (mapABInfo->avgCreatureLevel == 0)
+    {
+        return worldMultipliers;
+    }
 
     // create some data variables
     InstanceMap* instanceMap = map->ToInstanceMap();
-    uint8 avgMapCreatureLevelRounded = (uint8)(mapABInfo->avgCreatureLevel + 0.5f);
+    uint8 avgCreatureLevelRounded = (uint8)(mapABInfo->avgCreatureLevel + 0.5f);
 
     // get the inflection point settings for this map
     AutoBalanceInflectionPointSettings inflectionPointSettings = getInflectionPointSettings(instanceMap);
@@ -1754,7 +1767,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
     LOG_DEBUG("module.AutoBalance",
         "AutoBalance::getWorldMultiplier: Map {} ({}) {} | defaultMultiplier ({}) = getDefaultMultiplier(map, inflectionPointSettings)",
         map->GetMapName(),
-        avgMapCreatureLevelRounded,
+        avgCreatureLevelRounded,
         baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
         defaultMultiplier
     );
@@ -1774,7 +1787,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
     LOG_DEBUG("module.AutoBalance",
         "AutoBalance::getWorldMultiplier: Map {} ({}) {} | worldMultiplier ({}) = defaultMultiplier ({}) * statModifiers.global ({}) * statModifiers.{} ({})",
         map->GetMapName(),
-        avgMapCreatureLevelRounded,
+        avgCreatureLevelRounded,
         baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
         worldMultiplier,
         defaultMultiplier,
@@ -1788,7 +1801,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
 
     LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} | multiplier before level scaling = ({}).",
             map->GetMapName(),
-            avgMapCreatureLevelRounded,
+            avgCreatureLevelRounded,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
             worldMultiplier
     );
@@ -1804,13 +1817,13 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
         mapABInfo->worldMultiplierTargetLevel = mapABInfo->highestPlayerLevel;
         LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} | level will be scaled to {}.",
             map->GetMapName(),
-            avgMapCreatureLevelRounded,
+            avgCreatureLevelRounded,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
             mapABInfo->worldMultiplierTargetLevel
         );
 
-        // use creature base stats to determine how to level scale the damage multiplier
-        CreatureBaseStats const* origMapBaseStats = sObjectMgr->GetCreatureBaseStats(avgMapCreatureLevelRounded, Classes::CLASS_WARRIOR);
+        // use creature base stats to determine how to level scale the multiplier (the map is a warrior!)
+        CreatureBaseStats const* origMapBaseStats = sObjectMgr->GetCreatureBaseStats(avgCreatureLevelRounded, Classes::CLASS_WARRIOR);
         CreatureBaseStats const* adjustedMapBaseStats = sObjectMgr->GetCreatureBaseStats(mapABInfo->worldMultiplierTargetLevel, Classes::CLASS_WARRIOR);
 
         // Original Base Value
@@ -1820,20 +1833,20 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
         {
             originalBaseValue = getBaseExpansionValueForLevel(
                 origMapBaseStats->BaseHealth,
-                avgMapCreatureLevelRounded
+                avgCreatureLevelRounded
             );
         }
         else // damage
         {
             originalBaseValue = getBaseExpansionValueForLevel(
                 origMapBaseStats->BaseDamage,
-                avgMapCreatureLevelRounded
+                avgCreatureLevelRounded
             );
         }
 
         LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} | base is {}.",
             map->GetMapName(),
-            avgMapCreatureLevelRounded,
+            avgCreatureLevelRounded,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
             originalBaseValue
         );
@@ -1858,7 +1871,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
 
         LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}->{}) {} | base is {}.",
             map->GetMapName(),
-            avgMapCreatureLevelRounded,
+            avgCreatureLevelRounded,
             mapABInfo->worldMultiplierTargetLevel,
             baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
             newBaseValue
@@ -1878,9 +1891,9 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
             originalBaseValue
         );
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}->{}) {} multiplier after level scaling = ({}).",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}->{}) {} | multiplier after level scaling = ({}).",
                 map->GetMapName(),
-                avgMapCreatureLevelRounded,
+                avgCreatureLevelRounded,
                 mapABInfo->worldMultiplierTargetLevel,
                 baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
                 worldMultiplier
@@ -1888,12 +1901,12 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
     }
     else
     {
-        mapABInfo->worldMultiplierTargetLevel = avgMapCreatureLevelRounded;
+        mapABInfo->worldMultiplierTargetLevel = avgCreatureLevelRounded;
 
         // level scaling is disabled
         if (!LevelScaling)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to level scaling being disabled. World multiplier target level set to avgCreatureLevel ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) | not level scaled due to level scaling being disabled. World multiplier target level set to avgCreatureLevel ({}).",
                 map->GetMapName(),
                 mapABInfo->worldMultiplierTargetLevel,
                 mapABInfo->worldMultiplierTargetLevel
@@ -1902,14 +1915,14 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
         // inside the level skip range
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) not level scaled due to being inside the level skip range. World multiplier target level set to avgCreatureLevel ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) | not level scaled due to being inside the level skip range. World multiplier target level set to avgCreatureLevel ({}).",
                 map->GetMapName(),
                 mapABInfo->worldMultiplierTargetLevel,
                 mapABInfo->worldMultiplierTargetLevel
             );
         }
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} multiplier after level scaling = ({}).",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::getWorldMultiplier: Map {} ({}) {} | multiplier after level scaling = ({}).",
                 map->GetMapName(),
                 mapABInfo->worldMultiplierTargetLevel,
                 baseValueType == BaseValueType::AUTOBALANCE_HEALTH ? "health" : "damage",
@@ -1931,7 +1944,7 @@ void LoadMapSettings(Map* map)
     // create an InstanceMap object
     InstanceMap* instanceMap = map->ToInstanceMap();
 
-    LOG_DEBUG("module.AutoBalance", "AutoBalance::LoadMapSettings: Loading settings for map {} ({}{}, {}-player {}).",
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::LoadMapSettings: Map {} ({}{}, {}-player {}) | Loading settings.",
         map->GetMapName(),
         map->GetId(),
         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -1956,7 +1969,7 @@ void LoadMapSettings(Map* map)
     // if the minPlayers value we determined is less than the max number of players in this map, adjust down
     if (mapABInfo->minPlayers > instanceMap->GetMaxPlayers())
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::LoadMapSettings: Your settings tried to set a minimum player count of {} which is greater than {}'s max player count of {}. Adjusting down.",
+        LOG_WARN("module.AutoBalance", "AutoBalance::LoadMapSettings: Your settings tried to set a minimum player count of {} which is greater than {}'s max player count of {}. Adjusting down.",
             mapABInfo->minPlayers,
             map->GetMapName(),
             instanceMap->GetMaxPlayers()
@@ -1965,7 +1978,7 @@ void LoadMapSettings(Map* map)
         mapABInfo->minPlayers = instanceMap->GetMaxPlayers();
     }
 
-    LOG_DEBUG("module.AutoBalance", "AutoBalance::LoadMapSettings: Map {} ({}{}, {}-player {}) has a minimum player count of {}.",
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::LoadMapSettings: Map {} ({}{}, {}-player {}) | has a minimum player count of {}.",
         map->GetMapName(),
         map->GetId(),
         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2006,7 +2019,7 @@ void LoadMapSettings(Map* map)
     // something went wrong
     else
     {
-        LOG_ERROR("module.AutoBalance", "AutoBalance::LoadMapSettings: Unable to determine dynamic scaling floor and ceiling for instance {} ({}{}, {}-player {}).",
+        LOG_ERROR("module.AutoBalance", "AutoBalance::LoadMapSettings: Map {} ({}{}, {}-player {}) | Unable to determine dynamic scaling floor and ceiling for instance.",
             map->GetMapName(),
             map->GetId(),
             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2072,7 +2085,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     // handle summoned creatures
     if (creature->IsSummon())
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is a summon.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is a summon.",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel
         );
@@ -2084,7 +2097,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
             if (!summoner)
             {
                 creatureABInfo->UnmodifiedLevel = mapABInfo->avgCreatureLevel;
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is not owned by a summoner. Original level is {}.",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is not owned by a summoner. Original level is {}.",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel
                 );
@@ -2094,7 +2107,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                 Creature* summonerCreature = summoner->ToCreature();
                 AutoBalanceCreatureInfo *summonerABInfo=summonerCreature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is owned by {} ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is owned by {} ({}).",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             summonerCreature->GetName(),
@@ -2104,7 +2117,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                 // if the creature or its summoner is a trigger
                 if (creature->IsTrigger() || summoner->IsTrigger())
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) or their summoner is a trigger.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | or their summoner is a trigger.",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel
                     );
@@ -2115,7 +2128,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                         (creatureABInfo->UnmodifiedLevel > (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f))
                     )
                     {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) original level is within the expected NPC level for this map ({} to {}). Level scaling is allowed.",
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | original level is within the expected NPC level for this map ({} to {}). Level scaling is allowed.",
                                     creature->GetName(),
                                     creatureABInfo->UnmodifiedLevel,
                                     creatureABInfo->UnmodifiedLevel
@@ -2123,7 +2136,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                     }
                     else {
                         creatureABInfo->neverLevelScale = true;
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) original level is outside the expected NPC level for this map ({} to {}). It will keep its original level.",
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | original level is outside the expected NPC level for this map ({} to {}). It will keep its original level.",
                                     creature->GetName(),
                                     creatureABInfo->UnmodifiedLevel,
                                     creatureABInfo->UnmodifiedLevel
@@ -2136,7 +2149,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                     // match the summoner's level
                     creatureABInfo->UnmodifiedLevel = summonerABInfo->UnmodifiedLevel;
 
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) original level will match summoner's level ({}).",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | original level will match summoner's level ({}).",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 summonerABInfo->UnmodifiedLevel
@@ -2157,7 +2170,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
             // is this creature relevant?
             if (isCreatureRelevant(creature))
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is an enemy owned by player {} ({}). Summon original level set to ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is an enemy owned by player {} ({}). Summon original level set to ({}).",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             summoner->GetName(),
@@ -2169,7 +2182,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
             else
             {
                 uint8 newLevel = std::min(summoner->GetLevel(), creature->GetCreatureTemplate()->maxlevel);
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is an ally owned by player {} ({}). Summon original level set to ({}) level ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is an ally owned by player {} ({}). Summon original level set to ({}) level ({}).",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             summoner->GetName(),
@@ -2183,7 +2196,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
         // pets and totems
         else if (creature->IsCreatedByPlayer() || creature->IsPet() || creature->IsHunterPet() || creature->IsTotem())
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) is a {}. Summon original level set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is a {}. Original level set to ({}).",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->IsCreatedByPlayer() ? "creature created by a player" : creature->IsPet() ? "pet" : creature->IsHunterPet() ? "hunter pet" : "totem",
@@ -2192,7 +2205,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) does not have a summoner. Summon original level set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | does not have a summoner. Summon original level set to ({}).",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creatureABInfo->UnmodifiedLevel
@@ -2200,7 +2213,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
         }
 
         // if this is a summon, we shouldn't track it in any list and it does not contribute to the average level
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
     }
     // handle "special" creatures
@@ -2214,7 +2227,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
         )
         {
             creatureABInfo->neverLevelScale = true;
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is a {} and is outside the expected NPC level for this map ({} to {}). Keeping original level of {}.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is a {} and is outside the expected NPC level for this map ({} to {}). Keeping original level of {}.",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->IsCritter() ? "critter" : creature->IsTotem() ? "totem" : "trigger",
@@ -2227,7 +2240,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
         else
         {
             creatureABInfo->UnmodifiedLevel = mapABInfo->lfgTargetLevel;
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is a {} and is within the expected NPC level for this map ({} to {}). Keeping original level of {}.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is a {} and is within the expected NPC level for this map ({} to {}). Keeping original level of {}.",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->IsCritter() ? "critter" : creature->IsTotem() ? "totem" : "trigger",
@@ -2243,7 +2256,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     else
     {
         creatureABInfo->UnmodifiedLevel = creatureABInfo->UnmodifiedLevel;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) original level set to ({}).",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | Original level set to ({}).",
             creature->GetName(),
             creatureABInfo->UnmodifiedLevel,
             creatureABInfo->UnmodifiedLevel
@@ -2253,14 +2266,14 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     // if this is a creature controlled by the player, skip for stats
     if (((creature->IsHunterPet() || creature->IsPet() || creature->IsSummon()) && creature->IsControlledByPlayer()))
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is controlled by the player and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is controlled by the player and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
     }
 
     // if this is a non-relevant creature, skip for stats
     if (creature->IsCritter() || creature->IsTotem() || creature->IsTrigger())
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is a {} and will not affect the map's stats.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is a {} and will not affect the map's stats.",
             creature->GetName(),
             creatureABInfo->UnmodifiedLevel,
             creature->IsCritter() ? "critter" : creature->IsTotem() ? "totem" : "trigger"
@@ -2271,14 +2284,14 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     // if the creature level is below 85% of the minimum LFG level, assume it's a flavor creature and shouldn't be tracked
     if (creatureABInfo->UnmodifiedLevel < (uint8)(((float)mapABInfo->lfgMinLevel * 0.85f) + 0.5f))
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is below 85% of the LFG min level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMinLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is below 85% of the LFG min level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMinLevel);
         return;
     }
 
     // if the creature level is above 125% of the maximum LFG level, assume it's a flavor creature or holiday boss and shouldn't be tracked
     if (creatureABInfo->UnmodifiedLevel > (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f))
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is above 115% of the LFG max level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMaxLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is above 115% of the LFG max level of {} and will not affect the map's stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->lfgMaxLevel);
         return;
     }
 
@@ -2290,7 +2303,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     {
         mapABInfo->allMapCreatures.push_back(creature);
         creatureABInfo->isInCreatureList = true;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is #{} in the creature list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is #{} in the creature list.", creature->GetName(), creatureABInfo->UnmodifiedLevel, mapABInfo->allMapCreatures.size());
     }
 
     // alter stats for the map if needed
@@ -2300,7 +2313,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     // exception for if forceRecalculation is true (used on player enter/exit to recalculate map stats)
     if (isCreatureAlreadyInCreatureList && !forceRecalculation)
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
         return;
 
     }
@@ -2320,7 +2333,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                 (!isBossOrBossSummon(creature))
             )
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is a a vendor, trainer, or is otherwise not attackable - do not include in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             isIncludedInMapStats = false;
         }
         else
@@ -2339,7 +2352,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                 // if the creature is friendly and not a boss
                 if (creature->IsFriendlyTo(thisPlayer) && !isBossOrBossSummon(creature))
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is friendly to {} - do not include in map stats.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is friendly to {} - do not include in map stats.",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         thisPlayer->GetName()
@@ -2367,13 +2380,13 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
 
                     if (thisPlayer->IsWithinDist(creature, 500))
                     {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is in range ({} world units) of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, distance, thisPlayer->GetName());
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is in range ({} world units) of player {} and is considered active.", creature->GetName(), creatureABInfo->UnmodifiedLevel, distance, thisPlayer->GetName());
                         isPlayerWithinDistance = true;
                         break;
                     }
                     else
                     {
-                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is NOT in range ({} world units) of any player and is NOT considered active.",
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is NOT in range ({} world units) of any player and is NOT considered active.",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             distance
@@ -2409,13 +2422,13 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
         // increment the active creature counter
         mapABInfo->activeCreatureCount++;
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) is included in map stats, adjusting avgCreatureLevel to ({})", creature->GetName(), creatureABInfo->UnmodifiedLevel, newAvgCreatureLevel);
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is included in map stats (active), adjusting avgCreatureLevel to ({})", creature->GetName(), creatureABInfo->UnmodifiedLevel, newAvgCreatureLevel);
 
         // if the average creature level transitions from one whole number to the next, reset the map's config time so it will refresh
         if (round(oldAvgCreatureLevel) != round(newAvgCreatureLevel))
         {
             mapABInfo->mapConfigTime = 1;
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}{}) average creature level changes {}->{}. Force map update. {} ({}{}) map config set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: {} ({}{}) | average creature level changes {}->{}. Force map update. {} ({}{}) map config set to ({}).",
                 instanceMap->GetMapName(),
                 instanceMap->GetId(),
                 instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
@@ -2444,7 +2457,7 @@ void RemoveCreatureFromMapData(Creature* creature)
         {
             if (*creatureIteration == creature)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Creature {} ({}) is in the creature list and will be removed. There are {} creatures left.", creature->GetName(), creature->GetLevel(), mapABInfo->allMapCreatures.size() - 1);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Creature {} ({}) | is in the creature list and will be removed. There are {} creatures left.", creature->GetName(), creature->GetLevel(), mapABInfo->allMapCreatures.size() - 1);
                 mapABInfo->allMapCreatures.erase(creatureIteration);
 
                 // mark this creature as removed
@@ -2454,13 +2467,24 @@ void RemoveCreatureFromMapData(Creature* creature)
                 // decrement the active creature counter if they were considered active
                 if (creatureABInfo->isActive)
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Creature {} ({}) is no longer active. There are {} active creatures left.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Creature {} ({}) | is no longer active. There are {} active creatures left.",
                         creature->GetName(),
                         creature->GetLevel(),
                         mapABInfo->activeCreatureCount - 1
                     );
 
-                    mapABInfo->activeCreatureCount--;
+                    if (mapABInfo->activeCreatureCount > 0)
+                    {
+                        mapABInfo->activeCreatureCount--;
+                    }
+                    else
+                    {
+                        LOG_WARN("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Map {} ({}{}) | activeCreatureCount is already 0. This should not happen.",
+                            creature->GetMap()->GetMapName(),
+                            creature->GetMap()->GetId(),
+                            creature->GetMap()->GetInstanceId() ? "-" + std::to_string(creature->GetMap()->GetInstanceId()) : ""
+                        );
+                    }
                 }
 
                 break;
@@ -2591,7 +2615,7 @@ void UpdateMapPlayerStats(Map* map)
 
         // no non-GM players on the map, disable it
         mapABInfo->enabled = false;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has no non-GM players. Disabling (potentially temporarily).",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) | has no non-GM players. Disabling (potentially temporarily).",
             map->GetMapName(),
             map->GetId(),
             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2601,7 +2625,7 @@ void UpdateMapPlayerStats(Map* map)
     }
     else
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) has {} player(s) with level range ({})-({}). Difficulty is {} player(s).",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) | has {} player(s) with level range ({})-({}). Difficulty is {} player(s).",
             map->GetMapName(),
             map->GetId(),
             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2644,7 +2668,7 @@ void AddPlayerToMap(Map* map, Player* player)
     // if this player is already in the map's player list, skip
     else if (std::find(mapABInfo->allMapPlayers.begin(), mapABInfo->allMapPlayers.end(), player) != mapABInfo->allMapPlayers.end())
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) is already in the map's player list.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) | is already in the map's player list.",
             player->GetName(),
             player->getLevel()
         );
@@ -2653,7 +2677,7 @@ void AddPlayerToMap(Map* map, Player* player)
 
     // add the player to the map's player list
     mapABInfo->allMapPlayers.push_back(player);
-    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) added to the map's player list.", player->GetName(), player->getLevel());
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) | added to the map's player list.", player->GetName(), player->getLevel());
 
     // update the map's player stats
     UpdateMapPlayerStats(map);
@@ -2667,13 +2691,13 @@ bool RemovePlayerFromMap(Map* map, Player* player)
     // if this player isn't in the map's player list, skip
     if (std::find(mapABInfo->allMapPlayers.begin(), mapABInfo->allMapPlayers.end(), player) == mapABInfo->allMapPlayers.end())
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::RemovePlayerFromMap: Player {} ({}) was not in the map's player list.", player->GetName(), player->getLevel());
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::RemovePlayerFromMap: Player {} ({}) | was not in the map's player list.", player->GetName(), player->GetLevel());
         return false;
     }
 
     // remove the player from the map's player list
     mapABInfo->allMapPlayers.erase(std::remove(mapABInfo->allMapPlayers.begin(), mapABInfo->allMapPlayers.end(), player), mapABInfo->allMapPlayers.end());
-    LOG_DEBUG("module.AutoBalance", "AutoBalance::RemovePlayerFromMap: Player {} ({}) removed from the map's player list.", player->GetName(), player->getLevel());
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::RemovePlayerFromMap: Player {} ({}) | removed from the map's player list.", player->GetName(), player->GetLevel());
 
     // if the map is combat locked, schedule a map update for when combat ends
     if (mapABInfo->combatLocked)
@@ -2696,7 +2720,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
     if (force || mapABInfo->globalConfigTime < globalConfigTime || mapABInfo->mapConfigTime < mapABInfo->globalConfigTime)
     {
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) globalConfigTime = ({}) | mapConfigTime = ({})",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | globalConfigTime = ({}) | mapConfigTime = ({})",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2707,7 +2731,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
         // update forced
         if (force)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) update forced.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | Update forced.",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2722,7 +2746,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
         // if this was triggered by a global config update, redetect players
         if (isGlobalConfigOutOfDate)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) global config is out of date ({} < {}) and will be updated.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | Global config is out of date ({} < {}) and will be updated.",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2772,7 +2796,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
         // map config is out of date
         if (isMapConfigOutOfDate)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) map config is out of date ({} < {}) and will be updated.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | Map config is out of date ({} < {}) and will be updated.",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2789,7 +2813,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
         {
             mapABInfo->mapConfigTime = 1;
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) enabled state changes {}->{}, map update forced. Map config time set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | Enabled state transitions from {}->{}, map update forced. Map config time set to ({}).",
                 map->GetMapName(),
                 map->GetId(),
                 map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2808,7 +2832,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             mapABInfo->globalConfigTime = globalConfigTime;
             mapABInfo->mapConfigTime = globalConfigTime;
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) is disabled.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}) | is disabled.",
                 map->GetMapName(),
                 map->GetId(),
                 map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
@@ -2835,7 +2859,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             // only log if the mapLevel has changed
             if (mapABInfo->prevMapLevel != mapABInfo->mapLevel)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) level scaling is disabled. Map level tracking stat updated {}{} (original level).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) | Level scaling is disabled. Map level tracking stat updated {}{} (original level).",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2858,7 +2882,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             // only log if the mapLevel has changed
             if (mapABInfo->prevMapLevel != mapABInfo->mapLevel)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) scaling is enabled. Map level updated {}{} (average creature level).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) | Level scaling is enabled. Map level updated {}{} (average creature level).",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2879,7 +2903,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             // only log if the mapLevel has changed
             if (mapABInfo->prevMapLevel != mapABInfo->mapLevel)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) scaling is enabled. Map level updated {}{} (highest player level).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) | Lcaling is enabled. Map level updated {}{} (highest player level).",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2910,14 +2934,14 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
         mapABInfo->globalConfigTime = globalConfigTime;
         mapABInfo->mapConfigTime = GetCurrentTime();
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: {} ({}{}) global config time set to ({}).",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: {} ({}{}) | Global config time set to ({}).",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
                     mapABInfo->globalConfigTime
         );
 
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: {} ({}{}) map config time set to ({}).",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: {} ({}{}) | Map config time set to ({}).",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2979,9 +3003,6 @@ class AutoBalance_WorldScript : public WorldScript
         globalConfigTime = GetCurrentTime();
 
         LOG_INFO("module.AutoBalance", "AutoBalance::OnBeforeConfigLoad: Config loaded. Global config time set to ({}).", globalConfigTime);
-    }
-    void OnStartup() override
-    {
     }
 
     void SetInitialWorldSettings()
@@ -3592,7 +3613,7 @@ class AutoBalance_PlayerScript : public PlayerScript
             bool anyPlayersInCombat = false;
             for (auto player : mapABInfo->allMapPlayers)
             {
-                if (player->IsInCombat())
+                if (player && player->IsInCombat())
                 {
                     anyPlayersInCombat = true;
 
@@ -3603,7 +3624,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                                 player->GetName()
                     );
 
-                    //break;
+                    break;
                 }
             }
 
@@ -3611,6 +3632,7 @@ class AutoBalance_PlayerScript : public PlayerScript
             if (!anyPlayersInCombat && mapABInfo->combatLocked)
             {
                 mapABInfo->combatLocked = false;
+                mapABInfo->combatLockMinPlayers = 0;
 
                 LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | Unlocking difficulty as {} leaves combat.",
                             map->GetMapName(),
@@ -3626,7 +3648,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                     {
                         if (player && player->GetSession())
                         {
-                            ChatHandler(player->GetSession()).SendSysMessage("Combat has ended. Difficulty is no longer locked.");
+                            ChatHandler(player->GetSession()).PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 Combat has ended. Difficulty is no longer locked.|r");
                         }
                     }
                 }
@@ -3678,8 +3700,8 @@ class AutoBalance_UnitScript : public UnitScript
 
         void ModifySpellDamageTaken(Unit* target, Unit* source, int32& amount, SpellInfo const* spellInfo) override
         {
-            // if the spell is negative (damage), we need to flip the sign
-            // if the spell is positive (healing or other) we keep it the same
+            // if the spell is negative (damage), we need to flip the sign to negative
+            // if the spell is positive (healing or other) we keep it the same (positive)
             int32 adjustedAmount = !spellInfo->IsPositive() ? amount * -1 : amount;
 
             // only debug if the source or target is a player
@@ -3698,7 +3720,7 @@ class AutoBalance_UnitScript : public UnitScript
 
         void ModifyMeleeDamage(Unit* target, Unit* source, uint32& amount) override
         {
-            // melee damage is always negative, so we need to flip the sign
+            // melee damage is always negative, so we need to flip the sign to negative
             int32 adjustedAmount = amount * -1;
 
             // only debug if the source or target is a player
@@ -3735,14 +3757,18 @@ class AutoBalance_UnitScript : public UnitScript
             _debug_damage_and_healing = (unit && unit->GetMap()->GetInstanceId());
 
             // Only if this aura has a duration
-            if (aura->GetDuration() > 0 || aura->GetMaxDuration() > 0)
+            if (aura && (aura->GetDuration() > 0 || aura->GetMaxDuration() > 0))
             {
                 uint32 auraDuration = _Modifier_CCDuration(unit, aura->GetCaster(), aura);
 
                 // only update if we decided to change it
                 if (auraDuration != (float)aura->GetDuration())
                 {
-                    if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::OnAuraApply(): Spell '{}' had it's duration adjusted ({}->{}).", aura->GetSpellInfo()->SpellName[0], aura->GetMaxDuration()/1000, auraDuration/1000);
+                    if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::OnAuraApply(): Spell '{}' had it's duration adjusted ({}->{}).",
+                        aura->GetSpellInfo()->SpellName[0],
+                        aura->GetMaxDuration()/1000,
+                        auraDuration/1000
+                    );
 
                     aura->SetMaxDuration(auraDuration);
                     aura->SetDuration(auraDuration);
@@ -3757,28 +3783,61 @@ class AutoBalance_UnitScript : public UnitScript
         {
             if (phase == AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance:: {}", SPACER);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance:: {}", SPACER);
             }
 
             if (target && source && amount)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::{}: {} {} {} {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", source->GetName(), amount, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} {} {} {} ({} - {})",
+                    function_name,
+                    phase ? "AFTER:" : "BEFORE:",
+                    source->GetName(),
+                    amount,
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else if (target && source)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::{}: {} {} 0 {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", source->GetName(), target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} {} 0 {} ({} - {})",
+                    function_name,
+                    phase ? "AFTER:" : "BEFORE:",
+                    source->GetName(),
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else if (target && amount)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::{}: {} ?? {} {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", amount, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} ?? {} {} ({} - {})",
+                    function_name,
+                    phase ? "AFTER:" : "BEFORE:",
+                    amount,
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else if (target)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::{}: {} ?? ?? {} ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} ?? ?? {} ({} - {})",
+                    function_name,
+                    phase ? "AFTER:" : "BEFORE:",
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::{}: {} W? T? F? ({} - {})", function_name, phase ? "AFTER:" : "BEFORE:", spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} W? T? F? ({} - {})",
+                    function_name,
+                    phase ? "AFTER:" : "BEFORE:",
+                    spell_name,
+                    spell_id
+                );
             }
         }
 
@@ -3796,7 +3855,7 @@ class AutoBalance_UnitScript : public UnitScript
             if (!EnableGlobal)
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: EnableGlobal is false, returning original value of {}.", amount);
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: EnableGlobal is false, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -3806,7 +3865,7 @@ class AutoBalance_UnitScript : public UnitScript
             if (!source)
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is null, using target as source.");
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is null, using target as source.");
 
                 source = target;
             }
@@ -3815,7 +3874,7 @@ class AutoBalance_UnitScript : public UnitScript
             if (!(source->GetMap()->IsDungeon() && target->GetMap()->IsDungeon()))
             {
                 //if (_debug_damage_and_healing)
-                //    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Not in an instance, returning original value of {}.", amount);
+                //    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Not in an instance, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -3824,7 +3883,7 @@ class AutoBalance_UnitScript : public UnitScript
             if (!source->IsInWorld())
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source does not exist in the world, returning original value of {}.", amount);
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source does not exist in the world, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -3837,7 +3896,7 @@ class AutoBalance_UnitScript : public UnitScript
             if (!sourceMapABInfo->enabled || !targetMapABInfo->enabled)
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source or Target's map is not enabled, returning original value of {}.", amount);
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source or Target's map is not enabled, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -3850,7 +3909,7 @@ class AutoBalance_UnitScript : public UnitScript
             if (source->GetTypeId() == TYPEID_PLAYER && source->GetGUID() == target->GetGUID() && amount >= 0)
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-healing, returning original value of {}.", amount);
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-healing, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -3871,25 +3930,25 @@ class AutoBalance_UnitScript : public UnitScript
                 )
                 {
                     if (_debug_damage_and_healing)
-                        LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-damaging with a spell that is ignored, returning original value of {}.", amount);
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-damaging with a spell that is ignored, returning original value of ({}).", amount);
 
                     return amount;
                 }
 
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-damaging, continuing.");
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is self-damaging, continuing.");
             }
             // if the source is a player and they are damaging unit that is friendly, log to debug but continue
             else if (source->GetTypeId() == TYPEID_PLAYER && target->IsFriendlyTo(source) && amount < 0)
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is damaging a friendly unit, continuing.");
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player that is damaging a friendly unit, continuing.");
             }
             // if the source is a player under any other condition, return the original value
             else if (source->GetTypeId() == TYPEID_PLAYER)
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player, returning original value of {}.", amount);
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is an enemy player, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -3899,7 +3958,7 @@ class AutoBalance_UnitScript : public UnitScript
             if ((source->IsHunterPet() || source->IsPet() || source->IsSummon()) && source->IsControlledByPlayer())
             {
                 if (_debug_damage_and_healing)
-                    LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player-controlled pet or summon, returning original value of {}.", amount);
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player-controlled pet or summon, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -3918,9 +3977,9 @@ class AutoBalance_UnitScript : public UnitScript
                     damageMultiplier = sourceMapABInfo->worldDamageHealingMultiplier;
                     if (_debug_damage_and_healing)
                     {
-                        LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell damage based on percent of max health. Ignore level scaling.");
-                        LOG_DEBUG("module.AutoBalance_Damage",
-                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player and the target is that same player, using the map's (level-scaling ignored) multiplier: {}",
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell damage based on percent of max health. Ignore level scaling.");
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC",
+                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player and the target is that same player, using the map's (level-scaling ignored) multiplier: ({})",
                                 damageMultiplier
                         );
                     }
@@ -3930,8 +3989,8 @@ class AutoBalance_UnitScript : public UnitScript
                     damageMultiplier = sourceMapABInfo->scaledWorldDamageHealingMultiplier;
                     if (_debug_damage_and_healing)
                     {
-                        LOG_DEBUG("module.AutoBalance_Damage",
-                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player and the target is that same player, using the map's multiplier: {}",
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC",
+                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a player and the target is that same player, using the map's multiplier: ({})",
                                 damageMultiplier
                         );
                     }
@@ -3944,8 +4003,8 @@ class AutoBalance_UnitScript : public UnitScript
                 damageMultiplier = targetMapABInfo->scaledWorldDamageHealingMultiplier;
                 if (_debug_damage_and_healing)
                 {
-                    LOG_DEBUG("module.AutoBalance_Damage",
-                              "AutoBalance_UnitScript::_Modify_Damage_Healing: Target for healing is a player, using the map's multiplier: {}",
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC",
+                              "AutoBalance_UnitScript::_Modify_Damage_Healing: A non-player is healing a player, using the map's multiplier: ({})",
                               damageMultiplier
                     );
                 }
@@ -3959,9 +4018,9 @@ class AutoBalance_UnitScript : public UnitScript
                     damageMultiplier = targetMapABInfo->worldDamageHealingMultiplier;
                     if (_debug_damage_and_healing)
                     {
-                        LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell damage based on percent of max health. Ignore level scaling.");
-                        LOG_DEBUG("module.AutoBalance_Damage",
-                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Target is a player and the source is not a creature, using the map's (level-scaling ignored) multiplier: {}",
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell damage based on percent of max health. Ignore level scaling.");
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC",
+                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Target is a player and the source is not a creature, using the map's (level-scaling-ignored) multiplier: ({})",
                                 damageMultiplier
                         );
                     }
@@ -3971,8 +4030,8 @@ class AutoBalance_UnitScript : public UnitScript
                     damageMultiplier = targetMapABInfo->scaledWorldDamageHealingMultiplier;
                     if (_debug_damage_and_healing)
                     {
-                        LOG_DEBUG("module.AutoBalance_Damage",
-                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Target is a player and the source is not a creature, using the map's multiplier: {}",
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC",
+                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Target is a player and the source is not a creature, using the map's multiplier: ({})",
                                 damageMultiplier
                         );
                     }
@@ -3987,9 +4046,9 @@ class AutoBalance_UnitScript : public UnitScript
                     damageMultiplier = source->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->DamageMultiplier;
                     if (_debug_damage_and_healing)
                     {
-                        LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell damage based on percent of max health. Ignore level scaling.");
-                        LOG_DEBUG("module.AutoBalance_Damage",
-                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Using the source creature's (level-scaling ignored) damage multiplier: {}",
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell damage based on percent of max health. Ignore level scaling.");
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC",
+                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Using the source creature's (level-scaling ignored) damage multiplier: ({})",
                                 damageMultiplier
                         );
                     }
@@ -4000,8 +4059,8 @@ class AutoBalance_UnitScript : public UnitScript
                     damageMultiplier = source->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->ScaledDamageMultiplier;
                     if (_debug_damage_and_healing)
                     {
-                        LOG_DEBUG("module.AutoBalance_Damage",
-                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Using the source creature's damage multiplier: {}",
+                        LOG_DEBUG("module.AutoBalance_DamageHealingCC",
+                                "AutoBalance_UnitScript::_Modify_Damage_Healing: Using the source creature's damage multiplier: ({})",
                                 damageMultiplier
                         );
                     }
@@ -4010,7 +4069,7 @@ class AutoBalance_UnitScript : public UnitScript
 
             // we are good to go, return the original damage times the multiplier
             if (_debug_damage_and_healing)
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_UnitScript::_Modify_Damage_Healing: Returning modified damage: {} * {} = {}", amount, damageMultiplier, amount * damageMultiplier);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Returning modified damage: ({}) * ({}) = ({})", amount, damageMultiplier, amount * damageMultiplier);
 
             return amount * damageMultiplier;
         }
@@ -4129,23 +4188,56 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
         {
             if (target && source && amount)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::{}: {} {} {} {} ({} - {})", function_name, prefix, source->GetName(), amount, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::{}: {} {} {} {} ({} - {})",
+                    function_name,
+                    prefix,
+                    source->GetName(),
+                    amount,
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else if (target && source)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::{}: {} {} 0 {} ({} - {})", function_name, prefix, source->GetName(), target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::{}: {} {} 0 {} ({} - {})",
+                    function_name,
+                    prefix,
+                    source->GetName(),
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else if (target && amount)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::{}: {} ?? {} {} ({} - {})", function_name, prefix, amount, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::{}: {} ?? {} {} ({} - {})",
+                    function_name,
+                    prefix,
+                    amount,
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else if (target)
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::{}: {} ?? ?? {} ({} - {})", function_name, prefix, target->GetName(), spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::{}: {} ?? ?? {} ({} - {})",
+                    function_name,
+                    prefix,
+                    target->GetName(),
+                    spell_name,
+                    spell_id
+                );
             }
             else
             {
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::{}: {} W? T? F? ({} - {})", function_name, prefix, spell_name, spell_id);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::{}: {} W? T? F? ({} - {})",
+                    function_name,
+                    prefix,
+                    spell_name,
+                    spell_id
+                );
             }
         }
 
@@ -4161,7 +4253,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             // check that we're enabled globally, else return the original value
             if (!EnableGlobal)
             {
-                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: EnableGlobal is false, returning original value of {}.", amount);
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: EnableGlobal is false, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -4169,7 +4261,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             // make sure the target is in an instance, else return the original damage
             if (!(target->GetMap()->IsDungeon()))
             {
-                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target is not in an instance, returning original value of {}.", amount);
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target is not in an instance, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -4177,7 +4269,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             // make sure the target is in the world, else return the original value
             if (!target->IsInWorld())
             {
-                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target does not exist in the world, returning original value of {}.", amount);
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target does not exist in the world, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -4188,7 +4280,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             // if the target's map is not enabled, return the original damage
             if (!targetMapABInfo->enabled)
             {
-                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target's map is not enabled, returning original value of {}.", amount);
+                if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target's map is not enabled, returning original value of ({}).", amount);
 
                 return amount;
             }
@@ -4201,7 +4293,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             int32 newAmount = _Calculate_Amount_For_GameObject(target, amount, targetMapABInfo->worldHealthMultiplier);
 
             if (_debug_damage_and_healing)
-                LOG_DEBUG("module.AutoBalance_Damage", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Returning modified damage: {} -> {}", amount, newAmount);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Returning modified damage: ({}) -> ({})", amount, newAmount);
 
             return newAmount;
         }
@@ -4233,7 +4325,7 @@ class AutoBalance_AllMapScript : public AllMapScript
 
         void OnCreateMap(Map* map)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}{})",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{})",
                 map->GetMapName(),
                 map->GetId(),
                 map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
@@ -4253,7 +4345,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                     mapABInfo->lfgMaxLevel = dungeon->MaxLevel;
                     mapABInfo->lfgTargetLevel = dungeon->TargetLevel;
 
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}{}) LFG Min: {} Max: {} Target: {}",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | LFG Min: {} Max: {} Target: {}",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -4265,7 +4357,7 @@ class AutoBalance_AllMapScript : public AllMapScript
 
                 if (map->GetInstanceId())
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}{}) is an instance of a map. Loading initial map data.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | is an instance of a map. Loading initial map data.",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
@@ -4273,7 +4365,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                     UpdateMapDataIfNeeded(map);
 
                     // provide a concise summary of the map data we collected
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}{}) LFG levels {}-{} (target {}). {} for AutoBalancing.",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | LFG levels ({}-{}) (target {}). {} for AutoBalancing.",
                         map->GetMapName(),
                         map->GetId(),
                         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -4286,7 +4378,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                 else
                 {
                     LOG_DEBUG(
-                        "module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): {} ({}) is an instance base map.",
+                        "module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}) | is an instance base map.",
                         map->GetMapName(),
                         map->GetId()
                     );
@@ -4305,8 +4397,9 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player {} enters {} ({}{})",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player {}{} | enters {} ({}{})",
                 player->GetName(),
+                player->IsGameMaster() ? " (GM)" : "",
                 map->GetMapName(),
                 map->GetId(),
                 map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
@@ -4331,13 +4424,6 @@ class AutoBalance_AllMapScript : public AllMapScript
             for (std::vector<Creature*>::iterator creatureIterator = mapABInfo->allMapCreatures.begin(); creatureIterator != mapABInfo->allMapCreatures.end(); ++creatureIterator)
             {
                 AddCreatureToMapCreatureList(*creatureIterator, false, true);
-            }
-
-            // Notify GMs that they won't be accounted for
-            if (player->IsGameMaster() && EnableGlobal)
-            {
-                ChatHandler gmChatHandle = ChatHandler(player->GetSession());
-                gmChatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 Your GM flag is turned on. AutoBalance will ignore you. Please turn GM off and exit/re-enter if you'd like to be considering for AutoBalancing.|r");
             }
 
             // Notify players of the change
@@ -4403,7 +4489,7 @@ class AutoBalance_AllMapScript : public AllMapScript
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player {}{} exits {} ({}{})",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player {}{} | exits {} ({}{})",
                 player->GetName(),
                 player->IsGameMaster() ? " (GM)" : "",
                 map->GetMapName(),
@@ -4522,7 +4608,7 @@ public:
             // if the creature already has a selectedLevel on it, we have already processed it and can re-use that value
             if (creatureABInfo->selectedLevel)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) has already been processed, using level {}.",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) | has already been processed, using level {}.",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             creatureABInfo->selectedLevel
@@ -4538,7 +4624,7 @@ public:
             Map* creatureMap = creature->GetMap();
             InstanceMap* instanceMap = creatureMap->ToInstanceMap();
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) is in map {} ({}{}{}{})",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) | is in map {} ({}{}{}{})",
                         creature->GetName(),
                         level,
                         creatureMap->GetMapName(),
@@ -4565,7 +4651,7 @@ public:
             // set the new creature level
                 level = creatureABInfo->selectedLevel;
 
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) will spawn in as level ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) | will spawn in as level ({}).",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             creatureABInfo->selectedLevel
@@ -4574,7 +4660,7 @@ public:
             else
             {
                 // don't change level value
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) will spawn in at its original level ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) | will spawn in at its original level ({}).",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             creatureABInfo->selectedLevel
@@ -4594,7 +4680,7 @@ public:
             // final check to be sure the creature is the right level
             if (isCreatureRelevant(creature) && creature->GetLevel() != creatureABInfo->selectedLevel && !creature->IsSummon())
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) is set to level ({}) just after being added to the world.",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | is set to level ({}) just after being added to the world.",
                             creature->GetName(),
                             creature->GetLevel(),
                             creatureABInfo->selectedLevel
@@ -4602,7 +4688,7 @@ public:
                 creature->SetLevel(creatureABInfo->selectedLevel);
             }
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) added to map {} ({}{}{}{})",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | added to map {} ({}{}{}{})",
                         creature->GetName(),
                         creature->GetLevel(),
                         creatureMap->GetMapName(),
@@ -4631,7 +4717,7 @@ public:
             InstanceMap* instanceMap = creature->GetMap()->ToInstanceMap();
             Map* map = sMapMgr->FindBaseMap(creature->GetMapId());
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureRemoveWorld: Creature {} ({}) removed from map {} ({}{}{}{})",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureRemoveWorld: Creature {} ({}) | removed from map {} ({}{}{}{})",
                         creature->GetName(),
                         creature->GetLevel(),
                         map->GetMapName(),
@@ -4680,7 +4766,7 @@ public:
 
             if (creatureABInfo->isBrandNew)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) is no longer brand new.",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) | is no longer brand new.",
                             creature->GetName(),
                             creature->GetLevel()
                 );
@@ -4696,7 +4782,7 @@ public:
 
             if (creature->GetLevel() != creatureABInfo->selectedLevel && isCreatureRelevant(creature))
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) is set to level ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) | is set to level ({}).",
                             creature->GetName(),
                             creature->GetLevel(),
                             creatureABInfo->selectedLevel
@@ -4729,7 +4815,7 @@ public:
         else if (creature->isDead())
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) is dead and mapConfigTime is not 0 - prime for reset if revived.", creature->GetName(), creature->GetLevel());
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) | is dead and mapConfigTime is not 0 - prime for reset if revived.", creature->GetName(), creature->GetLevel());
             creatureABInfo->mapConfigTime = 1;
             creatureABInfo->wasAliveNowDead = true;
             return false;
@@ -4747,7 +4833,7 @@ public:
                         creature->GetSpawnId()
             );
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) map config time is out of date ({} < {}). Resetting creature before modify.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) | Map config time is out of date ({} < {}). Resetting creature before modify.",
                         creature->GetName(),
                         creature->GetLevel(),
                         creatureABInfo->mapConfigTime,
@@ -4770,7 +4856,7 @@ public:
             // set the creature's level
             if (creature->GetLevel() != unmodifiedLevel)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) is set to level ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) | is set to level ({}).",
                             creature->GetName(),
                             creature->GetLevel(),
                             unmodifiedLevel
@@ -4780,7 +4866,7 @@ public:
             }
             else
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) is already set to level ({}).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ResetCreatureIfNeeded: Creature {} ({}) | is already set to level ({}).",
                             creature->GetName(),
                             creature->GetLevel(),
                             unmodifiedLevel
@@ -4847,7 +4933,7 @@ public:
         // if this creature is brand new, do not update this so that it will be re-processed next OnCreatureUpdate
         if (creatureABInfo->mapConfigTime < mapABInfo->mapConfigTime && !creatureABInfo->isBrandNew)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) map config time set to ({}).",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | Map config time set to ({}).",
                         creature->GetName(),
                         creature->GetLevel(),
                         mapABInfo->mapConfigTime
@@ -4858,14 +4944,14 @@ public:
         // check to make sure that the creature's map is enabled for scaling
         if (!mapABInfo->enabled)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is in map {} ({}{}{}{}) that is not enabled, not changed.",
-                      creature->GetName(),
-                      creatureABInfo->UnmodifiedLevel,
-                      map->GetMapName(),
-                      map->GetId(),
-                      instanceMap ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
-                      instanceMap ? ", " + std::to_string(instanceMap->GetMaxPlayers()) + "-player" : "",
-                      instanceMap ? instanceMap->IsHeroic() ? " Heroic" : " Normal" : ""
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is in map {} ({}{}{}{}) that is not enabled, not changed.",
+                creature->GetName(),
+                creatureABInfo->UnmodifiedLevel,
+                map->GetMapName(),
+                map->GetId(),
+                instanceMap ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+                instanceMap ? ", " + std::to_string(instanceMap->GetMaxPlayers()) + "-player" : "",
+                instanceMap ? instanceMap->IsHeroic() ? " Heroic" : " Normal" : ""
             );
 
             // return the creature back to their original level, if it's not already
@@ -4877,7 +4963,10 @@ public:
         // if the creature isn't relevant, don't modify it
         if (!isCreatureRelevant(creature))
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature is not relevant, not changed.");
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is not relevant, not changed.",
+                creature->GetName(),
+                creatureABInfo->UnmodifiedLevel
+            );
 
             // return the creature back to their original level, if it's not already
             creatureABInfo->selectedLevel = creatureABInfo->UnmodifiedLevel;
@@ -4886,6 +4975,7 @@ public:
         }
 
         // if this creature is below 85% of the minimum LFG level for the map, make no changes
+        // if this creature is above 115% of the maximum LFG level for the map, make no changes
         // if this is a critter that is substantial enough to be considered a real enemy, still modify it
         // if this is a trigger, still modify it
         if (
@@ -4899,7 +4989,7 @@ public:
             )
         )
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is a {} outside of the expected NPC level range for the map ({} to {}), not modified.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is a {} outside of the expected NPC level range for the map ({} to {}), not modified.",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel,
                         creature->IsCritter() ? "critter" : "creature",
@@ -4915,14 +5005,14 @@ public:
         // if the creature was dead (but this function is being called because they are being revived), reset it and allow modifications
         if (creatureABInfo->wasAliveNowDead)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) was dead but appears to be alive now, reset wasAliveNowDead flag.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | was dead but appears to be alive now, reset wasAliveNowDead flag.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             // if the creature was dead, reset it
             creatureABInfo->wasAliveNowDead = false;
         }
         // if the creature is dead and wasn't marked as dead by this script, simply skip
         else if (creature->isDead())
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is dead, do not modify.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is dead, do not modify.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             return;
         }
 
@@ -4933,7 +5023,7 @@ public:
 
         if (forcedNumPlayers == 0)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is in the forced num players list with a value of 0, not changed.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is in the forced num players list with a value of 0, not changed.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             return; // forcedNumPlayers 0 means that the creature is contained in DisabledID -> no scaling
         }
 
@@ -4943,7 +5033,7 @@ public:
         // if the forced value is set and the adjusted player count is above the forced value, change it to match
         if (forcedNumPlayers > 0 && adjustedPlayerCount > forcedNumPlayers)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is in the forced num players list with a value of {}, adjusting adjustedPlayerCount to match.", creature->GetName(), creatureABInfo->UnmodifiedLevel, forcedNumPlayers);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is in the forced num players list with a value of {}, adjusting adjustedPlayerCount to match.", creature->GetName(), creatureABInfo->UnmodifiedLevel, forcedNumPlayers);
             adjustedPlayerCount = forcedNumPlayers;
         }
 
@@ -4952,7 +5042,7 @@ public:
 
         if (!creatureABInfo->instancePlayerCount) // no players in map, do not modify attributes
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is on a map with no players, not changed.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is on a map with no players, not changed.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             return;
         }
 
@@ -4976,7 +5066,7 @@ public:
             // note that these already passed a more complex check above
             if (creature->IsTotem() || (creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() <= 100))
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is a {} that will not be level scaled, but will have modifiers set.",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is a {} that will not be level scaled, but will have modifiers set.",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             creature->IsTotem() ? "totem" : "critter"
@@ -4987,15 +5077,6 @@ public:
             // if we're using dynamic scaling, calculate the creature's level based relative to the highest player level in the map
             else if (LevelScalingMethod == AUTOBALANCE_SCALING_DYNAMIC)
             {
-                /*
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) dynamic scaling floor: {}, ceiling: {}.",
-                          creature->GetName(),
-                          creatureABInfo->UnmodifiedLevel,
-                          mapABInfo->levelScalingDynamicFloor,
-                          mapABInfo->levelScalingDynamicCeiling
-                );
-                */
-
                 // calculate the creature's new level
                 selectedLevel = (mapABInfo->highestPlayerLevel + mapABInfo->levelScalingDynamicCeiling) - (mapABInfo->highestCreatureLevel - creatureABInfo->UnmodifiedLevel);
 
@@ -5011,7 +5092,7 @@ public:
                     selectedLevel = mapABInfo->highestPlayerLevel + mapABInfo->levelScalingDynamicCeiling;
                 }
 
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) scaled to level ({}) via dynamic scaling.",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaled to level ({}) via dynamic scaling.",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
                             selectedLevel
@@ -5021,7 +5102,7 @@ public:
             else
             {
                 selectedLevel = mapABInfo->highestPlayerLevel;
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) scaled to level ({}) via fixed scaling.", creature->GetName(), creatureABInfo->UnmodifiedLevel, selectedLevel);
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaled to level ({}) via fixed scaling.", creature->GetName(), creatureABInfo->UnmodifiedLevel, selectedLevel);
             }
 
             creatureABInfo->selectedLevel = selectedLevel;
@@ -5030,7 +5111,7 @@ public:
             {
                 if (!creatureABInfo->isBrandNew)
                 {
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is set to new selectedLevel ({}).",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is set to new selectedLevel ({}).",
                                 creature->GetName(),
                                 creatureABInfo->UnmodifiedLevel,
                                 selectedLevel
@@ -5042,23 +5123,23 @@ public:
         }
         else if (!LevelScaling)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) not level scaled due to level scaling being disabled.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | not level scaled due to level scaling being disabled.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             creatureABInfo->selectedLevel = creatureABInfo->UnmodifiedLevel;
         }
         else if (creatureABInfo->neverLevelScale)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) not level scaled due to being marked as multipliers only.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | not level scaled due to being marked as multipliers only.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             creatureABInfo->selectedLevel = creatureABInfo->UnmodifiedLevel;
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) not level scaled due the instance's average creature level being inside the skip range.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | not level scaled due the instance's average creature level being inside the skip range.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
             creatureABInfo->selectedLevel = creatureABInfo->UnmodifiedLevel;
         }
 
         if (creatureABInfo->isBrandNew)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) is brand new, do not modify level or stats yet.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is brand new, do not modify level or stats yet.",
                         creature->GetName(),
                         creatureABInfo->UnmodifiedLevel
             );
@@ -5763,7 +5844,7 @@ public:
         // debug log the new stat multipliers stored in CreatureABInfo in a compact, single-line format
         if (creatureABInfo->UnmodifiedLevel != creatureABInfo->selectedLevel)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}->{}) multipliers: H:{:.3f}->{:.3f} M:{:.3f}->{:.3f} A:{:.3f}->{:.3f} D:{:.3f}->{:.3f} CC:{:.3f} XP:{:.3f} $:{:.3f}",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}->{}) | Multipliers: H:{:.3f}->{:.3f} M:{:.3f}->{:.3f} A:{:.3f}->{:.3f} D:{:.3f}->{:.3f} CC:{:.3f} XP:{:.3f} $:{:.3f}",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel,
                     creatureABInfo->selectedLevel,
@@ -5782,7 +5863,7 @@ public:
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) multipliers: H:{:.3f} M:{:.3f} A:{:.3f} D:{:.3f} CC:{:.3f} XP:{:.3f} $:{:.3f}",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | Multipliers: H:{:.3f} M:{:.3f} A:{:.3f} D:{:.3f} CC:{:.3f} XP:{:.3f} $:{:.3f}",
                     creature->GetName(),
                     creatureABInfo->UnmodifiedLevel,
                     creatureABInfo->HealthMultiplier,
