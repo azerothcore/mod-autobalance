@@ -172,7 +172,6 @@ public:
     bool isInCreatureList = false;                  // whether or not the creature is in the map's creature list
     bool isBrandNew = false;                        // whether or not the creature is brand new to the map (hasn't been added to the world yet)
     bool neverLevelScale = false;                   // whether or not the creature should never be level scaled (can still be player scaled)
-    bool skipMe = false;                            // whether or not the creature should be skipped because it is not relevant for scaling
 
     Relevance relevance = AUTOBALANCE_RELEVANCE_UNCHECKED;  // whether or not the creature is relevant for scaling
 };
@@ -902,7 +901,7 @@ bool isBossOrBossSummon(Creature* creature, bool log = false)
 }
 
 bool isCreatureRelevant(Creature* creature) {
-    // if the creature is gone, return
+    // if the creature is gone, return false
     if (!creature)
     {
         LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature is null.");
@@ -4561,7 +4560,7 @@ public:
             // do an initial modification run of the creature, but don't update the level yet
             ModifyCreatureAttributes(creature);
 
-            if (!creatureABInfo->skipMe)
+            if (isCreatureRelevant(creature))
             {
             // set the new creature level
                 level = creatureABInfo->selectedLevel;
@@ -4575,7 +4574,6 @@ public:
             else
             {
                 // don't change level value
-
                 LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel: Creature {} ({}) will spawn in at its original level ({}).",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
@@ -4696,7 +4694,7 @@ public:
 
             AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-            if (creature->GetLevel() != creatureABInfo->selectedLevel && !creatureABInfo->skipMe)
+            if (creature->GetLevel() != creatureABInfo->selectedLevel && isCreatureRelevant(creature))
             {
                 LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) is set to level ({}).",
                             creature->GetName(),
@@ -5973,7 +5971,7 @@ public:
         handler->PSendSysMessage("%s (%u%s%s), %s",
                                   target->GetName(),
                                   creatureABInfo->UnmodifiedLevel,
-                                  !creatureABInfo->skipMe && creatureABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
+                                  isCreatureRelevant(target) && creatureABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
                                   isBossOrBossSummon(target) ? " | Boss" : "",
                                   creatureABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
         handler->PSendSysMessage("Creature difficulty level: %u player(s)", creatureABInfo->instancePlayerCount);
