@@ -208,6 +208,8 @@ public:
     std::vector<Player*> allMapPlayers;             // all players that are currently in the map
 
     bool combatLocked = false;                      // whether or not the map is combat locked
+    bool combatLockTripped = false;                 // set to true when combat locking was needed during this current combat
+    uint8 combatLockMinPlayers = 0;                 // the instance cannot be set to less than this number of players until combat ends
 
     uint8 highestCreatureLevel = 0;                 // the highest-level creature in the map
     uint8 lowestCreatureLevel = 0;                  // the lowest-level creature in the map
@@ -2480,24 +2482,82 @@ void UpdateMapPlayerStats(Map* map)
     AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
     InstanceMap* instanceMap = map->ToInstanceMap();
 
+    // remember some values
+    uint8 oldPlayerCount = mapABInfo->playerCount;
+    uint8 oldAdjustedPlayerCount = mapABInfo->adjustedPlayerCount;
+
     // update the player count
     mapABInfo->playerCount = mapABInfo->allMapPlayers.size();
 
-    // only change the adjustedPlayerCount if combat is unlocked
-    if (!mapABInfo->combatLocked)
+    uint8 adjustedPlayerCount = 0;
+
+    // if combat is locked and the new player count is higher than the combat lock, update the combat lock
+    if
+    (
+        mapABInfo->combatLocked &&
+        mapABInfo->playerCount > oldPlayerCount &&
+        mapABInfo->playerCount > mapABInfo->combatLockMinPlayers
+    )
     {
         // start with the actual player count
-        uint32 adjustedPlayerCount = mapABInfo->playerCount;
+        adjustedPlayerCount = mapABInfo->playerCount;
 
-        // if the adjusted player count is below the min players setting, adjust it
-        if (adjustedPlayerCount < mapABInfo->minPlayers)
-            adjustedPlayerCount = mapABInfo->minPlayers;
+        // this is the new floor
+        mapABInfo->combatLockMinPlayers = mapABInfo->playerCount;
 
-        // adjust by the PlayerDifficultyOffset
-        adjustedPlayerCount += PlayerCountDifficultyOffset;
+        LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | Combat is locked. Combat floor increased. New floor is ({}).",
+            instanceMap->GetMapName(),
+            instanceMap->GetId(),
+            instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+            mapABInfo->combatLockMinPlayers
+        );
 
-        // store the adjusted player count in the map's info
-        mapABInfo->adjustedPlayerCount = adjustedPlayerCount;
+    }
+    // if combat is otherwise locked
+    else if (mapABInfo->combatLocked)
+    {
+        // start with the saved floor
+        adjustedPlayerCount = mapABInfo->combatLockMinPlayers;
+
+        LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | Combat is locked. Combat floor is ({}).",
+            instanceMap->GetMapName(),
+            instanceMap->GetId(),
+            instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+            mapABInfo->combatLockMinPlayers
+        );
+    }
+    // if combat is not locked
+    else
+    {
+        // start with the actual player count
+        adjustedPlayerCount = mapABInfo->playerCount;
+    }
+
+    // if the adjusted player count is below the min players setting, adjust it
+    if (adjustedPlayerCount < mapABInfo->minPlayers)
+        adjustedPlayerCount = mapABInfo->minPlayers;
+
+    // adjust by the PlayerDifficultyOffset
+    adjustedPlayerCount += PlayerCountDifficultyOffset;
+
+    // store the adjusted player count in the map's info
+    mapABInfo->adjustedPlayerCount = adjustedPlayerCount;
+
+    // if the adjustedPlayerCount changed, schedule this map for a reconfiguration
+    if (oldAdjustedPlayerCount != mapABInfo->adjustedPlayerCount)
+    {
+        mapABInfo->mapConfigTime = 1;
+        LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | Player difficulty changes ({}->{}). Force map update. {} ({}{}) map config time set to ({}).",
+            instanceMap->GetMapName(),
+            instanceMap->GetId(),
+            instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+            oldAdjustedPlayerCount,
+            mapABInfo->adjustedPlayerCount,
+            instanceMap->GetMapName(),
+            instanceMap->GetId(),
+            instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+            mapABInfo->mapConfigTime
+        );
     }
 
     uint8 highestPlayerLevel = 0;
@@ -2616,6 +2676,12 @@ bool RemovePlayerFromMap(Map* map, Player* player)
     mapABInfo->allMapPlayers.erase(std::remove(mapABInfo->allMapPlayers.begin(), mapABInfo->allMapPlayers.end(), player), mapABInfo->allMapPlayers.end());
     LOG_DEBUG("module.AutoBalance", "AutoBalance::RemovePlayerFromMap: Player {} ({}) removed from the map's player list.", player->GetName(), player->getLevel());
 
+    // if the map is combat locked, schedule a map update for when combat ends
+    if (mapABInfo->combatLocked)
+    {
+        mapABInfo->combatLockTripped = true;
+    }
+
     // update the map's player stats
     UpdateMapPlayerStats(map);
 
@@ -2673,6 +2739,9 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
 
             // clear the map's player list
             mapABInfo->allMapPlayers.clear();
+
+            // reset the combat lock
+            mapABInfo->combatLockMinPlayers = 0;
 
             // get the map's player list
             Map::PlayerList const &playerList = map->GetPlayers();
@@ -3551,8 +3620,31 @@ class AutoBalance_PlayerScript : public PlayerScript
                             player->GetName()
                 );
 
-                // update the map's player stats
-                UpdateMapPlayerStats(map);
+                // if the combat lock needed to be used, notify the players of it lifting
+                if (mapABInfo->combatLockTripped)
+                {
+                    for (auto player : mapABInfo->allMapPlayers)
+                    {
+                        if (player && player->GetSession())
+                        {
+                            ChatHandler(player->GetSession()).SendSysMessage("Combat has ended. Difficulty is no longer locked.");
+                        }
+                    }
+                }
+
+                // if the number of players changed while combat was in progress, schedule the map for an update
+                if (mapABInfo->combatLockTripped)
+                {
+                    mapABInfo->mapConfigTime = 1;
+                    LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | Reset map config time to ({}).",
+                                map->GetMapName(),
+                                map->GetId(),
+                                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                                mapABInfo->mapConfigTime
+                    );
+
+                    mapABInfo->combatLockTripped = false;
+                }
             }
         }
 };
@@ -4377,11 +4469,21 @@ class AutoBalance_AllMapScript : public AllMapScript
                             {
                                 ChatHandler chatHandle = ChatHandler(thisPlayer->GetSession());
 
-                                chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
-                                    player->GetName().c_str(),
-                                    mapABInfo->playerCount,
-                                    mapABInfo->adjustedPlayerCount
-                                );
+                                if (mapABInfo->combatLocked)
+                                {
+                                    chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance while combat was in progress. Difficulty locked to no less than %u players until combat ends.|r",
+                                        player->GetName().c_str(),
+                                        mapABInfo->adjustedPlayerCount
+                                    );
+                                }
+                                else
+                                {
+                                    chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
+                                        player->GetName().c_str(),
+                                        mapABInfo->playerCount,
+                                        mapABInfo->adjustedPlayerCount
+                                    );
+                                }
                             }
                         }
                     }
@@ -5780,7 +5882,7 @@ public:
                                     );
 
             // Adjusted player count (multiple scenarios)
-            if (mapABInfo->combatLocked)
+            if (mapABInfo->combatLockTripped)
             {
                 handler->PSendSysMessage("Adjusted Player Count: %u (Combat Locked)", mapABInfo->adjustedPlayerCount);
             }
@@ -5874,6 +5976,7 @@ public:
                                   !creatureABInfo->skipMe && creatureABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
                                   isBossOrBossSummon(target) ? " | Boss" : "",
                                   creatureABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
+        handler->PSendSysMessage("Creature difficulty level: %u player(s)", creatureABInfo->instancePlayerCount);
         // level scaled
         if (creatureABInfo->UnmodifiedLevel != target->GetLevel())
         {
