@@ -3565,7 +3565,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                 return;
             }
 
-            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: {}", player->GetName());
+            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: {} enters combat.", player->GetName());
 
             AutoBalanceMapInfo *mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
@@ -3599,7 +3599,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                 return;
             }
 
-            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: {}", player->GetName());
+            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: {} leaves combat.", player->GetName());
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 

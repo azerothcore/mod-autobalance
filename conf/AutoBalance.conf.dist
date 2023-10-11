@@ -1,6 +1,17 @@
 [worldserver]
 ##########################
 #
+# Logging
+# 4 = Info, 5 = Debug
+#
+##########################
+Logger.module.AutoBalance=4,Console Server
+Logger.module.AutoBalance_CombatLocking=4,Console Server
+Logger.module.AutoBalance_DamageHealingCC=4,Console Server
+Logger.module.AutoBalance_StatGeneration=4,Console Server
+
+##########################
+#
 # Enable / Disable Settings
 #
 ##########################
