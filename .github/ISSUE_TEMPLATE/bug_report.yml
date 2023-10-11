@@ -44,6 +44,16 @@ body:
     validations:
       required: false
   - type: textarea
+    id: abcommands
+    attributes:
+      label: AutoBalance Debug Commands
+      description: |
+        Please include text or an image of the `.ab mapstat` command. If your issue is concerning scaling of creatures, please also include the `.ab creaturestat` command while targeting the problematic creature.
+      placeholder: |
+        None
+    validations:
+      required: false
+  - type: textarea
     id: commit
     attributes:
       label: AC rev. hash/commit
