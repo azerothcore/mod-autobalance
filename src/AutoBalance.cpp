@@ -2540,7 +2540,7 @@ void UpdateMapPlayerStats(Map* map)
     else if (mapABInfo->combatLocked)
     {
         // start with the saved floor
-        adjustedPlayerCount = mapABInfo->combatLockMinPlayers;
+        adjustedPlayerCount = mapABInfo->combatLockMinPlayers ? mapABInfo->combatLockMinPlayers : mapABInfo->playerCount;
 
         LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | Combat is locked. Combat floor is ({}).",
             instanceMap->GetMapName(),
