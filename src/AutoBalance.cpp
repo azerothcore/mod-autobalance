@@ -221,7 +221,7 @@ public:
     uint8 levelScalingDynamicCeiling;               // how many levels MORE than the highestPlayerLevel creature should be scaled to
     uint8 levelScalingDynamicFloor;                 // how many levels LESS than the highestPlayerLevel creature should be scaled to
 
-    uint prevMapLevel = 0;                          // used to reduce calculations when they are not necessary
+    uint8 prevMapLevel = 0;                          // used to reduce calculations when they are not necessary
 };
 
 class AutoBalanceStatModifiers : public DataMap::Base
