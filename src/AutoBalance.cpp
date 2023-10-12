@@ -146,8 +146,6 @@ public:
     uint32 instancePlayerCount = 0;                 // the number of players this creature has been scaled for
     uint8 selectedLevel = 0;                        // the level that this creature should be set to
 
-    uint32 entry = 0;                               // TODO: see if this is still needed. Creature entry ID
-
     float DamageMultiplier = 1.0f;                  // per-player damage multiplier (no level scaling)
     float ScaledDamageMultiplier = 1.0f;            // per-player and level scaling damage multiplier
 
@@ -165,7 +163,7 @@ public:
     float XPModifier = 1.0f;                        // per-player XP modifier (level scaling provided by normal XP distribution)
     float MoneyModifier = 1.0f;                     // per-player money modifier (no level scaling)
 
-    uint8 UnmodifiedLevel = 0;                      // original the level of the creature as determined by the game
+    uint8 UnmodifiedLevel = 0;                      // original level of the creature as determined by the game
 
     bool isActive = false;                          // whether or not the current creature is affecting map stats. May change as conditions change.
     bool wasAliveNowDead = false;                   // whether or not the creature was alive and is now dead
@@ -181,45 +179,45 @@ class AutoBalanceMapInfo : public DataMap::Base
 public:
     AutoBalanceMapInfo() {}
 
-    uint64_t globalConfigTime = 1;                  // the last global config time that this map was updated
-    uint64_t mapConfigTime = 1;                     // the last map config time that this map was updated
+    uint64_t globalConfigTime = 1;                   // the last global config time that this map was updated
+    uint64_t mapConfigTime = 1;                      // the last map config time that this map was updated
 
-    uint8 playerCount = 0;                         // the base number of players, normally based on the actual number of players
-    uint8 adjustedPlayerCount = 0;                 // the number of players for the purposes of scaling
-    uint8 minPlayers = 1;                          // will bet set by the config
+    uint8 playerCount = 0;                           // the actual number of non-GM players in the map
+    uint8 adjustedPlayerCount = 0;                   // the currently difficulty level expressed as number of players
+    uint8 minPlayers = 1;                            // will be set by the config
 
-    uint8 mapLevel = 0;                             // calculated from the avgCreatureLevel
-    uint8 lowestPlayerLevel = 0;                    // the lowest-level player in the map
-    uint8 highestPlayerLevel = 0;                   // the highest-level player in the map
+    uint8 mapLevel = 0;                              // calculated from the avgCreatureLevel
+    uint8 lowestPlayerLevel = 0;                     // the lowest-level player in the map
+    uint8 highestPlayerLevel = 0;                    // the highest-level player in the map
 
-    uint8 lfgMinLevel = 0;                          // the minimum level for the map according to LFG
-    uint8 lfgTargetLevel = 0;                       // the target level for the map according to LFG
-    uint8 lfgMaxLevel = 0;                          // the maximum level for the map according to LFG
+    uint8 lfgMinLevel = 0;                           // the minimum level for the map according to LFG
+    uint8 lfgTargetLevel = 0;                        // the target level for the map according to LFG
+    uint8 lfgMaxLevel = 0;                           // the maximum level for the map according to LFG
 
-    uint8 worldMultiplierTargetLevel = 0;           // the level of the pseudo-creature that the world modifiers scale to
-    float worldDamageHealingMultiplier = 1.0f;      // the damage/healing multiplier for the world (damage/healing not from a creature)
-    float scaledWorldDamageHealingMultiplier = 1.0f;// the damage/healing multiplier for the world (damage/healing not from a creature) with level scaling
-    float worldHealthMultiplier = 1.0f;             // the health multiplier for any destructible buildings in the map
+    uint8 worldMultiplierTargetLevel = 0;            // the level of the pseudo-creature that the world modifiers scale to
+    float worldDamageHealingMultiplier = 1.0f;       // the damage/healing multiplier for the world (where source isn't an enemy creature)
+    float scaledWorldDamageHealingMultiplier = 1.0f; // the damage/healing multiplier for the world (where source isn't an enemy creature)
+    float worldHealthMultiplier = 1.0f;              // the "health" multiplier for any destructible buildings in the map
 
-    bool enabled = false;                           // should AutoBalance make any changes to this map or its creatures?
+    bool enabled = false;                            // should AutoBalance make any changes to this map or its creatures?
 
-    std::vector<Creature*> allMapCreatures;         // all creatures in the map, active and non-active
-    std::vector<Player*> allMapPlayers;             // all players that are currently in the map
+    std::vector<Creature*> allMapCreatures;          // all creatures in the map, active and non-active
+    std::vector<Player*> allMapPlayers;              // all players that are currently in the map
 
-    bool combatLocked = false;                      // whether or not the map is combat locked
-    bool combatLockTripped = false;                 // set to true when combat locking was needed during this current combat
-    uint8 combatLockMinPlayers = 0;                 // the instance cannot be set to less than this number of players until combat ends
+    bool combatLocked = false;                       // whether or not the map is combat locked
+    bool combatLockTripped = false;                  // set to true when combat locking was needed during this current combat (some tried to leave)
+    uint8 combatLockMinPlayers = 0;                  // the instance cannot be set to less than this number of players until combat ends
 
-    uint8 highestCreatureLevel = 0;                 // the highest-level creature in the map
-    uint8 lowestCreatureLevel = 0;                  // the lowest-level creature in the map
-    float avgCreatureLevel = 0;                     // the average level of all active creatures in the map (continuously updated)
-    uint32 activeCreatureCount = 0;                 // the number of active creatures in the map (not necessarily alive)
+    uint8 highestCreatureLevel = 0;                  // the highest-level creature in the map
+    uint8 lowestCreatureLevel = 0;                   // the lowest-level creature in the map
+    float avgCreatureLevel = 0;                      // the average level of all active creatures in the map (continuously updated)
+    uint32 activeCreatureCount = 0;                  // the number of creatures in the map that are included in the map's stats (not necessarily alive)
 
-    bool isLevelScalingEnabled = false;             // whether level scaling is enabled on this map
-    uint8 levelScalingSkipHigherLevels;             // used to determine if this map should scale or not
-    uint8 levelScalingSkipLowerLevels;              // used to determine if this map should scale or not
-    uint8 levelScalingDynamicCeiling;               // how many levels MORE than the highestPlayerLevel creature should be scaled to
-    uint8 levelScalingDynamicFloor;                 // how many levels LESS than the highestPlayerLevel creature should be scaled to
+    bool isLevelScalingEnabled = false;              // whether level scaling is enabled on this map
+    uint8 levelScalingSkipHigherLevels;              // used to determine if this map should scale or not
+    uint8 levelScalingSkipLowerLevels;               // used to determine if this map should scale or not
+    uint8 levelScalingDynamicCeiling;                // how many levels MORE than the highestPlayerLevel creature should be scaled to
+    uint8 levelScalingDynamicFloor;                  // how many levels LESS than the highestPlayerLevel creature should be scaled to
 
     uint8 prevMapLevel = 0;                          // used to reduce calculations when they are not necessary
 };
@@ -671,55 +669,61 @@ bool ShouldMapBeEnabled(Map* map)
         {
             //LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Heroic Enables - 5:{} 10:{} 25:{} Other:{}",
             //            Enable5MHeroic, Enable10MHeroic, Enable25MHeroic, EnableOtherHeroic);
-            switch (instanceMap->GetMaxPlayers())
+
+            if (instanceMap->GetMaxPlayers() <= 5)
             {
-                case 5:
-                    sizeDifficultyEnabled = Enable5MHeroic;
-                    break;
-                case 10:
-                    sizeDifficultyEnabled = Enable10MHeroic;
-                    break;
-                case 25:
-                    sizeDifficultyEnabled = Enable25MHeroic;
-                    break;
-                default:
-                    sizeDifficultyEnabled = EnableOtherHeroic;
-                    break;
+                sizeDifficultyEnabled = Enable5MHeroic;
+            }
+            else if (instanceMap->GetMaxPlayers() <= 10)
+            {
+                sizeDifficultyEnabled = Enable10MHeroic;
+            }
+            else if (instanceMap->GetMaxPlayers() <= 25)
+            {
+                sizeDifficultyEnabled = Enable25MHeroic;
+            }
+            else
+            {
+                sizeDifficultyEnabled = EnableOtherHeroic;
             }
         }
         else
         {
             //LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Normal Enables - 5:{} 10:{} 15:{} 20:{} 25:{} 40:{} Other:{}",
             //            Enable5M, Enable10M, Enable15M, Enable20M, Enable25M, Enable40M, EnableOtherNormal);
-            switch (instanceMap->GetMaxPlayers())
+            if (instanceMap->GetMaxPlayers() <= 5)
             {
-                case 5:
-                    sizeDifficultyEnabled = Enable5M;
-                    break;
-                case 10:
-                    sizeDifficultyEnabled = Enable10M;
-                    break;
-                case 15:
-                    sizeDifficultyEnabled = Enable15M;
-                    break;
-                case 20:
-                    sizeDifficultyEnabled = Enable20M;
-                    break;
-                case 25:
-                    sizeDifficultyEnabled = Enable25M;
-                    break;
-                case 40:
-                    sizeDifficultyEnabled = Enable40M;
-                    break;
-                default:
-                    sizeDifficultyEnabled = EnableOtherNormal;
-                    break;
+                sizeDifficultyEnabled = Enable5M;
+            }
+            else if (instanceMap->GetMaxPlayers() <= 10)
+            {
+                sizeDifficultyEnabled = Enable10M;
+            }
+            else if (instanceMap->GetMaxPlayers() <= 15)
+            {
+                sizeDifficultyEnabled = Enable15M;
+            }
+            else if (instanceMap->GetMaxPlayers() <= 20)
+            {
+                sizeDifficultyEnabled = Enable20M;
+            }
+            else if (instanceMap->GetMaxPlayers() <= 25)
+            {
+                sizeDifficultyEnabled = Enable25M;
+            }
+            else if (instanceMap->GetMaxPlayers() <= 40)
+            {
+                sizeDifficultyEnabled = Enable40M;
+            }
+            else
+            {
+                sizeDifficultyEnabled = EnableOtherNormal;
             }
         }
 
         if (sizeDifficultyEnabled)
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}, {}-player {}) - Enabled for AutoBalancing.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}, {}-player {}) | Enabled for AutoBalancing.",
                       map->GetMapName(),
                       map->GetId(),
                       map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -729,7 +733,7 @@ bool ShouldMapBeEnabled(Map* map)
         }
         else
         {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}, {}-player {}) - Not enabled because its size and difficulty are disabled via configuration.",
+            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}, {}-player {}) | Not enabled because its size and difficulty are disabled via configuration.",
                       map->GetMapName(),
                       map->GetId(),
                       map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -742,7 +746,7 @@ bool ShouldMapBeEnabled(Map* map)
     }
     else
     {
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}) - Not enabled because the map is not an instance.",
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: Map {} ({}{}) | Not enabled because the map is not an instance.",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
@@ -1053,7 +1057,7 @@ bool isCreatureRelevant(Creature* creature) {
 
     }
 
-    // if this is a critter
+    // if this is a flavor critter
     // level and health checks for some nasty level 1 critters in some encounters
     if ((creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() < 100))
     {
@@ -1090,75 +1094,74 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
     //
     if (instanceMap->IsHeroic())
     {
-        switch (maxNumberOfPlayers)
+        if (maxNumberOfPlayers <= 5)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-                inflectionValue *= InflectionPointHeroic;
-                curveFloor = InflectionPointHeroicCurveFloor;
-                curveCeiling = InflectionPointHeroicCurveCeiling;
-                break;
-            case 10:
-                inflectionValue *= InflectionPointRaid10MHeroic;
-                curveFloor = InflectionPointRaid10MHeroicCurveFloor;
-                curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
-                break;
-            case 25:
-                inflectionValue *= InflectionPointRaid25MHeroic;
-                curveFloor = InflectionPointRaid25MHeroicCurveFloor;
-                curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
-                break;
-            default:
-                inflectionValue *= InflectionPointRaidHeroic;
-                curveFloor = InflectionPointRaidHeroicCurveFloor;
-                curveCeiling = InflectionPointRaidHeroicCurveCeiling;
+            inflectionValue *= InflectionPointHeroic;
+            curveFloor = InflectionPointHeroicCurveFloor;
+            curveCeiling = InflectionPointHeroicCurveCeiling;
+        }
+        else if (maxNumberOfPlayers <= 10)
+        {
+            inflectionValue *= InflectionPointRaid10MHeroic;
+            curveFloor = InflectionPointRaid10MHeroicCurveFloor;
+            curveCeiling = InflectionPointRaid10MHeroicCurveCeiling;
+        }
+        else if (maxNumberOfPlayers <= 25)
+        {
+            inflectionValue *= InflectionPointRaid25MHeroic;
+            curveFloor = InflectionPointRaid25MHeroicCurveFloor;
+            curveCeiling = InflectionPointRaid25MHeroicCurveCeiling;
+        }
+        else
+        {
+            inflectionValue *= InflectionPointRaidHeroic;
+            curveFloor = InflectionPointRaidHeroicCurveFloor;
+            curveCeiling = InflectionPointRaidHeroicCurveCeiling;
         }
     }
     else
     {
-        switch (maxNumberOfPlayers)
+        if (maxNumberOfPlayers <= 5)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-                inflectionValue *= InflectionPoint;
-                curveFloor = InflectionPointCurveFloor;
-                curveCeiling = InflectionPointCurveCeiling;
-                break;
-            case 10:
-                inflectionValue *= InflectionPointRaid10M;
-                curveFloor = InflectionPointRaid10MCurveFloor;
-                curveCeiling = InflectionPointRaid10MCurveCeiling;
-                break;
-            case 15:
-                inflectionValue *= InflectionPointRaid15M;
-                curveFloor = InflectionPointRaid15MCurveFloor;
-                curveCeiling = InflectionPointRaid15MCurveCeiling;
-                break;
-            case 20:
-                inflectionValue *= InflectionPointRaid20M;
-                curveFloor = InflectionPointRaid20MCurveFloor;
-                curveCeiling = InflectionPointRaid20MCurveCeiling;
-                break;
-            case 25:
-                inflectionValue *= InflectionPointRaid25M;
-                curveFloor = InflectionPointRaid25MCurveFloor;
-                curveCeiling = InflectionPointRaid25MCurveCeiling;
-                break;
-            case 40:
-                inflectionValue *= InflectionPointRaid40M;
-                curveFloor = InflectionPointRaid40MCurveFloor;
-                curveCeiling = InflectionPointRaid40MCurveCeiling;
-                break;
-            default:
-                inflectionValue *= InflectionPointRaid;
-                curveFloor = InflectionPointRaidCurveFloor;
-                curveCeiling = InflectionPointRaidCurveCeiling;
+            inflectionValue *= InflectionPoint;
+            curveFloor = InflectionPointCurveFloor;
+            curveCeiling = InflectionPointCurveCeiling;
+        }
+        else if (maxNumberOfPlayers <= 10)
+        {
+            inflectionValue *= InflectionPointRaid10M;
+            curveFloor = InflectionPointRaid10MCurveFloor;
+            curveCeiling = InflectionPointRaid10MCurveCeiling;
+        }
+        else if (maxNumberOfPlayers <= 15)
+        {
+            inflectionValue *= InflectionPointRaid15M;
+            curveFloor = InflectionPointRaid15MCurveFloor;
+            curveCeiling = InflectionPointRaid15MCurveCeiling;
+        }
+        else if (maxNumberOfPlayers <= 20)
+        {
+            inflectionValue *= InflectionPointRaid20M;
+            curveFloor = InflectionPointRaid20MCurveFloor;
+            curveCeiling = InflectionPointRaid20MCurveCeiling;
+        }
+        else if (maxNumberOfPlayers <= 25)
+        {
+            inflectionValue *= InflectionPointRaid25M;
+            curveFloor = InflectionPointRaid25MCurveFloor;
+            curveCeiling = InflectionPointRaid25MCurveCeiling;
+        }
+        else if (maxNumberOfPlayers <= 40)
+        {
+            inflectionValue *= InflectionPointRaid40M;
+            curveFloor = InflectionPointRaid40MCurveFloor;
+            curveCeiling = InflectionPointRaid40MCurveCeiling;
+        }
+        else
+        {
+            inflectionValue *= InflectionPointRaid;
+            curveFloor = InflectionPointRaidCurveFloor;
+            curveCeiling = InflectionPointRaidCurveCeiling;
         }
     }
 
@@ -1185,56 +1188,54 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
 
         float bossInflectionPointMultiplier;
 
-        // Determine the correct boss inflection multiplier
         if (instanceMap->IsHeroic())
         {
-            switch (maxNumberOfPlayers)
+            if (maxNumberOfPlayers <= 5)
             {
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                    bossInflectionPointMultiplier = InflectionPointHeroicBoss;
-                    break;
-                case 10:
-                    bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss;
-                    break;
-                case 25:
-                    bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss;
-                    break;
-                default:
-                    bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss;
+                bossInflectionPointMultiplier = InflectionPointHeroicBoss;
+            }
+            else if (maxNumberOfPlayers <= 10)
+            {
+                bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss;
+            }
+            else if (maxNumberOfPlayers <= 25)
+            {
+                bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss;
+            }
+            else
+            {
+                bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss;
             }
         }
         else
         {
-            switch (maxNumberOfPlayers)
+            if (maxNumberOfPlayers <= 5)
             {
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 5:
-                    bossInflectionPointMultiplier = InflectionPointBoss;
-                    break;
-                case 10:
-                    bossInflectionPointMultiplier = InflectionPointRaid10MBoss;
-                    break;
-                case 15:
-                    bossInflectionPointMultiplier = InflectionPointRaid15MBoss;
-                    break;
-                case 20:
-                    bossInflectionPointMultiplier = InflectionPointRaid20MBoss;
-                    break;
-                case 25:
-                    bossInflectionPointMultiplier = InflectionPointRaid25MBoss;
-                    break;
-                case 40:
-                    bossInflectionPointMultiplier = InflectionPointRaid40MBoss;
-                    break;
-                default:
-                    bossInflectionPointMultiplier = InflectionPointRaidBoss;
+                bossInflectionPointMultiplier = InflectionPointBoss;
+            }
+            else if (maxNumberOfPlayers <= 10)
+            {
+                bossInflectionPointMultiplier = InflectionPointRaid10MBoss;
+            }
+            else if (maxNumberOfPlayers <= 15)
+            {
+                bossInflectionPointMultiplier = InflectionPointRaid15MBoss;
+            }
+            else if (maxNumberOfPlayers <= 20)
+            {
+                bossInflectionPointMultiplier = InflectionPointRaid20MBoss;
+            }
+            else if (maxNumberOfPlayers <= 25)
+            {
+                bossInflectionPointMultiplier = InflectionPointRaid25MBoss;
+            }
+            else if (maxNumberOfPlayers <= 40)
+            {
+                bossInflectionPointMultiplier = InflectionPointRaid40MBoss;
+            }
+            else
+            {
+                bossInflectionPointMultiplier = InflectionPointRaidBoss;
             }
         }
 
@@ -1317,333 +1318,283 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
     // AutoBalance.StatModifier*(.Boss).<stat>
     if (instanceMap->IsHeroic()) // heroic
     {
-        switch (maxNumberOfPlayers)
+        if (maxNumberOfPlayers <= 5)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierHeroic_Boss_Global;
-                    statModifiers.health = StatModifierHeroic_Boss_Health;
-                    statModifiers.mana = StatModifierHeroic_Boss_Mana;
-                    statModifiers.armor = StatModifierHeroic_Boss_Armor;
-                    statModifiers.damage = StatModifierHeroic_Boss_Damage;
-                    statModifiers.ccduration = StatModifierHeroic_Boss_CCDuration;
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierHeroic_Boss_Global;
+                statModifiers.health = StatModifierHeroic_Boss_Health;
+                statModifiers.mana = StatModifierHeroic_Boss_Mana;
+                statModifiers.armor = StatModifierHeroic_Boss_Armor;
+                statModifiers.damage = StatModifierHeroic_Boss_Damage;
+                statModifiers.ccduration = StatModifierHeroic_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "1 to 5 Player Heroic Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierHeroic_Global;
-                    statModifiers.health = StatModifierHeroic_Health;
-                    statModifiers.mana = StatModifierHeroic_Mana;
-                    statModifiers.armor = StatModifierHeroic_Armor;
-                    statModifiers.damage = StatModifierHeroic_Damage;
-                    statModifiers.ccduration = StatModifierHeroic_CCDuration;
+                getStatModifiersDebug(map, creature, "1 to 5 Player Heroic Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierHeroic_Global;
+                statModifiers.health = StatModifierHeroic_Health;
+                statModifiers.mana = StatModifierHeroic_Mana;
+                statModifiers.armor = StatModifierHeroic_Armor;
+                statModifiers.damage = StatModifierHeroic_Damage;
+                statModifiers.ccduration = StatModifierHeroic_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "1 to 5 Player Heroic");
-                }
-                break;
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid10MHeroic_Boss_Global;
-                    statModifiers.health = StatModifierRaid10MHeroic_Boss_Health;
-                    statModifiers.mana = StatModifierRaid10MHeroic_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid10MHeroic_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid10MHeroic_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid10MHeroic_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "1 to 5 Player Heroic");
+            }
+        }
+        else if (maxNumberOfPlayers <= 10)
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid10MHeroic_Boss_Global;
+                statModifiers.health = StatModifierRaid10MHeroic_Boss_Health;
+                statModifiers.mana = StatModifierRaid10MHeroic_Boss_Mana;
+                statModifiers.armor = StatModifierRaid10MHeroic_Boss_Armor;
+                statModifiers.damage = StatModifierRaid10MHeroic_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid10MHeroic_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "10 Player Heroic Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid10MHeroic_Global;
-                    statModifiers.health = StatModifierRaid10MHeroic_Health;
-                    statModifiers.mana = StatModifierRaid10MHeroic_Mana;
-                    statModifiers.armor = StatModifierRaid10MHeroic_Armor;
-                    statModifiers.damage = StatModifierRaid10MHeroic_Damage;
-                    statModifiers.ccduration = StatModifierRaid10MHeroic_CCDuration;
+                getStatModifiersDebug(map, creature, "10 Player Heroic Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid10MHeroic_Global;
+                statModifiers.health = StatModifierRaid10MHeroic_Health;
+                statModifiers.mana = StatModifierRaid10MHeroic_Mana;
+                statModifiers.armor = StatModifierRaid10MHeroic_Armor;
+                statModifiers.damage = StatModifierRaid10MHeroic_Damage;
+                statModifiers.ccduration = StatModifierRaid10MHeroic_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "10 Player Heroic");
-                }
-                break;
-            case 11:
-            case 12:
-            case 13:
-            case 14:
-            case 15:
-            case 16:
-            case 17:
-            case 18:
-            case 19:
-            case 20:
-            case 21:
-            case 22:
-            case 23:
-            case 24:
-            case 25:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid25MHeroic_Boss_Global;
-                    statModifiers.health = StatModifierRaid25MHeroic_Boss_Health;
-                    statModifiers.mana = StatModifierRaid25MHeroic_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid25MHeroic_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid25MHeroic_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid25MHeroic_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "10 Player Heroic");
+            }
+        }
+        else if (maxNumberOfPlayers <= 25)
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid25MHeroic_Boss_Global;
+                statModifiers.health = StatModifierRaid25MHeroic_Boss_Health;
+                statModifiers.mana = StatModifierRaid25MHeroic_Boss_Mana;
+                statModifiers.armor = StatModifierRaid25MHeroic_Boss_Armor;
+                statModifiers.damage = StatModifierRaid25MHeroic_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid25MHeroic_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "25 Player Heroic Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid25MHeroic_Global;
-                    statModifiers.health = StatModifierRaid25MHeroic_Health;
-                    statModifiers.mana = StatModifierRaid25MHeroic_Mana;
-                    statModifiers.armor = StatModifierRaid25MHeroic_Armor;
-                    statModifiers.damage = StatModifierRaid25MHeroic_Damage;
-                    statModifiers.ccduration = StatModifierRaid25MHeroic_CCDuration;
+                getStatModifiersDebug(map, creature, "25 Player Heroic Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid25MHeroic_Global;
+                statModifiers.health = StatModifierRaid25MHeroic_Health;
+                statModifiers.mana = StatModifierRaid25MHeroic_Mana;
+                statModifiers.armor = StatModifierRaid25MHeroic_Armor;
+                statModifiers.damage = StatModifierRaid25MHeroic_Damage;
+                statModifiers.ccduration = StatModifierRaid25MHeroic_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "25 Player Heroic");
-                }
-                break;
-            default:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaidHeroic_Boss_Global;
-                    statModifiers.health = StatModifierRaidHeroic_Boss_Health;
-                    statModifiers.mana = StatModifierRaidHeroic_Boss_Mana;
-                    statModifiers.armor = StatModifierRaidHeroic_Boss_Armor;
-                    statModifiers.damage = StatModifierRaidHeroic_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaidHeroic_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "25 Player Heroic");
+            }
+        }
+        else
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaidHeroic_Boss_Global;
+                statModifiers.health = StatModifierRaidHeroic_Boss_Health;
+                statModifiers.mana = StatModifierRaidHeroic_Boss_Mana;
+                statModifiers.armor = StatModifierRaidHeroic_Boss_Armor;
+                statModifiers.damage = StatModifierRaidHeroic_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaidHeroic_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "?? Player Heroic Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaidHeroic_Global;
-                    statModifiers.health = StatModifierRaidHeroic_Health;
-                    statModifiers.mana = StatModifierRaidHeroic_Mana;
-                    statModifiers.armor = StatModifierRaidHeroic_Armor;
-                    statModifiers.damage = StatModifierRaidHeroic_Damage;
-                    statModifiers.ccduration = StatModifierRaidHeroic_CCDuration;
+                getStatModifiersDebug(map, creature, "?? Player Heroic Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaidHeroic_Global;
+                statModifiers.health = StatModifierRaidHeroic_Health;
+                statModifiers.mana = StatModifierRaidHeroic_Mana;
+                statModifiers.armor = StatModifierRaidHeroic_Armor;
+                statModifiers.damage = StatModifierRaidHeroic_Damage;
+                statModifiers.ccduration = StatModifierRaidHeroic_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "?? Player Heroic");
-                }
+                getStatModifiersDebug(map, creature, "?? Player Heroic");
+            }
         }
     }
     else // non-heroic
     {
-        // unfortunately, the Windows C++ compiler doesn't support switch statements with ranges so we're forced to list all the values
-        switch (maxNumberOfPlayers)
+        if (maxNumberOfPlayers <= 5)
         {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-            case 5:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifier_Boss_Global;
-                    statModifiers.health = StatModifier_Boss_Health;
-                    statModifiers.mana = StatModifier_Boss_Mana;
-                    statModifiers.armor = StatModifier_Boss_Armor;
-                    statModifiers.damage = StatModifier_Boss_Damage;
-                    statModifiers.ccduration = StatModifier_Boss_CCDuration;
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifier_Boss_Global;
+                statModifiers.health = StatModifier_Boss_Health;
+                statModifiers.mana = StatModifier_Boss_Mana;
+                statModifiers.armor = StatModifier_Boss_Armor;
+                statModifiers.damage = StatModifier_Boss_Damage;
+                statModifiers.ccduration = StatModifier_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "1 to 5 Player Normal Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifier_Global;
-                    statModifiers.health = StatModifier_Health;
-                    statModifiers.mana = StatModifier_Mana;
-                    statModifiers.armor = StatModifier_Armor;
-                    statModifiers.damage = StatModifier_Damage;
-                    statModifiers.ccduration = StatModifier_CCDuration;
+                getStatModifiersDebug(map, creature, "1 to 5 Player Normal Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifier_Global;
+                statModifiers.health = StatModifier_Health;
+                statModifiers.mana = StatModifier_Mana;
+                statModifiers.armor = StatModifier_Armor;
+                statModifiers.damage = StatModifier_Damage;
+                statModifiers.ccduration = StatModifier_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "1 to 5 Player Normal");
-                }
-                break;
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid10M_Boss_Global;
-                    statModifiers.health = StatModifierRaid10M_Boss_Health;
-                    statModifiers.mana = StatModifierRaid10M_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid10M_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid10M_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid10M_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "1 to 5 Player Normal");
+            }
+        }
+        else if (maxNumberOfPlayers <= 10)
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid10M_Boss_Global;
+                statModifiers.health = StatModifierRaid10M_Boss_Health;
+                statModifiers.mana = StatModifierRaid10M_Boss_Mana;
+                statModifiers.armor = StatModifierRaid10M_Boss_Armor;
+                statModifiers.damage = StatModifierRaid10M_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid10M_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "10 Player Normal Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid10M_Global;
-                    statModifiers.health = StatModifierRaid10M_Health;
-                    statModifiers.mana = StatModifierRaid10M_Mana;
-                    statModifiers.armor = StatModifierRaid10M_Armor;
-                    statModifiers.damage = StatModifierRaid10M_Damage;
-                    statModifiers.ccduration = StatModifierRaid10M_CCDuration;
+                getStatModifiersDebug(map, creature, "10 Player Normal Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid10M_Global;
+                statModifiers.health = StatModifierRaid10M_Health;
+                statModifiers.mana = StatModifierRaid10M_Mana;
+                statModifiers.armor = StatModifierRaid10M_Armor;
+                statModifiers.damage = StatModifierRaid10M_Damage;
+                statModifiers.ccduration = StatModifierRaid10M_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "10 Player Normal");
-                }
-                break;
-            case 11:
-            case 12:
-            case 13:
-            case 14:
-            case 15:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid15M_Boss_Global;
-                    statModifiers.health = StatModifierRaid15M_Boss_Health;
-                    statModifiers.mana = StatModifierRaid15M_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid15M_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid15M_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid15M_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "10 Player Normal");
+            }
+        }
+        else if (maxNumberOfPlayers <= 15)
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid15M_Boss_Global;
+                statModifiers.health = StatModifierRaid15M_Boss_Health;
+                statModifiers.mana = StatModifierRaid15M_Boss_Mana;
+                statModifiers.armor = StatModifierRaid15M_Boss_Armor;
+                statModifiers.damage = StatModifierRaid15M_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid15M_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "15 Player Normal Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid15M_Global;
-                    statModifiers.health = StatModifierRaid15M_Health;
-                    statModifiers.mana = StatModifierRaid15M_Mana;
-                    statModifiers.armor = StatModifierRaid15M_Armor;
-                    statModifiers.damage = StatModifierRaid15M_Damage;
-                    statModifiers.ccduration = StatModifierRaid15M_CCDuration;
+                getStatModifiersDebug(map, creature, "15 Player Normal Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid15M_Global;
+                statModifiers.health = StatModifierRaid15M_Health;
+                statModifiers.mana = StatModifierRaid15M_Mana;
+                statModifiers.armor = StatModifierRaid15M_Armor;
+                statModifiers.damage = StatModifierRaid15M_Damage;
+                statModifiers.ccduration = StatModifierRaid15M_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "15 Player Normal");
-                }
-                break;
-            case 16:
-            case 17:
-            case 18:
-            case 19:
-            case 20:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid20M_Boss_Global;
-                    statModifiers.health = StatModifierRaid20M_Boss_Health;
-                    statModifiers.mana = StatModifierRaid20M_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid20M_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid20M_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid20M_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "15 Player Normal");
+            }
+        }
+        else if (maxNumberOfPlayers <= 20)
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid20M_Boss_Global;
+                statModifiers.health = StatModifierRaid20M_Boss_Health;
+                statModifiers.mana = StatModifierRaid20M_Boss_Mana;
+                statModifiers.armor = StatModifierRaid20M_Boss_Armor;
+                statModifiers.damage = StatModifierRaid20M_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid20M_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "20 Player Normal Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid20M_Global;
-                    statModifiers.health = StatModifierRaid20M_Health;
-                    statModifiers.mana = StatModifierRaid20M_Mana;
-                    statModifiers.armor = StatModifierRaid20M_Armor;
-                    statModifiers.damage = StatModifierRaid20M_Damage;
-                    statModifiers.ccduration = StatModifierRaid20M_CCDuration;
+                getStatModifiersDebug(map, creature, "20 Player Normal Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid20M_Global;
+                statModifiers.health = StatModifierRaid20M_Health;
+                statModifiers.mana = StatModifierRaid20M_Mana;
+                statModifiers.armor = StatModifierRaid20M_Armor;
+                statModifiers.damage = StatModifierRaid20M_Damage;
+                statModifiers.ccduration = StatModifierRaid20M_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "20 Player Normal");
-                }
-                break;
-            case 21:
-            case 22:
-            case 23:
-            case 24:
-            case 25:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid25M_Boss_Global;
-                    statModifiers.health = StatModifierRaid25M_Boss_Health;
-                    statModifiers.mana = StatModifierRaid25M_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid25M_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid25M_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid25M_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "20 Player Normal");
+            }
+        }
+        else if (maxNumberOfPlayers <= 25)
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid25M_Boss_Global;
+                statModifiers.health = StatModifierRaid25M_Boss_Health;
+                statModifiers.mana = StatModifierRaid25M_Boss_Mana;
+                statModifiers.armor = StatModifierRaid25M_Boss_Armor;
+                statModifiers.damage = StatModifierRaid25M_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid25M_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "25 Player Normal Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid25M_Global;
-                    statModifiers.health = StatModifierRaid25M_Health;
-                    statModifiers.mana = StatModifierRaid25M_Mana;
-                    statModifiers.armor = StatModifierRaid25M_Armor;
-                    statModifiers.damage = StatModifierRaid25M_Damage;
-                    statModifiers.ccduration = StatModifierRaid25M_CCDuration;
+                getStatModifiersDebug(map, creature, "25 Player Normal Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid25M_Global;
+                statModifiers.health = StatModifierRaid25M_Health;
+                statModifiers.mana = StatModifierRaid25M_Mana;
+                statModifiers.armor = StatModifierRaid25M_Armor;
+                statModifiers.damage = StatModifierRaid25M_Damage;
+                statModifiers.ccduration = StatModifierRaid25M_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "25 Player Normal");
-                }
-                break;
-            case 26:
-            case 27:
-            case 28:
-            case 29:
-            case 30:
-            case 31:
-            case 32:
-            case 33:
-            case 34:
-            case 35:
-            case 36:
-            case 37:
-            case 38:
-            case 39:
-            case 40:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid40M_Boss_Global;
-                    statModifiers.health = StatModifierRaid40M_Boss_Health;
-                    statModifiers.mana = StatModifierRaid40M_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid40M_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid40M_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid40M_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "25 Player Normal");
+            }
+        }
+        else if (maxNumberOfPlayers <= 40)
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid40M_Boss_Global;
+                statModifiers.health = StatModifierRaid40M_Boss_Health;
+                statModifiers.mana = StatModifierRaid40M_Boss_Mana;
+                statModifiers.armor = StatModifierRaid40M_Boss_Armor;
+                statModifiers.damage = StatModifierRaid40M_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid40M_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "40 Player Normal Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid40M_Global;
-                    statModifiers.health = StatModifierRaid40M_Health;
-                    statModifiers.mana = StatModifierRaid40M_Mana;
-                    statModifiers.armor = StatModifierRaid40M_Armor;
-                    statModifiers.damage = StatModifierRaid40M_Damage;
-                    statModifiers.ccduration = StatModifierRaid40M_CCDuration;
+                getStatModifiersDebug(map, creature, "40 Player Normal Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid40M_Global;
+                statModifiers.health = StatModifierRaid40M_Health;
+                statModifiers.mana = StatModifierRaid40M_Mana;
+                statModifiers.armor = StatModifierRaid40M_Armor;
+                statModifiers.damage = StatModifierRaid40M_Damage;
+                statModifiers.ccduration = StatModifierRaid40M_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "40 Player Normal");
-                }
-                break;
-            default:
-                if (creature && isBossOrBossSummon(creature))
-                {
-                    statModifiers.global = StatModifierRaid_Boss_Global;
-                    statModifiers.health = StatModifierRaid_Boss_Health;
-                    statModifiers.mana = StatModifierRaid_Boss_Mana;
-                    statModifiers.armor = StatModifierRaid_Boss_Armor;
-                    statModifiers.damage = StatModifierRaid_Boss_Damage;
-                    statModifiers.ccduration = StatModifierRaid_Boss_CCDuration;
+                getStatModifiersDebug(map, creature, "40 Player Normal");
+            }
+        }
+        else
+        {
+            if (creature && isBossOrBossSummon(creature))
+            {
+                statModifiers.global = StatModifierRaid_Boss_Global;
+                statModifiers.health = StatModifierRaid_Boss_Health;
+                statModifiers.mana = StatModifierRaid_Boss_Mana;
+                statModifiers.armor = StatModifierRaid_Boss_Armor;
+                statModifiers.damage = StatModifierRaid_Boss_Damage;
+                statModifiers.ccduration = StatModifierRaid_Boss_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "?? Player Normal Boss");
-                }
-                else
-                {
-                    statModifiers.global = StatModifierRaid_Global;
-                    statModifiers.health = StatModifierRaid_Health;
-                    statModifiers.mana = StatModifierRaid_Mana;
-                    statModifiers.armor = StatModifierRaid_Armor;
-                    statModifiers.damage = StatModifierRaid_Damage;
-                    statModifiers.ccduration = StatModifierRaid_CCDuration;
+                getStatModifiersDebug(map, creature, "?? Player Normal Boss");
+            }
+            else
+            {
+                statModifiers.global = StatModifierRaid_Global;
+                statModifiers.health = StatModifierRaid_Health;
+                statModifiers.mana = StatModifierRaid_Mana;
+                statModifiers.armor = StatModifierRaid_Armor;
+                statModifiers.damage = StatModifierRaid_Damage;
+                statModifiers.ccduration = StatModifierRaid_CCDuration;
 
-                    getStatModifiersDebug(map, creature, "?? Player Normal");
-                }
+                getStatModifiersDebug(map, creature, "?? Player Normal");
+            }
         }
     }
 
@@ -1679,9 +1630,9 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
 
     // Per-creature modifiers applied last
     // AutoBalance.StatModifier.PerCreature
-    if (creature && hasStatModifierCreatureOverride(creatureABInfo->entry))
+    if (creature && hasStatModifierCreatureOverride(creature->GetEntry()))
     {
-        AutoBalanceStatModifiers* myCreatureOverrides = &statModifierCreatureOverrides[creatureABInfo->entry];
+        AutoBalanceStatModifiers* myCreatureOverrides = &statModifierCreatureOverrides[creature->GetEntry()];
 
         if (myCreatureOverrides->global != -1)      { statModifiers.global =      myCreatureOverrides->global;      }
         if (myCreatureOverrides->health != -1)      { statModifiers.health =      myCreatureOverrides->health;      }
@@ -5203,8 +5154,6 @@ public:
 
             return;
         }
-
-        creatureABInfo->entry = creature->GetEntry();
 
         CreatureBaseStats const* origCreatureBaseStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->UnmodifiedLevel, creatureTemplate->unit_class);
         CreatureBaseStats const* newCreatureBaseStats = sObjectMgr->GetCreatureBaseStats(creatureABInfo->selectedLevel, creatureTemplate->unit_class);
