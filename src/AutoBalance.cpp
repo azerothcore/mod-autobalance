@@ -1682,19 +1682,8 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
 
 float getDefaultMultiplier(Map* map, AutoBalanceInflectionPointSettings inflectionPointSettings)
 {
-    // Note: InflectionPoint handle the number of players required to get 50% health.
-    //       you'd adjust this to raise or lower the hp modifier for per additional player in a non-whole group.
-    //
-    //       diff modify the rate of percentage increase between
-    //       number of players. Generally the closer to the value of 1 you have this
-    //       the less gradual the rate will be. For example in a 5 man it would take 3
-    //       total players to face a mob at full health.
-    //
-    //       The +1 and /2 values raise the TanH function to a positive range and make
-    //       sure the modifier never goes above the value or 1.0 or below 0.
-    //
-    //       curveFloor and curveCeiling squishes the curve by adjusting the curve start and end points.
-    //       This allows for better control over high and low player count scaling.
+    // You can visually see the effects of this function by using this spreadsheet:
+    // https://docs.google.com/spreadsheets/d/100cmKIJIjCZ-ncWd0K9ykO8KUgwFTcwg4h2nfE_UeCc/copy
 
     // get the max player count for the map
     uint32 maxNumberOfPlayers = map->ToInstanceMap()->GetMaxPlayers();
@@ -2890,7 +2879,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             // only log if the mapLevel has changed
             if (mapABInfo->prevMapLevel != mapABInfo->mapLevel)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) | Level scaling is enabled. Map level updated {}{} (average creature level).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) | Level scaling is enabled. Map level updated ({}{}) (average creature level).",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -2911,7 +2900,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
             // only log if the mapLevel has changed
             if (mapABInfo->prevMapLevel != mapABInfo->mapLevel)
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) | Lcaling is enabled. Map level updated {}{} (highest player level).",
+                LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: Map {} ({}{}, {}-player {}) | Lcaling is enabled. Map level updated ({}{}) (highest player level).",
                     map->GetMapName(),
                     map->GetId(),
                     map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -3460,16 +3449,20 @@ class AutoBalance_PlayerScript : public PlayerScript
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnLevelChanged: {} has leveled from {} to {}", player->GetName(), oldlevel, player->getLevel());
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnLevelChanged: {} has leveled ({}->{})", player->GetName(), oldlevel, player->getLevel());
             if (!player || player->IsGameMaster())
+            {
                 return;
+            }
 
             Map* map = player->GetMap();
 
             if (!map || !map->IsDungeon())
+            {
                 return;
+            }
 
-            // first update the map's player stats
+            // update the map's player stats
             UpdateMapPlayerStats(map);
 
             // schedule all creatures for an update
@@ -3483,7 +3476,9 @@ class AutoBalance_PlayerScript : public PlayerScript
 
             // If this isn't a dungeon, make no changes
             if (!map->IsDungeon() || !map->GetInstanceId() || !victim)
+            {
                 return;
+            }
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
@@ -3588,7 +3583,7 @@ class AutoBalance_PlayerScript : public PlayerScript
             {
                 mapABInfo->combatLocked = true;
 
-                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | Locking difficulty due to {} entering combat.",
+                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | Locking difficulty as {} enters combat.",
                             map->GetMapName(),
                             map->GetId(),
                             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -3662,7 +3657,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                 }
 
                 // if the number of players changed while combat was in progress, schedule the map for an update
-                if (mapABInfo->combatLockTripped)
+                if (mapABInfo->combatLockTripped && mapABInfo->playerCount != mapABInfo->combatLockMinPlayers)
                 {
                     mapABInfo->mapConfigTime = 1;
                     LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: Map {} ({}{}) | Reset map config time to ({}).",
@@ -4143,18 +4138,24 @@ class AutoBalance_UnitScript : public UnitScript
         {
             // if the spell is not defined, return false
             if (!spellInfo)
+            {
                 return false;
+            }
 
             // if the spell doesn't have any effects, return false
             if (!spellInfo->GetEffects().size())
+            {
                 return false;
+            }
 
             // iterate through the spell effects
             for (SpellEffectInfo effect : spellInfo->GetEffects())
             {
                 // if the effect is not an aura, continue to next effect
                 if (!effect.IsAura())
+                {
                     continue;
+                }
 
                 if (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE_PERCENT)
                 {
