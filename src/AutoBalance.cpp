@@ -261,7 +261,7 @@ public:
     int floor;
 };
 
-uint64_t GetCurrentTime()
+uint64_t GetCurrentConfigTime()
 {
     return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
@@ -331,7 +331,7 @@ static bool RewardScalingXP, RewardScalingMoney;
 static float RewardScalingXPModifier, RewardScalingMoneyModifier;
 
 // Track the initial config time
-static uint64_t globalConfigTime = GetCurrentTime();
+static uint64_t globalConfigTime = GetCurrentConfigTime();
 
 // Enable.*
 static bool EnableGlobal;
@@ -1319,7 +1319,11 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
     {
         switch (maxNumberOfPlayers)
         {
-            case 1 ... 5:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierHeroic_Boss_Global;
@@ -1343,7 +1347,11 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     getStatModifiersDebug(map, creature, "1 to 5 Player Heroic");
                 }
                 break;
-            case 6 ... 10:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid10MHeroic_Boss_Global;
@@ -1367,7 +1375,21 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     getStatModifiersDebug(map, creature, "10 Player Heroic");
                 }
                 break;
-            case 11 ... 25:
+            case 11:
+            case 12:
+            case 13:
+            case 14:
+            case 15:
+            case 16:
+            case 17:
+            case 18:
+            case 19:
+            case 20:
+            case 21:
+            case 22:
+            case 23:
+            case 24:
+            case 25:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid25MHeroic_Boss_Global;
@@ -1418,9 +1440,14 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
     }
     else // non-heroic
     {
+        // unfortunately, the Windows C++ compiler doesn't support switch statements with ranges so we're forced to list all the values
         switch (maxNumberOfPlayers)
         {
-            case 1 ... 5:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifier_Boss_Global;
@@ -1444,7 +1471,11 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     getStatModifiersDebug(map, creature, "1 to 5 Player Normal");
                 }
                 break;
-            case 6 ... 10:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid10M_Boss_Global;
@@ -1468,7 +1499,11 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     getStatModifiersDebug(map, creature, "10 Player Normal");
                 }
                 break;
-            case 11 ... 15:
+            case 11:
+            case 12:
+            case 13:
+            case 14:
+            case 15:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid15M_Boss_Global;
@@ -1492,7 +1527,11 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     getStatModifiersDebug(map, creature, "15 Player Normal");
                 }
                 break;
-            case 16 ... 20:
+            case 16:
+            case 17:
+            case 18:
+            case 19:
+            case 20:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid20M_Boss_Global;
@@ -1516,7 +1555,11 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     getStatModifiersDebug(map, creature, "20 Player Normal");
                 }
                 break;
-            case 21 ... 25:
+            case 21:
+            case 22:
+            case 23:
+            case 24:
+            case 25:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid25M_Boss_Global;
@@ -1540,7 +1583,21 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     getStatModifiersDebug(map, creature, "25 Player Normal");
                 }
                 break;
-            case 26 ... 40:
+            case 26:
+            case 27:
+            case 28:
+            case 29:
+            case 30:
+            case 31:
+            case 32:
+            case 33:
+            case 34:
+            case 35:
+            case 36:
+            case 37:
+            case 38:
+            case 39:
+            case 40:
                 if (creature && isBossOrBossSummon(creature))
                 {
                     statModifiers.global = StatModifierRaid40M_Boss_Global;
@@ -2932,7 +2989,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force = false)
 
         // mark the config updated
         mapABInfo->globalConfigTime = globalConfigTime;
-        mapABInfo->mapConfigTime = GetCurrentTime();
+        mapABInfo->mapConfigTime = GetCurrentConfigTime();
 
         LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapDataIfNeeded: {} ({}{}) | Global config time set to ({}).",
                     map->GetMapName(),
@@ -3000,7 +3057,7 @@ class AutoBalance_WorldScript : public WorldScript
     void OnBeforeConfigLoad(bool /*reload*/) override
     {
         SetInitialWorldSettings();
-        globalConfigTime = GetCurrentTime();
+        globalConfigTime = GetCurrentConfigTime();
 
         LOG_INFO("module.AutoBalance", "AutoBalance::OnBeforeConfigLoad: Config loaded. Global config time set to ({}).", globalConfigTime);
     }
@@ -3466,7 +3523,7 @@ class AutoBalance_PlayerScript : public PlayerScript
 
             // schedule all creatures for an update
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-            mapABInfo->mapConfigTime = GetCurrentTime();
+            mapABInfo->mapConfigTime = GetCurrentConfigTime();
         }
 
         void OnGiveXP(Player* player, uint32& amount, Unit* victim, uint8 /*xpSource*/) override
@@ -5918,7 +5975,7 @@ public:
             offseti = (uint32)atoi(offset);
             handler->PSendSysMessage("Changing Player Difficulty Offset to %i.", offseti);
             PlayerCountDifficultyOffset = offseti;
-            globalConfigTime = GetCurrentTime();
+            globalConfigTime = GetCurrentConfigTime();
             return true;
         }
         else
