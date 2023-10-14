@@ -4072,7 +4072,12 @@ class AutoBalance_UnitScript : public UnitScript
 
             // we are good to go, return the original damage times the multiplier
             if (_debug_damage_and_healing)
-                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Returning modified damage: ({}) * ({}) = ({})", amount, damageMultiplier, amount * damageMultiplier);
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Returning modified {}: ({}) * ({}) = ({})",
+                    amount <= 0 ? "damage" : "healing",
+                    amount,
+                    damageMultiplier,
+                    amount * damageMultiplier
+                );
 
             return amount * damageMultiplier;
         }
@@ -5073,7 +5078,12 @@ public:
 
             // handle "special" creatures
             // note that these already passed a more complex check above
-            if (creature->IsTotem() || (creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() <= 100))
+            if (
+                (creature->IsTotem() && creature->IsSummon() && creature->ToTempSummon() && creature->ToTempSummon()->GetSummoner() && creature->ToTempSummon()->GetSummoner()->IsPlayer()) ||
+                (
+                    creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() <= 100
+                )
+            )
             {
                 LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | is a {} that will not be level scaled, but will have modifiers set.",
                             creature->GetName(),
