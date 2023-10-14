@@ -4358,15 +4358,36 @@ class AutoBalance_AllMapScript : public AllMapScript
                     mapABInfo->lfgMinLevel = dungeon->MinLevel;
                     mapABInfo->lfgMaxLevel = dungeon->MaxLevel;
                     mapABInfo->lfgTargetLevel = dungeon->TargetLevel;
+                }
+                // if this is a heroic dungeon that isn't in LFG, get the stats from the non-heroic version
+                else if (map->IsHeroic())
+                {
+                    LFGDungeonEntry const* nonHeroicDungeon = nullptr;
+                    if (map->GetDifficulty() == DUNGEON_DIFFICULTY_HEROIC)
+                    {
+                        nonHeroicDungeon = GetLFGDungeon(map->GetId(), DUNGEON_DIFFICULTY_HEROIC);
+                    }
+                    else if (map->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC)
+                    {
+                        nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_10MAN_NORMAL);
+                    }
+                    else if (map->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
+                    {
+                        nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_25MAN_NORMAL);
+                    }
 
-                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | LFG Min: {} Max: {} Target: {}",
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | is a Heroic dungeon that is not in LFG. Using non-heroic LFG levels.",
                         map->GetMapName(),
                         map->GetId(),
-                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                        mapABInfo->lfgMinLevel,
-                        mapABInfo->lfgMaxLevel,
-                        mapABInfo->lfgTargetLevel
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
                     );
+
+                    if (nonHeroicDungeon)
+                    {
+                        mapABInfo->lfgMinLevel = nonHeroicDungeon->MinLevel;
+                        mapABInfo->lfgMaxLevel = nonHeroicDungeon->MaxLevel;
+                        mapABInfo->lfgTargetLevel = nonHeroicDungeon->TargetLevel;
+                    }
                 }
 
                 if (map->GetInstanceId())
