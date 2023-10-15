@@ -4365,7 +4365,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                     LFGDungeonEntry const* nonHeroicDungeon = nullptr;
                     if (map->GetDifficulty() == DUNGEON_DIFFICULTY_HEROIC)
                     {
-                        nonHeroicDungeon = GetLFGDungeon(map->GetId(), DUNGEON_DIFFICULTY_HEROIC);
+                        nonHeroicDungeon = GetLFGDungeon(map->GetId(), DUNGEON_DIFFICULTY_NORMAL);
                     }
                     else if (map->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC)
                     {
@@ -4388,6 +4388,13 @@ class AutoBalance_AllMapScript : public AllMapScript
                         mapABInfo->lfgMaxLevel = nonHeroicDungeon->MaxLevel;
                         mapABInfo->lfgTargetLevel = nonHeroicDungeon->TargetLevel;
                     }
+                    else
+                    {
+                        LOG_ERR("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | Could not determine LFG level ranges for this map. Level will bet set to 0.",
+                        map->GetMapName(),
+                        map->GetId(),
+                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+                    );
                 }
 
                 if (map->GetInstanceId())
