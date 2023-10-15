@@ -4396,11 +4396,12 @@ class AutoBalance_AllMapScript : public AllMapScript
                     }
                     else
                     {
-                        LOG_ERR("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | Could not determine LFG level ranges for this map. Level will bet set to 0.",
-                        map->GetMapName(),
-                        map->GetId(),
-                        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
-                    );
+                        LOG_ERROR("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | Could not determine LFG level ranges for this map. Level will bet set to 0.",
+                            map->GetMapName(),
+                            map->GetId(),
+                            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+                        );
+                    }
                 }
 
                 if (map->GetInstanceId())
