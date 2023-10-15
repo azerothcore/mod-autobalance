@@ -2311,8 +2311,14 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
     if (isCreatureAlreadyInCreatureList && !forceRecalculation)
     {
         LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) | is already included in map stats.", creature->GetName(), creatureABInfo->UnmodifiedLevel);
-        return;
 
+        // ensure that this creature is marked active
+        creatureABInfo->isActive = true;
+
+        // increment the active creature counter
+        mapABInfo->activeCreatureCount++;
+
+        return;
     }
 
     // only do these additional checks if we still think they need to be applied to the map stats
@@ -3086,9 +3092,9 @@ class AutoBalance_WorldScript : public WorldScript
         EnableOtherNormal = sConfigMgr->GetOption<bool>("AutoBalance.Enable.OtherNormal", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
 
         Enable5MHeroic = sConfigMgr->GetOption<bool>("AutoBalance.Enable.5MHeroic", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
-        Enable10MHeroic = sConfigMgr->GetOption<bool>("AutoBalance.Enable.5MHeroic", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
-        Enable25MHeroic = sConfigMgr->GetOption<bool>("AutoBalance.Enable.5MHeroic", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
-        EnableOtherHeroic = sConfigMgr->GetOption<bool>("AutoBalance.Enable.5MHeroic", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
+        Enable10MHeroic = sConfigMgr->GetOption<bool>("AutoBalance.Enable.10MHeroic", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
+        Enable25MHeroic = sConfigMgr->GetOption<bool>("AutoBalance.Enable.25MHeroic", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
+        EnableOtherHeroic = sConfigMgr->GetOption<bool>("AutoBalance.Enable.OtherHeroic", sConfigMgr->GetOption<bool>("AutoBalance.enable", 1, false));
 
         // Deprecated setting warning
         if (sConfigMgr->GetOption<int>("AutoBalance.DungeonsOnly", -1, false) != -1)
