@@ -171,6 +171,10 @@ public:
     bool isBrandNew = false;                        // whether or not the creature is brand new to the map (hasn't been added to the world yet)
     bool neverLevelScale = false;                   // whether or not the creature should never be level scaled (can still be player scaled)
 
+    // creature->IsSummon()                         // whether or not the creature is a summon
+    Creature* summoner = nullptr;                   // the creature that summoned this creature
+    bool isCloneOfSummoner = false;                 // whether or not the creature is a clone of its summoner
+
     Relevance relevance = AUTOBALANCE_RELEVANCE_UNCHECKED;  // whether or not the creature is relevant for scaling
 };
 
@@ -935,7 +939,7 @@ bool isCreatureRelevant(Creature* creature) {
     }
     // otherwise the value is AUTOBALANCE_RELEVANCE_UNCHECKED, so it needs checking
 
-    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {}({}) | First-time evaluating.",
+    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::isCreatureRelevant: Creature {} ({}) | Needs to be evaluated.",
                 creature->GetName(),
                 creatureABInfo->UnmodifiedLevel
     );
@@ -1658,7 +1662,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     statModifiers.mana,
                     statModifiers.armor,
                     statModifiers.damage,
-                    statModifiers.ccduration
+                    statModifiers.ccduration == -1 ? 1.0f : statModifiers.ccduration
         );
     }
     else
@@ -1672,7 +1676,7 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
                     statModifiers.mana,
                     statModifiers.armor,
                     statModifiers.damage,
-                    statModifiers.ccduration
+                    statModifiers.ccduration == -1 ? 1.0f : statModifiers.ccduration
         );
     }
 
@@ -2090,7 +2094,9 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
             creature->ToTempSummon()->GetSummoner() &&
             creature->ToTempSummon()->GetSummoner()->ToCreature())
         {
-            Creature* summoner = creature->ToTempSummon()->GetSummoner()->ToCreature();
+            creatureABInfo->summoner = creature->ToTempSummon()->GetSummoner()->ToCreature();
+            Creature* summoner = creatureABInfo->summoner;
+
             if (!summoner)
             {
                 creatureABInfo->UnmodifiedLevel = mapABInfo->avgCreatureLevel;
@@ -2101,13 +2107,12 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
             }
             else
             {
-                Creature* summonerCreature = summoner->ToCreature();
-                AutoBalanceCreatureInfo *summonerABInfo=summonerCreature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+                AutoBalanceCreatureInfo *summonerABInfo=summoner->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
                 LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | is owned by {} ({}).",
                             creature->GetName(),
                             creatureABInfo->UnmodifiedLevel,
-                            summonerCreature->GetName(),
+                            summoner->GetName(),
                             summonerABInfo->UnmodifiedLevel
                 );
 
@@ -2121,14 +2126,15 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
 
                     // if the creature is within the expected level range, allow scaling
                     if (
-                        (creatureABInfo->UnmodifiedLevel < (uint8)(((float)mapABInfo->lfgMinLevel * .85f) + 0.5f)) ||
-                        (creatureABInfo->UnmodifiedLevel > (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f))
+                        (creatureABInfo->UnmodifiedLevel >= (uint8)(((float)mapABInfo->lfgMinLevel * .85f) + 0.5f)) &&
+                        (creatureABInfo->UnmodifiedLevel <= (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f))
                     )
                     {
                         LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | original level is within the expected NPC level for this map ({} to {}). Level scaling is allowed.",
                                     creature->GetName(),
                                     creatureABInfo->UnmodifiedLevel,
-                                    creatureABInfo->UnmodifiedLevel
+                                    (uint8)(((float)mapABInfo->lfgMinLevel * .85f) + 0.5f),
+                                    (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f)
                         );
                     }
                     else {
@@ -2136,7 +2142,8 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
                         LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | original level is outside the expected NPC level for this map ({} to {}). It will keep its original level.",
                                     creature->GetName(),
                                     creatureABInfo->UnmodifiedLevel,
-                                    creatureABInfo->UnmodifiedLevel
+                                    (uint8)(((float)mapABInfo->lfgMinLevel * .85f) + 0.5f),
+                                    (uint8)(((float)mapABInfo->lfgMaxLevel * 1.15f) + 0.5f)
                         );
                     }
                 }
@@ -5114,7 +5121,7 @@ public:
             // handle "special" creatures
             // note that these already passed a more complex check above
             if (
-                (creature->IsTotem() && creature->IsSummon() && creature->ToTempSummon() && creature->ToTempSummon()->GetSummoner() && creature->ToTempSummon()->GetSummoner()->IsPlayer()) ||
+                (creature->IsTotem() && creature->IsSummon() && creatureABInfo->summoner && creatureABInfo->summoner->IsPlayer()) ||
                 (
                     creature->IsCritter() && creatureABInfo->UnmodifiedLevel <= 5 && creature->GetMaxHealth() <= 100
                 )
@@ -5213,9 +5220,6 @@ public:
         if (!sABScriptMgr->OnAfterDefaultMultiplier(creature, defaultMultiplier))
             return;
 
-        // Debug for boss detection
-        isBossOrBossSummon(creature, true);
-
         // Stat Modifiers
         AutoBalanceStatModifiers statModifiers = getStatModifiers(map, creature);
         float statMod_global        = statModifiers.global;
@@ -5265,7 +5269,6 @@ public:
 
         // set the non-level-scaled health multiplier on the creature's AB info
         creatureABInfo->HealthMultiplier = healthMultiplier;
-
 
         // only level scale health if level scaling is enabled and the creature level has been altered
         if (LevelScaling && creatureABInfo->selectedLevel != creatureABInfo->UnmodifiedLevel)
@@ -5780,12 +5783,97 @@ public:
         creatureABInfo->ScaledDamageMultiplier = scaledDamageMultiplier;
         creatureABInfo->CCDurationMultiplier = ccDurationMultiplier;
 
-        uint32 scaledCurHealth=prevHealth && prevMaxHealth ? float(newFinalHealth)/float(prevMaxHealth)*float(prevHealth) : 0;
-        uint32 scaledCurPower=prevPower && prevMaxPower  ? float(newFinalMana)/float(prevMaxPower)*float(prevPower) : 0;
+        // adjust the current health as appropriate
+        uint32 scaledCurHealth = 0;
+        uint32 scaledCurPower = 0;
+
+        // if this is a summon and it's a clone of its summoner, keep the health and mana values of the summon
+        // only do this once, when `_isSummonCloneOfSummoner(creature)` returns true but !creatureABInfo->isCloneOfSummoner is false
+        if
+        (
+            creature->IsSummon() &&
+            _isSummonCloneOfSummoner(creature) &&
+            !creatureABInfo->isCloneOfSummoner
+        )
+        {
+            creatureABInfo->isCloneOfSummoner = true;
+            LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | Summon is a clone of its summoner, keeping health and mana values.",
+                        creature->GetName(),
+                        creatureABInfo->selectedLevel
+            );
+
+            if (prevHealth && prevMaxHealth)
+            {
+                scaledCurHealth = prevHealth;
+                LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaledCurHealth ({}) = prevHealth ({})",
+                            creature->GetName(),
+                            creatureABInfo->selectedLevel,
+                            scaledCurHealth,
+                            prevHealth
+                );
+            }
+
+            if (prevPower && prevMaxPower)
+            {
+                scaledCurPower = prevPower;
+                LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaledCurPower ({}) = prevPower ({})",
+                            creature->GetName(),
+                            creatureABInfo->selectedLevel,
+                            scaledCurPower,
+                            prevPower
+                );
+            }
+        }
+        else
+        {
+            if (prevHealth && prevMaxHealth)
+            {
+                scaledCurHealth = float(newFinalHealth) / float(prevMaxHealth) * float(prevHealth);
+                LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaledCurHealth ({}) = float(newFinalHealth) ({}) / float(prevMaxHealth) ({}) * float(prevHealth) ({})",
+                            creature->GetName(),
+                            creatureABInfo->selectedLevel,
+                            scaledCurHealth,
+                            newFinalHealth,
+                            prevMaxHealth,
+                            prevHealth
+                );
+            }
+            else
+            {
+                scaledCurHealth = 0;
+                LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaledCurHealth ({}) = 0",
+                            creature->GetName(),
+                            creatureABInfo->selectedLevel,
+                            scaledCurHealth
+                );
+            }
+
+            if (prevPower && prevMaxPower)
+            {
+                scaledCurPower = float(newFinalMana) / float(prevMaxPower) * float(prevPower);
+                LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaledCurPower ({}) = float(newFinalMana) ({}) / float(prevMaxPower) ({}) * float(prevPower) ({})",
+                            creature->GetName(),
+                            creatureABInfo->selectedLevel,
+                            scaledCurPower,
+                            newFinalMana,
+                            prevMaxPower,
+                            prevPower
+                );
+            }
+            else
+            {
+                scaledCurPower = 0;
+                LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaledCurPower ({}) = 0",
+                            creature->GetName(),
+                            creatureABInfo->selectedLevel,
+                            scaledCurPower
+                );
+            }
+        }
 
         creature->SetHealth(scaledCurHealth);
-        if (pType == POWER_MANA)
-            creature->SetPower(POWER_MANA, scaledCurPower);
+        if (pType == Powers::POWER_MANA)
+            creature->SetPower(Powers::POWER_MANA, scaledCurPower);
         else
             creature->setPowerType(pType); // fix creatures with different power types
 
@@ -5893,6 +5981,36 @@ public:
         // update all stats
         creature->UpdateAllStats();
 
+        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | ---------- FINAL STATS ----------",
+                    creature->GetName(),
+                    creatureABInfo->selectedLevel
+        );
+
+        LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | Health ({}/{} {:.1f}%) -> ({}/{} {:.1f}%)",
+                    creature->GetName(),
+                    creatureABInfo->selectedLevel,
+                    prevHealth,
+                    prevMaxHealth,
+                    prevMaxHealth ? float(prevHealth) / float(prevMaxHealth) * 100.0f : 0.0f,
+                    creature->GetHealth(),
+                    creature->GetMaxHealth(),
+                    creature->GetMaxHealth() ? float(creature->GetHealth()) / float(creature->GetMaxHealth()) * 100.0f : 0.0f
+        );
+
+        if (prevPower && prevMaxPower && pType == Powers::POWER_MANA)
+        {
+            LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | Mana ({}/{} {:.1f}%) -> ({}/{} {:.1f}%)",
+                        creature->GetName(),
+                        creatureABInfo->selectedLevel,
+                        prevPower,
+                        prevMaxPower,
+                        prevMaxPower ? float(prevPower) / float(prevMaxPower) * 100.0f : 0.0f,
+                        creature->GetPower(Powers::POWER_MANA),
+                        creature->GetMaxPower(Powers::POWER_MANA),
+                        creature->GetMaxPower(Powers::POWER_MANA) ? float(creature->GetPower(Powers::POWER_MANA)) / float(creature->GetMaxPower(Powers::POWER_MANA)) * 100.0f : 0.0f
+            );
+        }
+
         // debug log the new stat multipliers stored in CreatureABInfo in a compact, single-line format
         if (creatureABInfo->UnmodifiedLevel != creatureABInfo->selectedLevel)
         {
@@ -5929,6 +6047,136 @@ public:
         }
 
 
+    }
+
+private:
+    bool _isSummonCloneOfSummoner(Creature* summon)
+    {
+        // if the summon doesn't exist or isn't a summon
+        if (!summon || !summon->IsSummon())
+        {
+            return false;
+        }
+
+        // get the summon's info
+        AutoBalanceCreatureInfo* summonABInfo = summon->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+        // get the saved summoner
+        Creature* summoner = summonABInfo->summoner;
+
+        // if the summoner doesn't exist
+        if (!summoner)
+        {
+            return false;
+        }
+
+        // create a running score for this check
+        int8 score = 0;
+
+        LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | Is this a clone of it's summoner {} ({})?",
+                    summon->GetName(),
+                    summonABInfo->selectedLevel,
+                    summoner->GetName(),
+                    summoner->GetLevel()
+        );
+
+
+        // if the entry ID is the same, +2
+        if (summon->GetEntry() == summoner->GetEntry())
+        {
+            score += 2;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | Entry: ({}) == ({}) | score: +2 = ({})",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        summon->GetEntry(),
+                        summoner->GetEntry(),
+                        score
+            );
+        }
+
+        // if the max health is the same, +3
+        if (summon->GetMaxHealth() == summoner->GetMaxHealth())
+        {
+            score += 3;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | MaxHealth: ({}) == ({}) | score: +3 = ({})",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        summon->GetMaxHealth(),
+                        summoner->GetMaxHealth(),
+                        score
+            );
+        }
+
+        // if the type (humanoid, dragonkin, etc) is the same, +1
+        if (summon->GetCreatureType() == summoner->GetCreatureType())
+        {
+            score += 1;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | CreatureType: ({}) == ({}) | score: +1 = ({})",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        summon->GetCreatureType(),
+                        summoner->GetCreatureType(),
+                        score
+            );
+        }
+
+        // if the name is the same, +2
+        if (summon->GetName() == summoner->GetName())
+        {
+            score += 2;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | Name: ({}) == ({}) | score: +2 = ({})",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        summon->GetName(),
+                        summoner->GetName(),
+                        score
+            );
+        }
+        // if the summoner's name is a part of the summon's name, +1
+        else if (summon->GetName().find(summoner->GetName()) != std::string::npos)
+        {
+            score += 1;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | Name: ({}) contains ({}) | score: +1 = ({})",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        summon->GetName(),
+                        summoner->GetName(),
+                        score
+            );
+        }
+
+        // if the display ID is the same, +1
+        if (summon->GetDisplayId() == summoner->GetDisplayId())
+        {
+            score += 1;
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | DisplayId: ({}) == ({}) | score: +1 = ({})",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        summon->GetDisplayId(),
+                        summoner->GetDisplayId(),
+                        score
+            );
+        }
+
+        // if the score is at least 5, consider this a clone
+        if (score >= 5)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | score ({}) >= 5 | true",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        score
+            );
+            return true;
+        }
+        else
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | score ({}) < 5 | false",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        score
+            );
+            return false;
+        }
     }
 };
 class AutoBalance_CommandScript : public CommandScript
@@ -6098,34 +6346,49 @@ public:
             return false;
         }
 
-        AutoBalanceCreatureInfo *creatureABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+        AutoBalanceCreatureInfo *targetABInfo=target->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
         handler->PSendSysMessage("---");
         handler->PSendSysMessage("%s (%u%s%s), %s",
                                   target->GetName(),
-                                  creatureABInfo->UnmodifiedLevel,
-                                  isCreatureRelevant(target) && creatureABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(creatureABInfo->selectedLevel) : "",
+                                  targetABInfo->UnmodifiedLevel,
+                                  isCreatureRelevant(target) && targetABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(targetABInfo->selectedLevel) : "",
                                   isBossOrBossSummon(target) ? " | Boss" : "",
-                                  creatureABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
-        handler->PSendSysMessage("Creature difficulty level: %u player(s)", creatureABInfo->instancePlayerCount);
-        // level scaled
-        if (creatureABInfo->UnmodifiedLevel != target->GetLevel())
+                                  targetABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
+        handler->PSendSysMessage("Creature difficulty level: %u player(s)", targetABInfo->instancePlayerCount);
+
+        // summon
+        if (target->IsSummon() && targetABInfo->summoner && targetABInfo->isCloneOfSummoner)
         {
-            handler->PSendSysMessage("Health multiplier: %.3f -> %.3f", creatureABInfo->HealthMultiplier, creatureABInfo->ScaledHealthMultiplier);
-            handler->PSendSysMessage("Mana multiplier: %.3f -> %.3f", creatureABInfo->ManaMultiplier, creatureABInfo->ScaledManaMultiplier);
-            handler->PSendSysMessage("Armor multiplier: %.3f-> %.3f", creatureABInfo->ArmorMultiplier, creatureABInfo->ScaledArmorMultiplier);
-            handler->PSendSysMessage("Damage multiplier: %.3f -> %.3f", creatureABInfo->DamageMultiplier, creatureABInfo->ScaledDamageMultiplier);
+            handler->PSendSysMessage("Clone of %s (%u)", targetABInfo->summoner->GetName(), targetABInfo->summoner->GetLevel());
+        }
+        else if (target->IsSummon() && targetABInfo->summoner)
+        {
+            handler->PSendSysMessage("Summon of %s (%u)", targetABInfo->summoner->GetName(), targetABInfo->summoner->GetLevel());
+        }
+        else if (target->IsSummon())
+        {
+            handler->PSendSysMessage("Summon without a summoner.");
+        }
+
+        // level scaled
+        if (targetABInfo->UnmodifiedLevel != target->GetLevel())
+        {
+            handler->PSendSysMessage("Health multiplier: %.3f -> %.3f", targetABInfo->HealthMultiplier, targetABInfo->ScaledHealthMultiplier);
+            handler->PSendSysMessage("Mana multiplier: %.3f -> %.3f", targetABInfo->ManaMultiplier, targetABInfo->ScaledManaMultiplier);
+            handler->PSendSysMessage("Armor multiplier: %.3f-> %.3f", targetABInfo->ArmorMultiplier, targetABInfo->ScaledArmorMultiplier);
+            handler->PSendSysMessage("Damage multiplier: %.3f -> %.3f", targetABInfo->DamageMultiplier, targetABInfo->ScaledDamageMultiplier);
         }
         // not level scaled
         else
         {
-            handler->PSendSysMessage("Health multiplier: %.3f", creatureABInfo->HealthMultiplier);
-            handler->PSendSysMessage("Mana multiplier: %.3f", creatureABInfo->ManaMultiplier);
-            handler->PSendSysMessage("Armor multiplier: %.3f", creatureABInfo->ArmorMultiplier);
-            handler->PSendSysMessage("Damage multiplier: %.3f", creatureABInfo->DamageMultiplier);
+            handler->PSendSysMessage("Health multiplier: %.3f", targetABInfo->HealthMultiplier);
+            handler->PSendSysMessage("Mana multiplier: %.3f", targetABInfo->ManaMultiplier);
+            handler->PSendSysMessage("Armor multiplier: %.3f", targetABInfo->ArmorMultiplier);
+            handler->PSendSysMessage("Damage multiplier: %.3f", targetABInfo->DamageMultiplier);
         }
-        handler->PSendSysMessage("CC Duration multiplier: %.3f", creatureABInfo->CCDurationMultiplier);
-        handler->PSendSysMessage("XP multiplier: %.3f  Money multiplier: %.3f", creatureABInfo->XPModifier, creatureABInfo->MoneyModifier);
+        handler->PSendSysMessage("CC Duration multiplier: %.3f", targetABInfo->CCDurationMultiplier);
+        handler->PSendSysMessage("XP multiplier: %.3f  Money multiplier: %.3f", targetABInfo->XPModifier, targetABInfo->MoneyModifier);
 
         return true;
 
