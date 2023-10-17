@@ -298,6 +298,11 @@ static std::list<uint32> spellIdsThatSpendPlayerHealth =
     55213       // Unholy Frenzy
 };
 
+static std::list<uint32> spellIdsToNeverModify = 
+{
+    1177        // Twin Empathy (AQ40 Twin Emperors)
+};
+
 // spacer used for logging
 std::string SPACER = "------------------------------------------------";
 
@@ -3804,55 +3809,63 @@ class AutoBalance_UnitScript : public UnitScript
 
             if (target && source && amount)
             {
-                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} {} {} {} ({} - {})",
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {}: {}{} {} {}{} with {}{} for ({})",
                     function_name,
-                    phase ? "AFTER:" : "BEFORE:",
+                    phase ? "AFTER" : "BEFORE",
                     source->GetName(),
-                    amount,
+                    source->GetEntry() ? " (" + std::to_string(source->GetEntry()) + ")" : "",
+                    amount > 0 ? "heals" : "damages",
                     target->GetName(),
+                    target->GetEntry() ? " (" + std::to_string(target->GetEntry()) + ")" : "",
                     spell_name,
-                    spell_id
+                    spell_id ? " (" + std::to_string(spell_id) + ")" : "",
+                    amount
                 );
             }
             else if (target && source)
             {
-                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} {} 0 {} ({} - {})",
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {}: {}{} damages {}{} with {}{} for (0)",
                     function_name,
-                    phase ? "AFTER:" : "BEFORE:",
+                    phase ? "AFTER" : "BEFORE",
                     source->GetName(),
+                    source->GetEntry() ? " (" + std::to_string(source->GetEntry()) + ")" : "",
                     target->GetName(),
+                    target->GetEntry() ? " (" + std::to_string(target->GetEntry()) + ")" : "",
                     spell_name,
-                    spell_id
+                    spell_id ? " (" + std::to_string(spell_id) + ")" : ""
                 );
             }
             else if (target && amount)
             {
-                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} ?? {} {} ({} - {})",
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {}: ?? {} {}{} with {}{} for ({})",
                     function_name,
-                    phase ? "AFTER:" : "BEFORE:",
-                    amount,
+                    phase ? "AFTER" : "BEFORE",
+                    amount > 0 ? "heals" : "damages",
                     target->GetName(),
+                    target->GetEntry() ? " (" + std::to_string(target->GetEntry()) + ")" : "",
                     spell_name,
-                    spell_id
+                    spell_id ? " (" + std::to_string(spell_id) + ")" : "",
+                    amount
                 );
             }
             else if (target)
             {
-                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} ?? ?? {} ({} - {})",
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {}: ?? affects {}{} with {}{}",
                     function_name,
-                    phase ? "AFTER:" : "BEFORE:",
+                    phase ? "AFTER" : "BEFORE",
                     target->GetName(),
+                    target->GetEntry() ? " (" + std::to_string(target->GetEntry()) + ")" : "",
                     spell_name,
-                    spell_id
+                    spell_id ? " (" + std::to_string(spell_id) + ")" : ""
                 );
             }
             else
             {
-                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {} W? T? F? ({} - {})",
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::{}: {}: W? T? F? with {}{}",
                     function_name,
-                    phase ? "AFTER:" : "BEFORE:",
+                    phase ? "AFTER" : "BEFORE",
                     spell_name,
-                    spell_id
+                    spell_id ? " (" + std::to_string(spell_id) + ")" : ""
                 );
             }
         }
@@ -3900,6 +3913,29 @@ class AutoBalance_UnitScript : public UnitScript
             {
                 if (_debug_damage_and_healing)
                     LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source does not exist in the world, returning original value of ({}).", amount);
+
+                return amount;
+            }
+
+            // if the spell ID is in our "never modify" list, return the original value
+            if
+            (
+                spellInfo &&
+                spellInfo->Id &&
+                std::find
+                (
+                    spellIdsToNeverModify.begin(),
+                    spellIdsToNeverModify.end(),
+                    spellInfo->Id
+                ) != spellIdsToNeverModify.end()
+            )
+            {
+                if (_debug_damage_and_healing)
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell {}({}) is in the never modify list, returning original value of ({}).",
+                        spellInfo->SpellName[0],
+                        spellInfo->Id,
+                        amount
+                    );
 
                 return amount;
             }
@@ -3968,6 +4004,20 @@ class AutoBalance_UnitScript : public UnitScript
 
                 return amount;
             }
+            // if the creature is attacking itself with an aura with effect type SPELL_AURA_SHARE_DAMAGE_PCT, return the orginal damage
+            else if 
+            (
+                source->GetTypeId() == TYPEID_UNIT &&
+                source->GetTypeId() != TYPEID_PLAYER &&
+                source->GetGUID() == target->GetGUID() &&
+                _isAuraWithEffectType(spellInfo, SPELL_AURA_SHARE_DAMAGE_PCT)
+            )
+            {
+                if (_debug_damage_and_healing)
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Source is a creature that is self-damaging with an aura that shares damage, returning original value of ({}).", amount);
+
+                return amount;
+            }
 
             // if the source is under the control of the player, return the original damage
             // noteably, this should NOT include mind control targets
@@ -3988,7 +4038,7 @@ class AutoBalance_UnitScript : public UnitScript
             if (source->GetTypeId() == TYPEID_PLAYER && source->GetGUID() == target->GetGUID() && amount < 0)
             {
                 // if this aura damages based on a percent of the player's max health, use the un-level-scaled multiplier
-                if (_IsAuraPercentDamage(spellInfo))
+                if (_isAuraWithEffectType(spellInfo, SPELL_AURA_PERIODIC_DAMAGE_PERCENT))
                 {
                     damageMultiplier = sourceMapABInfo->worldDamageHealingMultiplier;
                     if (_debug_damage_and_healing)
@@ -4029,7 +4079,7 @@ class AutoBalance_UnitScript : public UnitScript
             else if (target->GetTypeId() == TYPEID_PLAYER && source->GetTypeId() != TYPEID_UNIT && amount < 0)
             {
                 // if this aura damages based on a percent of the player's max health, use the un-level-scaled multiplier
-                if (_IsAuraPercentDamage(spellInfo))
+                if (_isAuraWithEffectType(spellInfo, SPELL_AURA_PERIODIC_DAMAGE_PERCENT))
                 {
                     damageMultiplier = targetMapABInfo->worldDamageHealingMultiplier;
                     if (_debug_damage_and_healing)
@@ -4057,7 +4107,7 @@ class AutoBalance_UnitScript : public UnitScript
             else
             {
                 // if this aura damages based on a percent of the player's max health, use the un-level-scaled multiplier
-                if (_IsAuraPercentDamage(spellInfo))
+                if (_isAuraWithEffectType(spellInfo, SPELL_AURA_PERIODIC_DAMAGE_PERCENT))
                 {
                     damageMultiplier = source->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo")->DamageMultiplier;
                     if (_debug_damage_and_healing)
@@ -4152,17 +4202,19 @@ class AutoBalance_UnitScript : public UnitScript
             }
         }
 
-        bool _IsAuraPercentDamage(SpellInfo const* spellInfo)
+        bool _isAuraWithEffectType(SpellInfo const* spellInfo, AuraType auraType, bool log = false)
         {
             // if the spell is not defined, return false
             if (!spellInfo)
             {
+                if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo is null, returning false."); }
                 return false;
             }
 
             // if the spell doesn't have any effects, return false
             if (!spellInfo->GetEffects().size())
             {
+                if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has no effects, returning false."); }
                 return false;
             }
 
@@ -4172,17 +4224,20 @@ class AutoBalance_UnitScript : public UnitScript
                 // if the effect is not an aura, continue to next effect
                 if (!effect.IsAura())
                 {
+                    if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has an effect that is not an aura, continuing to next effect."); }
                     continue;
                 }
 
-                if (effect.ApplyAuraName == SPELL_AURA_PERIODIC_DAMAGE_PERCENT)
+                if (effect.ApplyAuraName == auraType)
                 {
-                    // if the effect is a percent damage aura, return true
+                    // if the effect is an aura of the target type, return true
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has an aura of the target type, returning true.");
                     return true;
                 }
             }
 
-            // if no percent damage aura was found, return false
+            // if no aura effect of type auraType was found, return false
+            if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has no aura of the target type, returning false."); }
             return false;
         }
 };
