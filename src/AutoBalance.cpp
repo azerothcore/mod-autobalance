@@ -300,7 +300,7 @@ static std::list<uint32> spellIdsThatSpendPlayerHealth =
 
 static std::list<uint32> spellIdsToNeverModify = 
 {
-    1177        // Twin Empathy (AQ40 Twin Emperors)
+    1177,       // Twin Empathy (AQ40 Twin Emperors, only in `spell_dbc`)
 };
 
 // spacer used for logging
