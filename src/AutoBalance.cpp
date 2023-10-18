@@ -2494,7 +2494,7 @@ void RemoveCreatureFromMapData(Creature* creature)
                     }
                     else
                     {
-                        LOG_WARN("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Map {} ({}{}) | activeCreatureCount is already 0. This should not happen.",
+                        LOG_DEBUG("module.AutoBalance", "AutoBalance::RemoveCreatureFromMapData: Map {} ({}{}) | activeCreatureCount is already 0. This should not happen.",
                             creature->GetMap()->GetMapName(),
                             creature->GetMap()->GetId(),
                             creature->GetMap()->GetInstanceId() ? "-" + std::to_string(creature->GetMap()->GetInstanceId()) : ""
