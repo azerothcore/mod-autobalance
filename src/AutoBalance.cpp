@@ -2524,8 +2524,31 @@ void UpdateMapPlayerStats(Map* map)
     uint8 oldPlayerCount = mapABInfo->playerCount;
     uint8 oldAdjustedPlayerCount = mapABInfo->adjustedPlayerCount;
 
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | oldPlayerCount = ({}), oldAdjustedPlayerCount = ({}).",
+        instanceMap->GetMapName(),
+        instanceMap->GetId(),
+        instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+        oldPlayerCount,
+        oldAdjustedPlayerCount
+    );
+
     // update the player count
     mapABInfo->playerCount = mapABInfo->allMapPlayers.size();
+
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | playerCount = ({}).",
+        instanceMap->GetMapName(),
+        instanceMap->GetId(),
+        instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+        mapABInfo->playerCount
+    );
+
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | combatLocked = ({}), combatLockMinPlayers = ({}).",
+        instanceMap->GetMapName(),
+        instanceMap->GetId(),
+        instanceMap->GetInstanceId() ? "-" + std::to_string(instanceMap->GetInstanceId()) : "",
+        mapABInfo->combatLocked,
+        mapABInfo->combatLockMinPlayers
+    );
 
     uint8 adjustedPlayerCount = 0;
 
@@ -3600,11 +3623,13 @@ class AutoBalance_PlayerScript : public PlayerScript
             if (!mapABInfo->combatLocked)
             {
                 mapABInfo->combatLocked = true;
+                mapABInfo->combatLockMinPlayers = mapABInfo->playerCount;
 
-                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | Locking difficulty as {} enters combat.",
+                LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: Map {} ({}{}) | Locking difficulty to no less than ({}) as {} enters combat.",
                             map->GetMapName(),
                             map->GetId(),
                             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+                            mapABInfo->combatLockMinPlayers,
                             player->GetName()
                 );
             }
@@ -3620,7 +3645,10 @@ class AutoBalance_PlayerScript : public PlayerScript
                 return;
             }
 
-            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: {} leaves combat.", player->GetName());
+            // this hook can get called even if the player isn't in combat
+            // I believe this happens whenever AC attempts to remove combat, but it doesn't check to see if the player is in combat first
+            // unfortunately, `player->IsInCombat()` doesn't work here
+            LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: {} leaves (or wasn't in) combat.", player->GetName());
 
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
