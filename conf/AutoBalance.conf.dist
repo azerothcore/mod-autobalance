@@ -2,13 +2,16 @@
 ##########################
 #
 # Logging
-# 4 = Info, 5 = Debug
+#
+# Add these lines to your worldserver.conf file to enable logging for AutoBalance.
+#
+# 4 = Info (Default), 5 = Debug
 #
 ##########################
-Logger.module.AutoBalance=4,Console Server
-Logger.module.AutoBalance_CombatLocking=4,Console Server
-Logger.module.AutoBalance_DamageHealingCC=4,Console Server
-Logger.module.AutoBalance_StatGeneration=4,Console Server
+# Logger.module.AutoBalance=4,Console Server
+# Logger.module.AutoBalance_CombatLocking=4,Console Server
+# Logger.module.AutoBalance_DamageHealingCC=4,Console Server
+# Logger.module.AutoBalance_StatGeneration=4,Console Server
 
 ##########################
 #
