@@ -4780,6 +4780,69 @@ public:
         }
     }
 
+    void Creature_SelectLevel(const CreatureTemplate* /* cinfo */, Creature* creature) override
+    {
+        // ensure we're in a dungeon with a creature
+        if (
+            !creature ||
+            !creature->GetMap() ||
+            !creature->GetMap()->IsDungeon() ||
+            !creature->GetMap()->GetInstanceId()
+        )
+        {
+            return;
+        }
+
+        // get the creature's info
+        AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+        // If the creature is brand new, it needs more processing
+        if (creatureABInfo->isBrandNew)
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
+
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::Creature_SelectLevel: Creature {} ({}) | Entry ID: ({}) | Spawn ID: ({})",
+                        creature->GetName(),
+                        creature->GetLevel(),
+                        creature->GetEntry(),
+                        creature->GetSpawnId()
+            );
+
+            if (creatureABInfo->isBrandNew)
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::Creature_SelectLevel: Creature {} ({}) | is no longer brand new.",
+                            creature->GetName(),
+                            creature->GetLevel()
+                );
+                creatureABInfo->isBrandNew = false;
+            }
+
+            // Update the map's data if it is out of date
+            UpdateMapDataIfNeeded(creature->GetMap());
+
+            ModifyCreatureAttributes(creature);
+
+            AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
+
+            if (creature->GetLevel() != creatureABInfo->selectedLevel && isCreatureRelevant(creature))
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::Creature_SelectLevel: Creature {} ({}) | is set to level ({}).",
+                            creature->GetName(),
+                            creature->GetLevel(),
+                            creatureABInfo->selectedLevel
+                );
+                creature->SetLevel(creatureABInfo->selectedLevel);
+            }
+        }
+        else
+        {
+            LOG_ERROR("module.AutoBalance", "AutoBalance_AllCreatureScript::Creature_SelectLevel: Creature {} ({}) | is new to the instance but wasn't flagged as brand new. Please open an issue.",
+                        creature->GetName(),
+                        creature->GetLevel()
+            );
+        }
+    }
+
     void OnCreatureAddWorld(Creature* creature) override
     {
         if (creature->GetMap()->IsDungeon())
@@ -4859,12 +4922,8 @@ public:
         // update map data before making creature changes
         UpdateMapDataIfNeeded(creature->GetMap());
 
-        // get the creature's info
-        AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
-
-        // If the creature is brand new, it needs more processing
         // If the config is out of date and the creature was reset, run modify against it
-        if (creatureABInfo->isBrandNew || ResetCreatureIfNeeded(creature))
+        if (ResetCreatureIfNeeded(creature))
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
@@ -4874,15 +4933,6 @@ public:
                         creature->GetEntry(),
                         creature->GetSpawnId()
             );
-
-            if (creatureABInfo->isBrandNew)
-            {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnAllCreatureUpdate: Creature {} ({}) | is no longer brand new.",
-                            creature->GetName(),
-                            creature->GetLevel()
-                );
-                creatureABInfo->isBrandNew = false;
-            }
 
             // Update the map's data if it is out of date
             UpdateMapDataIfNeeded(creature->GetMap());
