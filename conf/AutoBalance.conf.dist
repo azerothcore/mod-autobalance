@@ -1,6 +1,20 @@
 [worldserver]
 ##########################
 #
+# Logging
+#
+# Add these lines to your worldserver.conf file to enable logging for AutoBalance.
+#
+# 4 = Info (Default), 5 = Debug
+#
+##########################
+# Logger.module.AutoBalance=4,Console Server
+# Logger.module.AutoBalance_CombatLocking=4,Console Server
+# Logger.module.AutoBalance_DamageHealingCC=4,Console Server
+# Logger.module.AutoBalance_StatGeneration=4,Console Server
+
+##########################
+#
 # Enable / Disable Settings
 #
 ##########################
@@ -299,6 +313,8 @@ AutoBalance.playerCountDifficultyOffset=0
 #
 #        Health | Mana | Armor | Damage
 #           Adjusts the StatModifier for the appropriate stat. Affected by the Global StatModifier above.
+#
+#           NOTE: "Damage" affects both creature damage and world damage.
 #
 #           Default: 1.0
 #
@@ -807,12 +823,19 @@ AutoBalance.LevelScaling.DynamicLevel.DistanceCheck.PerInstance="189 500"
 
 #
 #     AutoBalance.LevelScaling.LevelEndGameBoost
+#
+#        NOTICE: This setting is currently not implemented pending a rewrite.
+#                Enabling it here has NO effect.
+#
+#        See: https://github.com/azerothcore/mod-autobalance/issues/156
+#
+#        Old description:
 #        End game creatures have an exponential (not linear) regression
 #        that is not correctly handled by db values. Keep this enabled
 #        to have stats as near possible to the official ones.
 #
-#        Default:     1 (1 = ON, 0 = OFF)
-AutoBalance.LevelScaling.EndGameBoost = 1
+#        Default:     0 (1 = ON, 0 = OFF)
+AutoBalance.LevelScaling.EndGameBoost = 0        # setting to 1 does not do anything
 
 ##########################
 #
