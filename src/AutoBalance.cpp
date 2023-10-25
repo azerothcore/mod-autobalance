@@ -173,6 +173,8 @@ public:
 
     // creature->IsSummon()                         // whether or not the creature is a summon
     Creature* summoner = nullptr;                   // the creature that summoned this creature
+    std::string summonerName = "";                  // the name of the creature that summoned this creature
+    uint8 summonerLevel = 0;                        // the level of the creature that summoned this creature
     bool isCloneOfSummoner = false;                 // whether or not the creature is a clone of its summoner
 
     Relevance relevance = AUTOBALANCE_RELEVANCE_UNCHECKED;  // whether or not the creature is relevant for scaling
@@ -298,9 +300,18 @@ static std::list<uint32> spellIdsThatSpendPlayerHealth =
     55213       // Unholy Frenzy
 };
 
-static std::list<uint32> spellIdsToNeverModify = 
+// creature IDs that should never be considered clones
+// handles cases where a creature is spawned by another creature, but is not a clone (doesn't retain health/mana values)
+static std::list<uint32> creatureIDsThatAreNotClones =
 {
-    1177,       // Twin Empathy (AQ40 Twin Emperors, only in `spell_dbc`)
+    16152       // Attumen the Huntsman (Karazhan) combined form
+};
+
+// spell IDs that should never be modified
+// handles cases where a spell is reflecting damage or otherwise converting player damage to something else
+static std::list<uint32> spellIdsToNeverModify =
+{
+    1177        // Twin Empathy (AQ40 Twin Emperors, only in `spell_dbc` database table)
 };
 
 // spacer used for logging
@@ -2100,6 +2111,8 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList = t
             creature->ToTempSummon()->GetSummoner()->ToCreature())
         {
             creatureABInfo->summoner = creature->ToTempSummon()->GetSummoner()->ToCreature();
+            creatureABInfo->summonerName = creatureABInfo->summoner->GetName();
+            creatureABInfo->summonerLevel = creatureABInfo->summoner->GetLevel();
             Creature* summoner = creatureABInfo->summoner;
 
             if (!summoner)
@@ -4033,7 +4046,7 @@ class AutoBalance_UnitScript : public UnitScript
                 return amount;
             }
             // if the creature is attacking itself with an aura with effect type SPELL_AURA_SHARE_DAMAGE_PCT, return the orginal damage
-            else if 
+            else if
             (
                 source->GetTypeId() == TYPEID_UNIT &&
                 source->GetTypeId() != TYPEID_PLAYER &&
@@ -6203,6 +6216,25 @@ private:
             return false;
         }
 
+        // if this creature's ID is in the list of creatures that are not clones of their summoner (creatureIDsThatAreNotClones), return false
+        if (
+            std::find
+            (
+                creatureIDsThatAreNotClones.begin(),
+                creatureIDsThatAreNotClones.end(),
+                summon->GetEntry()
+            ) != creatureIDsThatAreNotClones.end()
+        )
+        {
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner: Creature {} ({}) | creatureIDsThatAreNotClones contains this creature's ID ({}) | false",
+                        summon->GetName(),
+                        summonABInfo->selectedLevel,
+                        summon->GetEntry()
+            );
+            return false;
+        }
+
+
         // create a running score for this check
         int8 score = 0;
 
@@ -6493,11 +6525,11 @@ public:
         // summon
         if (target->IsSummon() && targetABInfo->summoner && targetABInfo->isCloneOfSummoner)
         {
-            handler->PSendSysMessage("Clone of %s (%u)", targetABInfo->summoner->GetName(), targetABInfo->summoner->GetLevel());
+            handler->PSendSysMessage("Clone of %s (%u)", targetABInfo->summonerName, targetABInfo->summonerLevel);
         }
         else if (target->IsSummon() && targetABInfo->summoner)
         {
-            handler->PSendSysMessage("Summon of %s (%u)", targetABInfo->summoner->GetName(), targetABInfo->summoner->GetLevel());
+            handler->PSendSysMessage("Summon of %s (%u)", targetABInfo->summonerName, targetABInfo->summonerLevel);
         }
         else if (target->IsSummon())
         {
