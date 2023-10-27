@@ -4298,7 +4298,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
 
             // modify the amount
-            amount = _Modify_GameObject_Damage_Healing(target, source, amount);
+            amount = _Modify_GameObject_Damage_Healing(target, source, amount, spellInfo);
 
             if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
         }
@@ -4364,7 +4364,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             }
         }
 
-        int32 _Modify_GameObject_Damage_Healing(GameObject* target, Unit* source, int32 amount)
+        int32 _Modify_GameObject_Damage_Healing(GameObject* target, Unit* source, int32 amount, SpellInfo const* spellInfo)
         {
             //
             // Pre-flight Checks
@@ -4393,6 +4393,29 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             if (!target->IsInWorld())
             {
                 if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target does not exist in the world, returning original value of ({}).", amount);
+
+                return amount;
+            }
+
+            // if the spell ID is in our "never modify" list, return the original value
+            if
+            (
+                spellInfo &&
+                spellInfo->Id &&
+                std::find
+                (
+                    spellIdsToNeverModify.begin(),
+                    spellIdsToNeverModify.end(),
+                    spellInfo->Id
+                ) != spellIdsToNeverModify.end()
+            )
+            {
+                if (_debug_damage_and_healing)
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell {}({}) is in the never modify list, returning original value of ({}).",
+                        spellInfo->SpellName[0],
+                        spellInfo->Id,
+                        amount
+                    );
 
                 return amount;
             }
