@@ -3614,6 +3614,12 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         virtual void OnPlayerEnterCombat(Player* player, Unit* /*enemy*/) override
         {
+            // if the player or their map is gone, return
+            if (!player || !player->GetMap())
+            {
+                return;
+            }
+
             Map* map = player->GetMap();
 
             // If this isn't a dungeon, no work to do
@@ -3650,6 +3656,12 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         virtual void OnPlayerLeaveCombat(Player* player) override
         {
+            // if the player or their map is gone, return
+            if (!player || !player->GetMap())
+            {
+                return;
+            }
+
             Map* map = player->GetMap();
 
             // If this isn't a dungeon, no work to do
