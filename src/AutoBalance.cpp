@@ -165,6 +165,9 @@ public:
 
     uint8 UnmodifiedLevel = 0;                      // original level of the creature as determined by the game
 
+    uint32 currentHealth = 0;                       // the creature's current health
+    uint32 maxHealth = 0;                           // the creature's current max health
+
     bool isActive = false;                          // whether or not the current creature is affecting map stats. May change as conditions change.
     bool wasAliveNowDead = false;                   // whether or not the creature was alive and is now dead
     bool isInCreatureList = false;                  // whether or not the creature is in the map's creature list
@@ -615,9 +618,6 @@ bool ShouldMapBeEnabled(Map* map)
 {
     if (map->IsDungeon())
     {
-        // get the map's info
-        AutoBalanceMapInfo *mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-
         // if globally disabled, return false
         if (!EnableGlobal)
         {
@@ -652,20 +652,6 @@ bool ShouldMapBeEnabled(Map* map)
                       instanceMap->GetMaxPlayers(),
                       instanceMap->IsHeroic() ? "Heroic" : "Normal"
             );
-            return false;
-        }
-
-        // if the map has no players in the player list, then disabled
-        if (!mapABInfo->playerCount)
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because there are no non-GM players in the map.",
-                      map->GetMapName(),
-                      map->GetId(),
-                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                      instanceMap->GetMaxPlayers(),
-                      instanceMap->IsHeroic() ? "Heroic" : "Normal"
-            );
-
             return false;
         }
 
@@ -2664,9 +2650,8 @@ void UpdateMapPlayerStats(Map* map)
         mapABInfo->highestPlayerLevel = mapABInfo->lfgTargetLevel;
         mapABInfo->lowestPlayerLevel = mapABInfo->lfgTargetLevel;
 
-        // no non-GM players on the map, disable it
-        mapABInfo->enabled = false;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) | has no non-GM players. Disabling (potentially temporarily).",
+        // no non-GM players on the map
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) | has no non-GM players. Player stats derived from LFG target level.",
             map->GetMapName(),
             map->GetId(),
             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -4947,6 +4932,21 @@ public:
                         instanceMap ? ", " + std::to_string(instanceMap->GetMaxPlayers()) + "-player" : "",
                         instanceMap ? instanceMap->IsHeroic() ? " Heroic" : " Normal" : ""
             );
+
+            // works around client update issues outlined in #168 #169
+            // apply calculated health and max health just before the creature is added to the world
+            if (creatureABInfo->currentHealth && creatureABInfo->maxHealth)
+            {
+                creature->SetHealth(creatureABInfo->currentHealth);
+                creature->SetMaxHealth(creatureABInfo->maxHealth);
+
+                LOG_TRACE("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | health set to ({} / {}) just before being added to the world.",
+                            creature->GetName(),
+                            creature->GetLevel(),
+                            creatureABInfo->currentHealth,
+                            creatureABInfo->maxHealth
+                );
+            }
         }
     }
 
@@ -5116,7 +5116,9 @@ public:
             // health
             float currentHealthPercent = (float)creature->GetHealth() / (float)creature->GetMaxHealth();
             creature->SetMaxHealth(origCreatureBaseStats->GenerateHealth(creatureTemplate));
+            creatureABInfo->maxHealth = creature->GetMaxHealth();
             creature->SetHealth((float)origCreatureBaseStats->GenerateHealth(creatureTemplate) * currentHealthPercent);
+            creatureABInfo->currentHealth = creature->GetHealth();
 
             // mana
             if (creature->getPowerType() == POWER_MANA && creature->GetPower(POWER_MANA) >= 0 && creature->GetMaxPower(POWER_MANA) > 0)
@@ -5958,6 +5960,7 @@ public:
         creature->SetModifierValue(UNIT_MOD_RAGE, BASE_VALUE, (float)100.0f);
         creature->SetModifierValue(UNIT_MOD_HEALTH, BASE_VALUE, (float)newFinalHealth);
         creature->SetModifierValue(UNIT_MOD_MANA, BASE_VALUE, (float)newFinalMana);
+        creatureABInfo->maxHealth = newFinalHealth;
         creatureABInfo->ScaledHealthMultiplier = scaledHealthMultiplier;
         creatureABInfo->ScaledManaMultiplier = scaledManaMultiplier;
         creatureABInfo->ScaledArmorMultiplier = scaledArmorMultiplier;
@@ -6053,6 +6056,7 @@ public:
         }
 
         creature->SetHealth(scaledCurHealth);
+        creatureABInfo->currentHealth = scaledCurHealth;
         if (pType == Powers::POWER_MANA)
             creature->SetPower(Powers::POWER_MANA, scaledCurPower);
         else
