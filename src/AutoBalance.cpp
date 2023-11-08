@@ -171,6 +171,8 @@ public:
     bool isBrandNew = false;                        // whether or not the creature is brand new to the map (hasn't been added to the world yet)
     bool neverLevelScale = false;                   // whether or not the creature should never be level scaled (can still be player scaled)
 
+    uint32 initialMaxHealth = 0;                    // stored max health value to be applied just before being added to the world
+
     // creature->IsSummon()                         // whether or not the creature is a summon
     Creature* summoner = nullptr;                   // the creature that summoned this creature
     std::string summonerName = "";                  // the name of the creature that summoned this creature
@@ -4923,6 +4925,9 @@ public:
 
             ModifyCreatureAttributes(creature);
 
+            // store the creature's max health value for validation in `OnCreatureAddWorld`
+            creatureABInfo->initialMaxHealth = creature->GetMaxHealth();
+
             AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
             if (creature->GetLevel() != creatureABInfo->selectedLevel && isCreatureRelevant(creature))
@@ -4952,15 +4957,36 @@ public:
             InstanceMap* instanceMap = creatureMap->ToInstanceMap();
             AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-            // final check to be sure the creature is the right level
-            if (isCreatureRelevant(creature) && creature->GetLevel() != creatureABInfo->selectedLevel && !creature->IsSummon())
+            // final checks on the creature before spawning
+            if (isCreatureRelevant(creature))
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | is set to level ({}) just after being added to the world.",
-                            creature->GetName(),
-                            creature->GetLevel(),
-                            creatureABInfo->selectedLevel
-                );
-                creature->SetLevel(creatureABInfo->selectedLevel);
+                // level check
+                if (creature->GetLevel() != creatureABInfo->selectedLevel && !creature->IsSummon())
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | is set to level ({}) just after being added to the world.",
+                                creature->GetName(),
+                                creature->GetLevel(),
+                                creatureABInfo->selectedLevel
+                    );
+                    creature->SetLevel(creatureABInfo->selectedLevel);
+                }
+
+                // max health check
+                if (creature->GetMaxHealth() != creatureABInfo->initialMaxHealth)
+                {
+
+                    float oldMaxHealth = creature->GetMaxHealth();
+                    float healthPct = creature->GetHealthPct();
+                    creature->SetMaxHealth(creatureABInfo->initialMaxHealth);
+                    creature->CountPctFromMaxHealth(healthPct);
+
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | had its max health changed from ({})->({}) just after being added to the world.",
+                                creature->GetName(),
+                                creature->GetLevel(),
+                                oldMaxHealth,
+                                creatureABInfo->initialMaxHealth
+                    );
+                }
             }
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | added to map {} ({}{}{}{})",
