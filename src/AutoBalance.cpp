@@ -4978,7 +4978,7 @@ public:
                     float oldMaxHealth = creature->GetMaxHealth();
                     float healthPct = creature->GetHealthPct();
                     creature->SetMaxHealth(creatureABInfo->initialMaxHealth);
-                    creature->CountPctFromMaxHealth(healthPct);
+                    creature->SetHealth(creature->GetMaxHealth() * (healthPct / 100));
 
                     LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | had its max health changed from ({})->({}) just after being added to the world.",
                                 creature->GetName(),
