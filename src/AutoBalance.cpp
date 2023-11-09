@@ -171,6 +171,8 @@ public:
     bool isBrandNew = false;                        // whether or not the creature is brand new to the map (hasn't been added to the world yet)
     bool neverLevelScale = false;                   // whether or not the creature should never be level scaled (can still be player scaled)
 
+    uint32 initialMaxHealth = 0;                    // stored max health value to be applied just before being added to the world
+
     // creature->IsSummon()                         // whether or not the creature is a summon
     Creature* summoner = nullptr;                   // the creature that summoned this creature
     std::string summonerName = "";                  // the name of the creature that summoned this creature
@@ -615,9 +617,6 @@ bool ShouldMapBeEnabled(Map* map)
 {
     if (map->IsDungeon())
     {
-        // get the map's info
-        AutoBalanceMapInfo *mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-
         // if globally disabled, return false
         if (!EnableGlobal)
         {
@@ -652,20 +651,6 @@ bool ShouldMapBeEnabled(Map* map)
                       instanceMap->GetMaxPlayers(),
                       instanceMap->IsHeroic() ? "Heroic" : "Normal"
             );
-            return false;
-        }
-
-        // if the map has no players in the player list, then disabled
-        if (!mapABInfo->playerCount)
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance::ShouldMapBeEnabled: {} ({}{}, {}-player {}) - Not enabled because there are no non-GM players in the map.",
-                      map->GetMapName(),
-                      map->GetId(),
-                      map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                      instanceMap->GetMaxPlayers(),
-                      instanceMap->IsHeroic() ? "Heroic" : "Normal"
-            );
-
             return false;
         }
 
@@ -2546,7 +2531,8 @@ void UpdateMapPlayerStats(Map* map)
     );
 
     // update the player count
-    mapABInfo->playerCount = mapABInfo->allMapPlayers.size();
+    // minimum of 1 to prevent scaling weirdness when only GMs are in the instnace
+    mapABInfo->playerCount = mapABInfo->allMapPlayers.size() ? mapABInfo->allMapPlayers.size() : 1;
 
     LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}) | playerCount = ({}).",
         instanceMap->GetMapName(),
@@ -2664,9 +2650,8 @@ void UpdateMapPlayerStats(Map* map)
         mapABInfo->highestPlayerLevel = mapABInfo->lfgTargetLevel;
         mapABInfo->lowestPlayerLevel = mapABInfo->lfgTargetLevel;
 
-        // no non-GM players on the map, disable it
-        mapABInfo->enabled = false;
-        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) | has no non-GM players. Disabling (potentially temporarily).",
+        // no non-GM players on the map
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::UpdateMapPlayerStats: Map {} ({}{}, {}-player {}) | has no non-GM players. Player stats derived from LFG target level.",
             map->GetMapName(),
             map->GetId(),
             map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
@@ -3614,6 +3599,12 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         virtual void OnPlayerEnterCombat(Player* player, Unit* /*enemy*/) override
         {
+            // if the player or their map is gone, return
+            if (!player || !player->GetMap())
+            {
+                return;
+            }
+
             Map* map = player->GetMap();
 
             // If this isn't a dungeon, no work to do
@@ -3650,6 +3641,12 @@ class AutoBalance_PlayerScript : public PlayerScript
 
         virtual void OnPlayerLeaveCombat(Player* player) override
         {
+            // if the player or their map is gone, return
+            if (!player || !player->GetMap())
+            {
+                return;
+            }
+
             Map* map = player->GetMap();
 
             // If this isn't a dungeon, no work to do
@@ -4298,7 +4295,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
 
             // modify the amount
-            amount = _Modify_GameObject_Damage_Healing(target, source, amount);
+            amount = _Modify_GameObject_Damage_Healing(target, source, amount, spellInfo);
 
             if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
         }
@@ -4364,7 +4361,7 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             }
         }
 
-        int32 _Modify_GameObject_Damage_Healing(GameObject* target, Unit* source, int32 amount)
+        int32 _Modify_GameObject_Damage_Healing(GameObject* target, Unit* source, int32 amount, SpellInfo const* spellInfo)
         {
             //
             // Pre-flight Checks
@@ -4393,6 +4390,29 @@ class AutoBalance_GameObjectScript : public AllGameObjectScript
             if (!target->IsInWorld())
             {
                 if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target does not exist in the world, returning original value of ({}).", amount);
+
+                return amount;
+            }
+
+            // if the spell ID is in our "never modify" list, return the original value
+            if
+            (
+                spellInfo &&
+                spellInfo->Id &&
+                std::find
+                (
+                    spellIdsToNeverModify.begin(),
+                    spellIdsToNeverModify.end(),
+                    spellInfo->Id
+                ) != spellIdsToNeverModify.end()
+            )
+            {
+                if (_debug_damage_and_healing)
+                    LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_Modify_Damage_Healing: Spell {}({}) is in the never modify list, returning original value of ({}).",
+                        spellInfo->SpellName[0],
+                        spellInfo->Id,
+                        amount
+                    );
 
                 return amount;
             }
@@ -4560,17 +4580,38 @@ class AutoBalance_AllMapScript : public AllMapScript
             // get the map's info
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
+            // store the previous difficulty for comparison later
+            int prevAdjustedPlayerCount = mapABInfo->adjustedPlayerCount;
+
             // add player to this map's player list
             AddPlayerToMap(map, player);
 
             // recalculate the zone's level stats
             mapABInfo->highestCreatureLevel = 0;
             mapABInfo->lowestCreatureLevel = 0;
-            mapABInfo->avgCreatureLevel = 0;
+            //mapABInfo->avgCreatureLevel = 0;
             mapABInfo->activeCreatureCount = 0;
 
-            // Update the map's data, forced
-            UpdateMapDataIfNeeded(map, true);
+            // if the previous player count is the same as the new player count, update without force
+            if (prevAdjustedPlayerCount == mapABInfo->adjustedPlayerCount)
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player difficulty unchanged at {}. Updating map data (no force).",
+                    mapABInfo->adjustedPlayerCount
+                );
+
+                // Update the map's data
+                UpdateMapDataIfNeeded(map, false);
+            }
+            else
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player difficulty changed from ({})->({}). Updating map data (force).",
+                    prevAdjustedPlayerCount,
+                    mapABInfo->adjustedPlayerCount
+                );
+
+                // Update the map's data, forced
+                UpdateMapDataIfNeeded(map, true);
+            }
 
             // see which existing creatures are active
             for (std::vector<Creature*>::iterator creatureIterator = mapABInfo->allMapCreatures.begin(); creatureIterator != mapABInfo->allMapCreatures.end(); ++creatureIterator)
@@ -4652,6 +4693,9 @@ class AutoBalance_AllMapScript : public AllMapScript
             // get the map's info
             AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
+            // store the previous difficulty for comparison later
+            int prevAdjustedPlayerCount = mapABInfo->adjustedPlayerCount;
+
             // remove this player from this map's player list
             bool playerWasRemoved = RemovePlayerFromMap(map, player);
 
@@ -4667,7 +4711,7 @@ class AutoBalance_AllMapScript : public AllMapScript
             // recalculate the zone's level stats
             mapABInfo->highestCreatureLevel = 0;
             mapABInfo->lowestCreatureLevel = 0;
-            mapABInfo->avgCreatureLevel = 0;
+            //mapABInfo->avgCreatureLevel = 0;
             mapABInfo->activeCreatureCount = 0;
 
             // see which existing creatures are active
@@ -4676,8 +4720,26 @@ class AutoBalance_AllMapScript : public AllMapScript
                 AddCreatureToMapCreatureList(*creatureIterator, false, true);
             }
 
-            // Update the map's data, forced
-            UpdateMapDataIfNeeded(map, true);
+            // if the previous player count is the same as the new player count, update without force
+            if (prevAdjustedPlayerCount == mapABInfo->adjustedPlayerCount)
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player difficulty unchanged at {}. Updating map data (no force).",
+                    mapABInfo->adjustedPlayerCount
+                );
+
+                // Update the map's data
+                UpdateMapDataIfNeeded(map, false);
+            }
+            else
+            {
+                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerLeaveAll: Player difficulty changed from ({})->({}). Updating map data (force).",
+                    prevAdjustedPlayerCount,
+                    mapABInfo->adjustedPlayerCount
+                );
+
+                // Update the map's data, forced
+                UpdateMapDataIfNeeded(map, true);
+            }
 
             // updates the player count and levels for the map
             if (map->GetEntry() && map->GetEntry()->IsDungeon())
@@ -4863,6 +4925,9 @@ public:
 
             ModifyCreatureAttributes(creature);
 
+            // store the creature's max health value for validation in `OnCreatureAddWorld`
+            creatureABInfo->initialMaxHealth = creature->GetMaxHealth();
+
             AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
             if (creature->GetLevel() != creatureABInfo->selectedLevel && isCreatureRelevant(creature))
@@ -4892,15 +4957,36 @@ public:
             InstanceMap* instanceMap = creatureMap->ToInstanceMap();
             AutoBalanceCreatureInfo *creatureABInfo=creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
-            // final check to be sure the creature is the right level
-            if (isCreatureRelevant(creature) && creature->GetLevel() != creatureABInfo->selectedLevel && !creature->IsSummon())
+            // final checks on the creature before spawning
+            if (isCreatureRelevant(creature))
             {
-                LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | is set to level ({}) just after being added to the world.",
-                            creature->GetName(),
-                            creature->GetLevel(),
-                            creatureABInfo->selectedLevel
-                );
-                creature->SetLevel(creatureABInfo->selectedLevel);
+                // level check
+                if (creature->GetLevel() != creatureABInfo->selectedLevel && !creature->IsSummon())
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | is set to level ({}) just after being added to the world.",
+                                creature->GetName(),
+                                creature->GetLevel(),
+                                creatureABInfo->selectedLevel
+                    );
+                    creature->SetLevel(creatureABInfo->selectedLevel);
+                }
+
+                // max health check
+                if (creature->GetMaxHealth() != creatureABInfo->initialMaxHealth)
+                {
+
+                    float oldMaxHealth = creature->GetMaxHealth();
+                    float healthPct = creature->GetHealthPct();
+                    creature->SetMaxHealth(creatureABInfo->initialMaxHealth);
+                    creature->SetHealth(creature->GetMaxHealth() * (healthPct / 100));
+
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | had its max health changed from ({})->({}) just after being added to the world.",
+                                creature->GetName(),
+                                creature->GetLevel(),
+                                oldMaxHealth,
+                                creatureABInfo->initialMaxHealth
+                    );
+                }
             }
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::OnCreatureAddWorld: Creature {} ({}) | added to map {} ({}{}{}{})",
