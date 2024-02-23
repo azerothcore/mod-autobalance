@@ -46,6 +46,7 @@
 #include "Log.h"
 #include "SharedDefines.h"
 #include <chrono>
+#include "Message.h"
 
 #if AC_COMPILER == AC_COMPILER_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -3687,6 +3688,8 @@ class AutoBalance_PlayerScript : public PlayerScript
                 }
             }
 
+            auto locale = player->GetSession()->GetSessionDbLocaleIndex();
+
             // if no players are in combat, unlock the map
             if (!anyPlayersInCombat && mapABInfo->combatLocked)
             {
@@ -3707,7 +3710,7 @@ class AutoBalance_PlayerScript : public PlayerScript
                     {
                         if (player && player->GetSession())
                         {
-                            ChatHandler(player->GetSession()).PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 Combat has ended. Difficulty is no longer locked.|r");
+                            ChatHandler(player->GetSession()).PSendSysMessage(ABGetLocaleText(locale, "leaving_instance_combat_change").c_str());
                         }
                     }
                 }
@@ -4592,6 +4595,9 @@ class AutoBalance_AllMapScript : public AllMapScript
             //mapABInfo->avgCreatureLevel = 0;
             mapABInfo->activeCreatureCount = 0;
 
+            WorldSession* session = player->GetSession();
+            LocaleConstant locale = session->GetSessionDbLocaleIndex();
+
             // if the previous player count is the same as the new player count, update without force
             if (prevAdjustedPlayerCount == mapABInfo->adjustedPlayerCount)
             {
@@ -4638,18 +4644,17 @@ class AutoBalance_AllMapScript : public AllMapScript
 
                                 if (thisPlayer && thisPlayer == player) // This is the player that entered
                                 {
-                                    chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 Welcome to %s (%u-player %s). There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
+                                    chatHandle.PSendSysMessage(ABGetLocaleText(locale, "welcome_to_player").c_str(),
                                         map->GetMapName(),
                                         instanceMap->GetMaxPlayers(),
-                                        instanceDifficulty,
+                                        instanceDifficulty.c_str(),
                                         mapABInfo->playerCount,
-                                        mapABInfo->adjustedPlayerCount
-                                    );
+                                        mapABInfo->adjustedPlayerCount);
 
                                     // notify GMs that they won't be accounted for
                                     if (player->IsGameMaster())
                                     {
-                                        chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 Your GM flag is turned on. AutoBalance will ignore you. Please turn GM off and exit/re-enter the instance if you'd like to be considering for AutoBalancing.|r");
+                                        chatHandle.PSendSysMessage(ABGetLocaleText(locale, "welcome_to_gm").c_str());
                                     }
                                 }
                                 else
@@ -4657,11 +4662,7 @@ class AutoBalance_AllMapScript : public AllMapScript
                                     // announce non-GMs entering the instance only
                                     if (!player->IsGameMaster())
                                     {
-                                        chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s enters the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
-                                            player->GetName().c_str(),
-                                            mapABInfo->playerCount,
-                                            mapABInfo->adjustedPlayerCount
-                                        );
+                                        chatHandle.PSendSysMessage(ABGetLocaleText(locale, "announce_non_gm_entering_instance").c_str(), player->GetName().c_str(), mapABInfo->playerCount, mapABInfo->adjustedPlayerCount);
                                     }
                                 }
                             }
@@ -4770,18 +4771,16 @@ class AutoBalance_AllMapScript : public AllMapScript
 
                                 if (mapABInfo->combatLocked)
                                 {
-                                    chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance while combat was in progress. Difficulty locked to no less than %u players until combat ends.|r",
+                                    chatHandle.PSendSysMessage(ABGetLocaleText(thisPlayer->GetSession()->GetSessionDbLocaleIndex(), "leaving_instance_combat").c_str(),
                                         player->GetName().c_str(),
-                                        mapABInfo->adjustedPlayerCount
-                                    );
+                                        mapABInfo->adjustedPlayerCount);
                                 }
                                 else
                                 {
-                                    chatHandle.PSendSysMessage("|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r",
+                                    chatHandle.PSendSysMessage(ABGetLocaleText(thisPlayer->GetSession()->GetSessionDbLocaleIndex(), "leaving_instance").c_str(),
                                         player->GetName().c_str(),
                                         mapABInfo->playerCount,
-                                        mapABInfo->adjustedPlayerCount
-                                    );
+                                        mapABInfo->adjustedPlayerCount);
                                 }
                             }
                         }
@@ -6458,7 +6457,7 @@ public:
         if (!*args)
         {
             handler->PSendSysMessage(".autobalance setoffset #");
-            handler->PSendSysMessage("Sets the Player Difficulty Offset for instances. Example: (You + offset(1) = 2 player difficulty).");
+            handler->PSendSysMessage(ABGetLocaleText(handler->GetSession()->GetSessionDbLocaleIndex(), "set_offset_command_description").c_str());
             return false;
         }
         char* offset = strtok((char*)args, " ");
@@ -6467,25 +6466,27 @@ public:
         if (offset)
         {
             offseti = (uint32)atoi(offset);
-            handler->PSendSysMessage("Changing Player Difficulty Offset to %i.", offseti);
+            std::vector<std::string> args = { std::to_string(offseti) };
+            handler->PSendSysMessage(ABGetLocaleText(handler->GetSession()->GetSessionDbLocaleIndex(), "set_offset_command_success").c_str(), offseti);
             PlayerCountDifficultyOffset = offseti;
             globalConfigTime = GetCurrentConfigTime();
             return true;
         }
         else
-            handler->PSendSysMessage("Error changing Player Difficulty Offset! Please try again.");
+            handler->PSendSysMessage(ABGetLocaleText(handler->GetSession()->GetSessionDbLocaleIndex(), "set_offset_command_error").c_str());
         return false;
     }
 
     static bool HandleABGetOffsetCommand(ChatHandler* handler, const char* /*args*/)
     {
-        handler->PSendSysMessage("Current Player Difficulty Offset = %i", PlayerCountDifficultyOffset);
+        handler->PSendSysMessage(ABGetLocaleText(handler->GetSession()->GetSessionDbLocaleIndex(), "get_offset_command_success").c_str(), PlayerCountDifficultyOffset);
         return true;
     }
 
     static bool HandleABMapStatsCommand(ChatHandler* handler, const char* /*args*/)
     {
         Player *player = handler->GetPlayer();
+        auto locale = handler->GetSession()->GetSessionDbLocaleIndex();
 
         AutoBalanceMapInfo *mapABInfo=player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
 
@@ -6514,59 +6515,59 @@ public:
             // Adjusted player count (multiple scenarios)
             if (mapABInfo->combatLockTripped)
             {
-                handler->PSendSysMessage("Adjusted Player Count: %u (Combat Locked)", mapABInfo->adjustedPlayerCount);
+                handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_combat_locked").c_str(), mapABInfo->adjustedPlayerCount);
             }
             else if (mapABInfo->playerCount < mapABInfo->minPlayers && !PlayerCountDifficultyOffset)
             {
-                handler->PSendSysMessage("Adjusted Player Count: %u (Map Minimum)", mapABInfo->adjustedPlayerCount);
+                handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_map_minimum").c_str(), mapABInfo->adjustedPlayerCount);
             }
             else if (mapABInfo->playerCount < mapABInfo->minPlayers && PlayerCountDifficultyOffset)
             {
-                handler->PSendSysMessage("Adjusted Player Count: %u (Map Minimum + Difficulty Offset of %u)", mapABInfo->adjustedPlayerCount, PlayerCountDifficultyOffset);
+                handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_map_minimum_difficulty_offset").c_str(), mapABInfo->adjustedPlayerCount, PlayerCountDifficultyOffset);
             }
             else if (PlayerCountDifficultyOffset)
             {
-                handler->PSendSysMessage("Adjusted Player Count: %u (Difficulty Offset of %u)", mapABInfo->adjustedPlayerCount, PlayerCountDifficultyOffset);
+                handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_difficulty_offset").c_str(), mapABInfo->adjustedPlayerCount, PlayerCountDifficultyOffset);
             }
             else
             {
-                handler->PSendSysMessage("Adjusted Player Count: %u", mapABInfo->adjustedPlayerCount);
+                handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count").c_str(), mapABInfo->adjustedPlayerCount);
             }
 
             // LFG levels
-            handler->PSendSysMessage("LFG Range: Lvl %u - %u (Target: Lvl %u)", mapABInfo->lfgMinLevel, mapABInfo->lfgMaxLevel, mapABInfo->lfgTargetLevel);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "lfg_range").c_str(), mapABInfo->lfgMinLevel, mapABInfo->lfgMaxLevel, mapABInfo->lfgTargetLevel);
 
             // Calculated map level (creature average)
-            handler->PSendSysMessage("Map Level: %u%s",
+            handler->PSendSysMessage(ABGetLocaleText(locale, "map_level").c_str(),
                                     (uint8)(mapABInfo->avgCreatureLevel+0.5f),
-                                    mapABInfo->isLevelScalingEnabled && mapABInfo->enabled ? "->" + std::to_string(mapABInfo->highestPlayerLevel) + " (Level Scaling Enabled)" : " (Level Scaling Disabled)"
+                                    mapABInfo->isLevelScalingEnabled && mapABInfo->enabled ? "->" + std::to_string(mapABInfo->highestPlayerLevel) + ABGetLocaleText(locale, "level_scaling_enabled").c_str() : ABGetLocaleText(locale, "level_scaling_disabled").c_str()
                                     );
 
             // World Health Multiplier
-            handler->PSendSysMessage("World health multiplier: %.3f", mapABInfo->worldHealthMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "world_health_multiplier").c_str(), mapABInfo->worldHealthMultiplier);
 
             // World Damage and Healing Multiplier
             if (mapABInfo->worldDamageHealingMultiplier != mapABInfo->scaledWorldDamageHealingMultiplier)
             {
-                handler->PSendSysMessage("World hostile damage and healing multiplier: %.3f -> %.3f",
+                handler->PSendSysMessage(ABGetLocaleText(locale, "world_hostile_damage_healing_multiplier_to").c_str(),
                         mapABInfo->worldDamageHealingMultiplier,
                         mapABInfo->scaledWorldDamageHealingMultiplier
                         );
             }
             else
             {
-                handler->PSendSysMessage("World hostile damage and healing multiplier: %.3f",
+                handler->PSendSysMessage(ABGetLocaleText(locale, "world_hostile_damage_healing_multiplier").c_str(),
                         mapABInfo->worldDamageHealingMultiplier
                         );
             }
 
             // Creature Stats
-            handler->PSendSysMessage("Original Creature Level Range: %u - %u (Avg: %.2f)",
+            handler->PSendSysMessage(ABGetLocaleText(locale, "original_creature_level_range").c_str(),
                                     mapABInfo->lowestCreatureLevel,
                                     mapABInfo->highestCreatureLevel,
                                     mapABInfo->avgCreatureLevel
                                     );
-            handler->PSendSysMessage("Active | Total Creatures in map: %u | %u",
+            handler->PSendSysMessage(ABGetLocaleText(locale, "active_total_creatures_in_map").c_str(),
                                     mapABInfo->activeCreatureCount,
                                     mapABInfo->allMapCreatures.size()
                                     );
@@ -6575,7 +6576,7 @@ public:
         }
         else
         {
-            handler->PSendSysMessage("This command can only be used in a dungeon or raid.");
+            handler->PSendSysMessage(ABGetLocaleText(locale, "ab_command_only_in_instance").c_str());
             return false;
         }
     }
@@ -6583,6 +6584,8 @@ public:
     static bool HandleABCreatureStatsCommand(ChatHandler* handler, const char* /*args*/)
     {
         Creature* target = handler->getSelectedCreature();
+
+        auto locale = handler->GetSession()->GetSessionDbLocaleIndex();
 
         if (!target)
         {
@@ -6592,7 +6595,7 @@ public:
         }
         else if (!target->GetMap()->IsDungeon())
         {
-            handler->PSendSysMessage("That target is not in an instance.");
+            handler->PSendSysMessage(ABGetLocaleText(locale, "target_no_in_instance").c_str());
             handler->SetSentErrorMessage(true);
             return false;
         }
@@ -6605,41 +6608,41 @@ public:
                                   targetABInfo->UnmodifiedLevel,
                                   isCreatureRelevant(target) && targetABInfo->UnmodifiedLevel != target->GetLevel() ? "->" + std::to_string(targetABInfo->selectedLevel) : "",
                                   isBossOrBossSummon(target) ? " | Boss" : "",
-                                  targetABInfo->isActive ? "Active for Map Stats" : "Ignored for Map Stats");
-        handler->PSendSysMessage("Creature difficulty level: %u player(s)", targetABInfo->instancePlayerCount);
+                                  targetABInfo->isActive ? ABGetLocaleText(locale, "active_for_map_stats").c_str() : ABGetLocaleText(locale, "ignored_for_map_stats").c_str());
+        handler->PSendSysMessage(ABGetLocaleText(locale, "creature_difficulty_level").c_str(), targetABInfo->instancePlayerCount);
 
         // summon
         if (target->IsSummon() && targetABInfo->summoner && targetABInfo->isCloneOfSummoner)
         {
-            handler->PSendSysMessage("Clone of %s (%u)", targetABInfo->summonerName, targetABInfo->summonerLevel);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "clone_of_summon").c_str(), targetABInfo->summonerName, targetABInfo->summonerLevel);
         }
         else if (target->IsSummon() && targetABInfo->summoner)
         {
-            handler->PSendSysMessage("Summon of %s (%u)", targetABInfo->summonerName, targetABInfo->summonerLevel);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "summon_of_summon").c_str(), targetABInfo->summonerName, targetABInfo->summonerLevel);
         }
         else if (target->IsSummon())
         {
-            handler->PSendSysMessage("Summon without a summoner.");
+            handler->PSendSysMessage(ABGetLocaleText(locale, "summon_without_summoner").c_str());
         }
 
         // level scaled
         if (targetABInfo->UnmodifiedLevel != target->GetLevel())
         {
-            handler->PSendSysMessage("Health multiplier: %.3f -> %.3f", targetABInfo->HealthMultiplier, targetABInfo->ScaledHealthMultiplier);
-            handler->PSendSysMessage("Mana multiplier: %.3f -> %.3f", targetABInfo->ManaMultiplier, targetABInfo->ScaledManaMultiplier);
-            handler->PSendSysMessage("Armor multiplier: %.3f-> %.3f", targetABInfo->ArmorMultiplier, targetABInfo->ScaledArmorMultiplier);
-            handler->PSendSysMessage("Damage multiplier: %.3f -> %.3f", targetABInfo->DamageMultiplier, targetABInfo->ScaledDamageMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "health_multiplier_to").c_str(), targetABInfo->HealthMultiplier, targetABInfo->ScaledHealthMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "mana_multiplier_to").c_str(), targetABInfo->ManaMultiplier, targetABInfo->ScaledManaMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "armor_multiplier_to").c_str(), targetABInfo->ArmorMultiplier, targetABInfo->ScaledArmorMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "damage_multiplier_to").c_str(), targetABInfo->DamageMultiplier, targetABInfo->ScaledDamageMultiplier);
         }
         // not level scaled
         else
         {
-            handler->PSendSysMessage("Health multiplier: %.3f", targetABInfo->HealthMultiplier);
-            handler->PSendSysMessage("Mana multiplier: %.3f", targetABInfo->ManaMultiplier);
-            handler->PSendSysMessage("Armor multiplier: %.3f", targetABInfo->ArmorMultiplier);
-            handler->PSendSysMessage("Damage multiplier: %.3f", targetABInfo->DamageMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "health_multiplier").c_str(), targetABInfo->HealthMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "mana_multiplier").c_str(), targetABInfo->ManaMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "armor_multiplier").c_str(), targetABInfo->ArmorMultiplier);
+            handler->PSendSysMessage(ABGetLocaleText(locale, "damage_multiplier").c_str(), targetABInfo->DamageMultiplier);
         }
-        handler->PSendSysMessage("CC Duration multiplier: %.3f", targetABInfo->CCDurationMultiplier);
-        handler->PSendSysMessage("XP multiplier: %.3f  Money multiplier: %.3f", targetABInfo->XPModifier, targetABInfo->MoneyModifier);
+        handler->PSendSysMessage(ABGetLocaleText(locale, "cc_duration_multiplier").c_str(), targetABInfo->CCDurationMultiplier);
+        handler->PSendSysMessage(ABGetLocaleText(locale, "xp_money_multiplier").c_str(), targetABInfo->XPModifier, targetABInfo->MoneyModifier);
 
         return true;
 
