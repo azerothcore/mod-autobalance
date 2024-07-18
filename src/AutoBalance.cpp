@@ -6438,16 +6438,16 @@ public:
     {
         static std::vector<ChatCommand> ABCommandTable =
         {
-            { "setoffset",        SEC_GAMEMASTER,                        true, &HandleABSetOffsetCommand,                 "Sets the global Player Difficulty Offset for instances. Example: (You + offset(1) = 2 player difficulty)." },
-            { "getoffset",        SEC_PLAYER,                            true, &HandleABGetOffsetCommand,                 "Shows current global player offset value." },
-            { "mapstat",          SEC_PLAYER,                            true, &HandleABMapStatsCommand,                  "Shows current autobalance information for this map" },
-            { "creaturestat",     SEC_PLAYER,                            true, &HandleABCreatureStatsCommand,             "Shows current autobalance information for selected creature." },
+            { "setoffset",     HandleABSetOffsetCommand,      SEC_GAMEMASTER,  Console::Yes },
+            { "getoffset",     HandleABGetOffsetCommand,      SEC_PLAYER,      Console::Yes },
+            { "mapstat",       HandleABMapStatsCommand,       SEC_PLAYER,      Console::Yes },
+            { "creaturestat",  HandleABCreatureStatsCommand,  SEC_PLAYER,      Console::Yes }
         };
 
         static std::vector<ChatCommand> commandTable =
         {
-            { "autobalance",     SEC_PLAYER,                             false, NULL,                      "", ABCommandTable },
-            { "ab",              SEC_PLAYER,                             false, NULL,                      "", ABCommandTable },
+            { "autobalance",  ABCommandTable },
+            { "ab",           ABCommandTable },
         };
         return commandTable;
     }
