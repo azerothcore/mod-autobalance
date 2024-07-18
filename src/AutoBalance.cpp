@@ -2631,14 +2631,14 @@ void UpdateMapPlayerStats(Map* map)
 
         if (thisPlayer && !thisPlayer->IsGameMaster())
         {
-            if (thisPlayer->getLevel() > highestPlayerLevel || highestPlayerLevel == 0)
+            if (thisPlayer->GetLevel() > highestPlayerLevel || highestPlayerLevel == 0)
             {
-                highestPlayerLevel = thisPlayer->getLevel();
+                highestPlayerLevel = thisPlayer->GetLevel();
             }
 
-            if (thisPlayer->getLevel() < lowestPlayerLevel || lowestPlayerLevel == 0)
+            if (thisPlayer->GetLevel() < lowestPlayerLevel || lowestPlayerLevel == 0)
             {
-                lowestPlayerLevel = thisPlayer->getLevel();
+                lowestPlayerLevel = thisPlayer->GetLevel();
             }
         }
     }
@@ -2707,14 +2707,14 @@ void AddPlayerToMap(Map* map, Player* player)
     {
         LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) | is already in the map's player list.",
             player->GetName(),
-            player->getLevel()
+            player->GetLevel()
         );
         return;
     }
 
     // add the player to the map's player list
     mapABInfo->allMapPlayers.push_back(player);
-    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) | added to the map's player list.", player->GetName(), player->getLevel());
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddPlayerToMap: Player {} ({}) | added to the map's player list.", player->GetName(), player->GetLevel());
 
     // update the map's player stats
     UpdateMapPlayerStats(map);
@@ -3489,7 +3489,7 @@ class AutoBalance_PlayerScript : public PlayerScript
         {
             LOG_DEBUG("module.AutoBalance", "AutoBalance:: {}", SPACER);
 
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnLevelChanged: {} has leveled ({}->{})", player->GetName(), oldlevel, player->getLevel());
+            LOG_DEBUG("module.AutoBalance", "AutoBalance_PlayerScript::OnLevelChanged: {} has leveled ({}->{})", player->GetName(), oldlevel, player->GetLevel());
             if (!player || player->IsGameMaster())
             {
                 return;
@@ -6685,7 +6685,7 @@ public:
 
         for (Map::PlayerList::const_iterator itr = playerList.begin(); itr != playerList.end(); ++itr)
         {
-            if (!itr->GetSource() || itr->GetSource()->IsGameMaster() || itr->GetSource()->getLevel() < DEFAULT_MAX_LEVEL)
+            if (!itr->GetSource() || itr->GetSource()->IsGameMaster() || itr->GetSource()->GetLevel() < DEFAULT_MAX_LEVEL)
                 continue;
 
             itr->GetSource()->AddItem(reward, 1 + difficulty); // difficulty boost
