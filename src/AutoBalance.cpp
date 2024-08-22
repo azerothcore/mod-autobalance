@@ -4599,7 +4599,7 @@ class AutoBalance_AllMapScript : public AllMapScript
             LocaleConstant locale = session->GetSessionDbLocaleIndex();
 
             // if the previous player count is the same as the new player count, update without force
-            if (prevAdjustedPlayerCount == mapABInfo->adjustedPlayerCount)
+            if ((prevAdjustedPlayerCount == mapABInfo->adjustedPlayerCount) && (mapABInfo->adjustedPlayerCount != 1))
             {
                 LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnPlayerEnterAll: Player difficulty unchanged at {}. Updating map data (no force).",
                     mapABInfo->adjustedPlayerCount
