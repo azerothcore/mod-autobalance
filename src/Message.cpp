@@ -8,15 +8,15 @@
 #include <sstream>
 
 const std::unordered_map<LocaleConstant, std::string> AB_WELCOME_TO_PLAYER = {
-    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 Welcome to %s (%u-player %s). There are %u player(s) in this instance. Difficulty set to %u player(s).|r"},
-    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s (%u-player %s)에 오신 것을 환영합니다. 이 인스턴스에는 %u명의 플레이어가 있습니다. 난이도가 %u명으로 설정되었습니다.|r"},
-    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 Bienvenue dans %s (%u %s). Il y a %u joueur(s) dans cette instance. La difficulté est réglée sur %u joueur(s).|r"},
-    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 Willkommen in %s (%u Spieler %s). Es gibt %u Spieler in dieser Instanz. Schwierigkeit auf %u Spieler eingestellt.|r"},
-    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 欢迎来到 %s（%u人 %s）。此副本中有 %u 名玩家。难度设置为 %u 名玩家。|r"},
-    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 歡迎來到 %s（%u人 %s）。此副本中有 %u 名玩家。難度設定為 %u 名玩家。|r"},
-    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 Bienvenido a %s (%u jugador %s). Hay %u jugador(es) en esta instancia. La dificultad se establece en %u jugador(es).|r"},
-    {LOCALE_esMX, "|cffc3dbff [AutoBalance]|r|cffFF8000 Bienvenido a %s (%u jugador %s). Hay %u jugador(es) en esta instancia. La dificultad se establece en %u jugador(es).|r"},
-    {LOCALE_ruRU, "|cffc3dbff [AutoBalance]|r|cffFF8000 Добро пожаловать в %s (%u игрок %s). В этом экземпляре %u игроков. Сложность установлена на %u игроков.|r"},
+    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 Welcome to {} ({}-player {}). There are {} player(s) in this instance. Difficulty set to {} player(s).|r"},
+    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} ({}-player {})에 오신 것을 환영합니다. 이 인스턴스에는 {}명의 플레이어가 있습니다. 난이도가 {}명으로 설정되었습니다.|r"},
+    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 Bienvenue dans {} ({} {}). Il y a {} joueur(s) dans cette instance. La difficulté est réglée sur {} joueur(s).|r"},
+    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 Willkommen in {} ({} Spieler {}). Es gibt {} Spieler in dieser Instanz. Schwierigkeit auf {} Spieler eingestellt.|r"},
+    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 欢迎来到 {}（{}人 {}）。此副本中有 {} 名玩家。难度设置为 {} 名玩家。|r"},
+    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 歡迎來到 {}（{}人 {}）。此副本中有 {} 名玩家。難度設定為 {} 名玩家。|r"},
+    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 Bienvenido a {} ({} jugador {}). Hay {} jugador(es) en esta instancia. La dificultad se establece en {} jugador(es).|r"},
+    {LOCALE_esMX, "|cffc3dbff [AutoBalance]|r|cffFF8000 Bienvenido a {} ({} jugador {}). Hay {} jugador(es) en esta instancia. La dificultad se establece en {} jugador(es).|r"},
+    {LOCALE_ruRU, "|cffc3dbff [AutoBalance]|r|cffFF8000 Добро пожаловать в {} ({} игрок {}). В этом экземпляре {} игроков. Сложность установлена на {} игроков.|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_WELCOME_TO_GM = {
@@ -32,36 +32,36 @@ const std::unordered_map<LocaleConstant, std::string> AB_WELCOME_TO_GM = {
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ANNOUNCE_NON_GM_ENTERING_INSTANCE = {
-    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s enters the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r"},
-    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s이(가) 인스턴스에 들어왔습니다. 이 인스턴스에는 %u명의 플레이어가 있습니다. 난이도가 %u명으로 설정되었습니다.|r"},
-    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s entre dans l'instance. Il y a %u joueur(s) dans cette instance. La difficulté est réglée sur %u joueur(s).|r"},
-    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s betritt die Instanz. Es gibt %u Spieler in dieser Instanz. Schwierigkeit auf %u Spieler eingestellt.|r"},
-    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s进入了副本。此副本中有 %u 名玩家。难度设置为 %u 名玩家。|r"},
-    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s進入了副本。此副本中有 %u 名玩家。難度設定為 %u 名玩家。|r"},
-    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s entra en la instancia. Hay %u jugador(es) en esta instancia. La dificultad se establece en %u jugador(es).|r"},
-    {LOCALE_esMX, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s entra en la instancia. Hay %u jugador(es) en esta instancia. La dificultad se establece en %u jugador(es).|r"},
-    {LOCALE_ruRU, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s входит в экземпляр. В этом экземпляре %u игроков. Сложность установлена на %u игроков.|r"},
+    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} enters the instance. There are {} player(s) in this instance. Difficulty set to {} player(s).|r"},
+    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}이(가) 인스턴스에 들어왔습니다. 이 인스턴스에는 {}명의 플레이어가 있습니다. 난이도가 {}명으로 설정되었습니다.|r"},
+    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} entre dans l'instance. Il y a {} joueur(s) dans cette instance. La difficulté est réglée sur {} joueur(s).|r"},
+    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} betritt die Instanz. Es gibt {} Spieler in dieser Instanz. Schwierigkeit auf {} Spieler eingestellt.|r"},
+    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}进入了副本。此副本中有 {} 名玩家。难度设置为 {} 名玩家。|r"},
+    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}進入了副本。此副本中有 {} 名玩家。難度設定為 {} 名玩家。|r"},
+    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} entra en la instancia. Hay {} jugador(es) en esta instancia. La dificultad se establece en {} jugador(es).|r"},
+    {LOCALE_esMX, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} entra en la instancia. Hay {} jugador(es) en esta instancia. La dificultad se establece en {} jugador(es).|r"},
+    {LOCALE_ruRU, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} входит в экземпляр. В этом экземпляре {} игроков. Сложность установлена на {} игроков.|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_LEAVING_INSTANCE_COMBAT = {
-    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance while combat was in progress. Difficulty locked to no less than %u players until combat ends.|r"},
-    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s이(가) 전투 중에 인스턴스를 떠났습니다. 전투가 끝날 때까지 난이도가 %u명 미만으로 잠겨 있습니다.|r"},
-    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s a quitté l'instance alors que le combat était en cours. La difficulté est verrouillée à pas moins de %u joueur(s) jusqu'à la fin du combat.|r"},
-    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s hat die Instanz verlassen, während der Kampf im Gange war. Die Schwierigkeit ist gesperrt, bis der Kampf endet, auf nicht weniger als %u Spieler.|r"},
-    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s在战斗进行中离开了副本。直到战斗结束，难度锁定为不少于 %u 名玩家。|r"},
-    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s在戰鬥進行中離開了副本。直到戰鬥結束，難度鎖定為不少於 %u 名玩家。|r"},
-    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s salió de la instancia mientras el combate estaba en progreso. La dificultad está bloqueada a no menos de %u jugador(es) hasta que termine el combate.|r"}
+    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} left the instance while combat was in progress. Difficulty locked to no less than {} players until combat ends.|r"},
+    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}이(가) 전투 중에 인스턴스를 떠났습니다. 전투가 끝날 때까지 난이도가 {}명 미만으로 잠겨 있습니다.|r"},
+    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} a quitté l'instance alors que le combat était en cours. La difficulté est verrouillée à pas moins de {} joueur(s) jusqu'à la fin du combat.|r"},
+    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} hat die Instanz verlassen, während der Kampf im Gange war. Die Schwierigkeit ist gesperrt, bis der Kampf endet, auf nicht weniger als {} Spieler.|r"},
+    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}在战斗进行中离开了副本。直到战斗结束，难度锁定为不少于 {} 名玩家。|r"},
+    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}在戰鬥進行中離開了副本。直到戰鬥結束，難度鎖定為不少於 {} 名玩家。|r"},
+    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} salió de la instancia mientras el combate estaba en progreso. La dificultad está bloqueada a no menos de {} jugador(es) hasta que termine el combate.|r"}
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_LEAVING_INSTANCE = {
-    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s left the instance. There are %u player(s) in this instance. Difficulty set to %u player(s).|r"},
-    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s이(가) 인스턴스를 떠났습니다. 이 인스턴스에는 %u명의 플레이어가 있습니다. 난이도가 %u명으로 설정되었습니다.|r"},
-    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s a quitté l'instance. Il y a %u joueur(s) dans cette instance. La difficulté est réglée sur %u joueur(s).|r"},
-    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s hat die Instanz verlassen. Es gibt %u Spieler in dieser Instanz. Schwierigkeit auf %u Spieler eingestellt.|r"},
-    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s离开了副本。此副本中有 %u 名玩家。难度设置为 %u 名玩家。|r"},
-    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s離開了副本。此副本中有 %u 名玩家。難度設定為 %u 名玩家。|r"},
-    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s salió de la instancia. Hay %u jugador(es) en esta instancia. La dificultad se establece en %u jugador(es).|r"},
-    {LOCALE_esMX, "|cffc3dbff [AutoBalance]|r|cffFF8000 %s salió de la instancia. Hay %u jugador(es) en esta instancia. La dificultad se establece en %u"}
+    {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} left the instance. There are {} player(s) in this instance. Difficulty set to {} player(s).|r"},
+    {LOCALE_koKR, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}이(가) 인스턴스를 떠났습니다. 이 인스턴스에는 {}명의 플레이어가 있습니다. 난이도가 {}명으로 설정되었습니다.|r"},
+    {LOCALE_frFR, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} a quitté l'instance. Il y a {} joueur(s) dans cette instance. La difficulté est réglée sur {} joueur(s).|r"},
+    {LOCALE_deDE, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} hat die Instanz verlassen. Es gibt {} Spieler in dieser Instanz. Schwierigkeit auf {} Spieler eingestellt.|r"},
+    {LOCALE_zhCN, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}离开了副本。此副本中有 {} 名玩家。难度设置为 {} 名玩家。|r"},
+    {LOCALE_zhTW, "|cffc3dbff [AutoBalance]|r|cffFF8000 {}離開了副本。此副本中有 {} 名玩家。難度設定為 {} 名玩家。|r"},
+    {LOCALE_esES, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} salió de la instancia. Hay {} jugador(es) en esta instancia. La dificultad se establece en {} jugador(es).|r"},
+    {LOCALE_esMX, "|cffc3dbff [AutoBalance]|r|cffFF8000 {} salió de la instancia. Hay {} jugador(es) en esta instancia. La dificultad se establece en {}"}
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_SET_OFFSET_COMMAND_DESCRIPTION = {
@@ -77,15 +77,15 @@ const std::unordered_map<LocaleConstant, std::string> AB_SET_OFFSET_COMMAND_DESC
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_SET_OFFSET_COMMAND_SUCCESS = {
-    {LOCALE_enUS, "Changing Player Difficulty Offset to %i.|r"},
-    {LOCALE_koKR, "플레이어 난이도 오프셋을 %i(으)로 변경합니다.|r"},
-    {LOCALE_frFR, "Modification du décalage de difficulté du joueur à %i.|r"},
-    {LOCALE_deDE, "Spieler-Schwierigkeits-Offset auf %i ändern.|r"},
-    {LOCALE_zhCN, "将玩家难度更改为 %i。|r"},
-    {LOCALE_zhTW, "將玩家難度更改為 %i。|r"},
-    {LOCALE_esES, "Cambiando el desplazamiento de dificultad del jugador a %i.|r"},
-    {LOCALE_esMX, "Cambiando el desplazamiento de dificultad del jugador a %i.|r"},
-    {LOCALE_ruRU, "Изменение смещения сложности игрока на %i.|r"},
+    {LOCALE_enUS, "Changing Player Difficulty Offset to {}.|r"},
+    {LOCALE_koKR, "플레이어 난이도 오프셋을 {}(으)로 변경합니다.|r"},
+    {LOCALE_frFR, "Modification du décalage de difficulté du joueur à {}.|r"},
+    {LOCALE_deDE, "Spieler-Schwierigkeits-Offset auf {} ändern.|r"},
+    {LOCALE_zhCN, "将玩家难度更改为 {}。|r"},
+    {LOCALE_zhTW, "將玩家難度更改為 {}。|r"},
+    {LOCALE_esES, "Cambiando el desplazamiento de dificultad del jugador a {}.|r"},
+    {LOCALE_esMX, "Cambiando el desplazamiento de dificultad del jugador a {}.|r"},
+    {LOCALE_ruRU, "Изменение смещения сложности игрока на {}.|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_SET_OFFSET_COMMAND_ERROR = {
@@ -101,99 +101,99 @@ const std::unordered_map<LocaleConstant, std::string> AB_SET_OFFSET_COMMAND_ERRO
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_GET_OFFSET_COMMAND_SUCCESS = {
-{LOCALE_enUS, "Current Player Difficulty Offset = %i.|r"},
-{LOCALE_koKR, "현재 플레이어 난이도 오프셋 = %i.|r"},
-{LOCALE_frFR, "Décalage de difficulté actuel du joueur = %i.|r"},
-{LOCALE_deDE, "Aktueller Spieler-Schwierigkeits-Offset = %i.|r"},
-{LOCALE_zhCN, "当前玩家难度偏移 = %i。|r"},
-{LOCALE_zhTW, "當前玩家難度偏移 = %i。|r"},
-{LOCALE_esES, "Desplazamiento de dificultad actual del jugador = %i.|r"},
-{LOCALE_esMX, "Desplazamiento de dificultad actual del jugador = %i.|r"},
-{LOCALE_ruRU, "Текущее смещение сложности игрока = %i.|r"},
+{LOCALE_enUS, "Current Player Difficulty Offset = {}.|r"},
+{LOCALE_koKR, "현재 플레이어 난이도 오프셋 = {}.|r"},
+{LOCALE_frFR, "Décalage de difficulté actuel du joueur = {}.|r"},
+{LOCALE_deDE, "Aktueller Spieler-Schwierigkeits-Offset = {}.|r"},
+{LOCALE_zhCN, "当前玩家难度偏移 = {}。|r"},
+{LOCALE_zhTW, "當前玩家難度偏移 = {}。|r"},
+{LOCALE_esES, "Desplazamiento de dificultad actual del jugador = {}.|r"},
+{LOCALE_esMX, "Desplazamiento de dificultad actual del jugador = {}.|r"},
+{LOCALE_ruRU, "Текущее смещение сложности игрока = {}.|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ADJUSTED_PLAYER_COUNT_COMBAT_LOCKED = {
-    {LOCALE_enUS, "Adjusted Player Count: %u (Combat Locked)|r"},
-    {LOCALE_koKR, "조정된 플레이어 수: %u (전투 잠금됨)|r"},
-    {LOCALE_frFR, "Nombre de joueurs ajusté : %u (verrouillé en combat)|r"},
-    {LOCALE_deDE, "Angepasste Spieleranzahl: %u (Kampf gesperrt)|r"},
-    {LOCALE_zhCN, "调整后的玩家数量：%u（战斗锁定）|r"},
-    {LOCALE_zhTW, "調整後的玩家數量：%u（戰鬥鎖定）|r"},
-    {LOCALE_esES, "Cantidad de jugadores ajustada: %u (bloqueada en combate)|r"},
-    {LOCALE_esMX, "Cantidad de jugadores ajustada: %u (bloqueada en combate)|r"},
-    {LOCALE_ruRU, "Количество игроков, отрегулированное: %u (заблокировано в бою)|r"},
+    {LOCALE_enUS, "Adjusted Player Count: {} (Combat Locked)|r"},
+    {LOCALE_koKR, "조정된 플레이어 수: {} (전투 잠금됨)|r"},
+    {LOCALE_frFR, "Nombre de joueurs ajusté : {} (verrouillé en combat)|r"},
+    {LOCALE_deDE, "Angepasste Spieleranzahl: {} (Kampf gesperrt)|r"},
+    {LOCALE_zhCN, "调整后的玩家数量：{}（战斗锁定）|r"},
+    {LOCALE_zhTW, "調整後的玩家數量：{}（戰鬥鎖定）|r"},
+    {LOCALE_esES, "Cantidad de jugadores ajustada: {} (bloqueada en combate)|r"},
+    {LOCALE_esMX, "Cantidad de jugadores ajustada: {} (bloqueada en combate)|r"},
+    {LOCALE_ruRU, "Количество игроков, отрегулированное: {} (заблокировано в бою)|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ADJUSTED_PLAYER_COUNT_MAP_MINIMUM = {
-    {LOCALE_enUS, "Adjusted Player Count: %u (Map Minimum)|r"},
-    {LOCALE_koKR, "조정된 플레이어 수: %u (지도 최소)|r"},
-    {LOCALE_frFR, "Nombre de joueurs ajusté : %u (minimum de la carte)|r"},
-    {LOCALE_deDE, "Angepasste Spieleranzahl: %u (Kartenminimum)|r"},
-    {LOCALE_zhCN, "调整后的玩家数量：%u（地图最小）|r"},
-    {LOCALE_zhTW, "調整後的玩家數量：%u（地圖最小）|r"},
-    {LOCALE_esES, "Cantidad de jugadores ajustada: %u (mínimo del mapa)|r"},
-    {LOCALE_esMX, "Cantidad de jugadores ajustada: %u (mínimo del mapa)|r"},
-    {LOCALE_ruRU, "Количество игроков, отрегулированное: %u (минимальное для карты)|r"},
+    {LOCALE_enUS, "Adjusted Player Count: {} (Map Minimum)|r"},
+    {LOCALE_koKR, "조정된 플레이어 수: {} (지도 최소)|r"},
+    {LOCALE_frFR, "Nombre de joueurs ajusté : {} (minimum de la carte)|r"},
+    {LOCALE_deDE, "Angepasste Spieleranzahl: {} (Kartenminimum)|r"},
+    {LOCALE_zhCN, "调整后的玩家数量：{}（地图最小）|r"},
+    {LOCALE_zhTW, "調整後的玩家數量：{}（地圖最小）|r"},
+    {LOCALE_esES, "Cantidad de jugadores ajustada: {} (mínimo del mapa)|r"},
+    {LOCALE_esMX, "Cantidad de jugadores ajustada: {} (mínimo del mapa)|r"},
+    {LOCALE_ruRU, "Количество игроков, отрегулированное: {} (минимальное для карты)|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ADJUSTED_PLAYER_COUNT_MAP_MINIMUM_DIFFICULTY_OFFSET = {
-    {LOCALE_enUS, "Adjusted Player Count: %u (Map Minimum + Difficulty Offset of %u)|r"},
-    {LOCALE_koKR, "조정된 플레이어 수: %u (지도 최소 + %u의 난이도 오프셋)|r"},
-    {LOCALE_frFR, "Nombre de joueurs ajusté : %u (minimum de la carte + décalage de difficulté de %u)|r"},
-    {LOCALE_deDE, "Angepasste Spieleranzahl: %u (Kartenminimum + Schwierigkeits-Offset von %u)|r"},
-    {LOCALE_zhCN, "调整后的玩家数量：%u（地图最小 + %u的难度修正）|r"},
-    {LOCALE_zhTW, "調整後的玩家數量：%u（地圖最小 + %u的難度修正）|r"},
-    {LOCALE_esES, "Cantidad de jugadores ajustada: %u (mínimo del mapa + desplazamiento de dificultad de %u)|r"},
-    {LOCALE_esMX, "Cantidad de jugadores ajustada: %u (mínimo del mapa + desplazamiento de dificultad de %u)|r"},
-    {LOCALE_ruRU, "Количество игроков, отрегулированное: %u (минимальное для карты"}
+    {LOCALE_enUS, "Adjusted Player Count: {} (Map Minimum + Difficulty Offset of {})|r"},
+    {LOCALE_koKR, "조정된 플레이어 수: {} (지도 최소 + {}의 난이도 오프셋)|r"},
+    {LOCALE_frFR, "Nombre de joueurs ajusté : {} (minimum de la carte + décalage de difficulté de {})|r"},
+    {LOCALE_deDE, "Angepasste Spieleranzahl: {} (Kartenminimum + Schwierigkeits-Offset von {})|r"},
+    {LOCALE_zhCN, "调整后的玩家数量：{}（地图最小 + {}的难度修正）|r"},
+    {LOCALE_zhTW, "調整後的玩家數量：{}（地圖最小 + {}的難度修正）|r"},
+    {LOCALE_esES, "Cantidad de jugadores ajustada: {} (mínimo del mapa + desplazamiento de dificultad de {})|r"},
+    {LOCALE_esMX, "Cantidad de jugadores ajustada: {} (mínimo del mapa + desplazamiento de dificultad de {})|r"},
+    {LOCALE_ruRU, "Количество игроков, отрегулированное: {} (минимальное для карты"}
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ADJUSTED_PLAYER_COUNT_DIFFICULTY_OFFSET = {
-    {LOCALE_enUS, "Adjusted Player Count: %u (Difficulty Offset of %u)|r"},
-    {LOCALE_koKR, "조정된 플레이어 수: %u (%u의 난이도 오프셋)|r"},
-    {LOCALE_frFR, "Nombre de joueurs ajusté : %u (décalage de difficulté de %u)|r"},
-    {LOCALE_deDE, "Angepasste Spieleranzahl: %u (Schwierigkeits-Offset von %u)|r"},
-    {LOCALE_zhCN, "调整后的玩家数量：%u（%u的难度修正）|r"},
-    {LOCALE_zhTW, "調整後的玩家數量：%u（%u的難度修正）|r"},
-    {LOCALE_esES, "Cantidad de jugadores ajustada: %u (desplazamiento de dificultad de %u)|r"},
-    {LOCALE_esMX, "Cantidad de jugadores ajustada: %u (desplazamiento de dificultad de %u)|r"},
-    {LOCALE_ruRU, "Количество игроков, отрегулированное: %u (смещение сложности %u)|r"},
+    {LOCALE_enUS, "Adjusted Player Count: {} (Difficulty Offset of {})|r"},
+    {LOCALE_koKR, "조정된 플레이어 수: {} ({}의 난이도 오프셋)|r"},
+    {LOCALE_frFR, "Nombre de joueurs ajusté : {} (décalage de difficulté de {})|r"},
+    {LOCALE_deDE, "Angepasste Spieleranzahl: {} (Schwierigkeits-Offset von {})|r"},
+    {LOCALE_zhCN, "调整后的玩家数量：{}（{}的难度修正）|r"},
+    {LOCALE_zhTW, "調整後的玩家數量：{}（{}的難度修正）|r"},
+    {LOCALE_esES, "Cantidad de jugadores ajustada: {} (desplazamiento de dificultad de {})|r"},
+    {LOCALE_esMX, "Cantidad de jugadores ajustada: {} (desplazamiento de dificultad de {})|r"},
+    {LOCALE_ruRU, "Количество игроков, отрегулированное: {} (смещение сложности {})|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ADJUSTED_PLAYER_COUNT = {
-    {LOCALE_enUS, "Adjusted Player Count: %u|r"},
-    {LOCALE_koKR, "조정된 플레이어 수: %u|r"},
-    {LOCALE_frFR, "Nombre de joueurs ajusté : %u|r"},
-    {LOCALE_deDE, "Angepasste Spieleranzahl: %u|r"},
-    {LOCALE_zhCN, "调整后的玩家数量：%u|r"},
-    {LOCALE_zhTW, "調整後的玩家數量：%u|r"},
-    {LOCALE_esES, "Cantidad de jugadores ajustada: %u|r"},
-    {LOCALE_esMX, "Cantidad de jugadores ajustada: %u|r"},
-    {LOCALE_ruRU, "Количество игроков, отрегулированное: %u|r"},
+    {LOCALE_enUS, "Adjusted Player Count: {}|r"},
+    {LOCALE_koKR, "조정된 플레이어 수: {}|r"},
+    {LOCALE_frFR, "Nombre de joueurs ajusté : {}|r"},
+    {LOCALE_deDE, "Angepasste Spieleranzahl: {}|r"},
+    {LOCALE_zhCN, "调整后的玩家数量：{}|r"},
+    {LOCALE_zhTW, "調整後的玩家數量：{}|r"},
+    {LOCALE_esES, "Cantidad de jugadores ajustada: {}|r"},
+    {LOCALE_esMX, "Cantidad de jugadores ajustada: {}|r"},
+    {LOCALE_ruRU, "Количество игроков, отрегулированное: {}|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_LFG_RANGE = {
-    {LOCALE_enUS, "LFG Range: Lvl %u - %u (Target: Lvl %u)|r"},
-    {LOCALE_koKR, "LFG 범위: 레벨 %u - %u (대상: 레벨 %u)|r"},
-    {LOCALE_frFR, "Plage LFG : Niveau %u - %u (Cible : Niveau %u)|r"},
-    {LOCALE_deDE, "LFG-Bereich: Stufe %u - %u (Ziel: Stufe %u)|r"},
-    {LOCALE_zhCN, "LFG范围：等级 %u - %u（目标：等级 %u）|r"},
-    {LOCALE_zhTW, "LFG範圍：等級 %u - %u（目標：等級 %u）|r"},
-    {LOCALE_esES, "Rango de LFG: Nivel %u - %u (Objetivo: Nivel %u)|r"},
-    {LOCALE_esMX, "Rango de LFG: Nivel %u - %u (Objetivo: Nivel %u)|r"},
-    {LOCALE_ruRU, "Диапазон поиска группы: Ур. %u - %u (Цель: Ур. %u)|r"},
+    {LOCALE_enUS, "LFG Range: Lvl {} - {} (Target: Lvl {})|r"},
+    {LOCALE_koKR, "LFG 범위: 레벨 {} - {} (대상: 레벨 {})|r"},
+    {LOCALE_frFR, "Plage LFG : Niveau {} - {} (Cible : Niveau {})|r"},
+    {LOCALE_deDE, "LFG-Bereich: Stufe {} - {} (Ziel: Stufe {})|r"},
+    {LOCALE_zhCN, "LFG范围：等级 {} - {}（目标：等级 {}）|r"},
+    {LOCALE_zhTW, "LFG範圍：等級 {} - {}（目標：等級 {}）|r"},
+    {LOCALE_esES, "Rango de LFG: Nivel {} - {} (Objetivo: Nivel {})|r"},
+    {LOCALE_esMX, "Rango de LFG: Nivel {} - {} (Objetivo: Nivel {})|r"},
+    {LOCALE_ruRU, "Диапазон поиска группы: Ур. {} - {} (Цель: Ур. {})|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_MAP_LEVEL = {
-    {LOCALE_enUS, "Map Level: %u%s|r"},
-    {LOCALE_koKR, "지도 레벨: %u%s|r"},
-    {LOCALE_frFR, "Niveau de la carte : %u%s|r"},
-    {LOCALE_deDE, "Kartenlevel: %u%s|r"},
-    {LOCALE_zhCN, "地图等级：%u%s|r"},
-    {LOCALE_zhTW, "地圖等級：%u%s|r"},
-    {LOCALE_esES, "Nivel del mapa: %u%s|r"},
-    {LOCALE_esMX, "Nivel del mapa: %u%s|r"},
-    {LOCALE_ruRU, "Уровень карты: %u%s|r"},
+    {LOCALE_enUS, "Map Level: {}{}|r"},
+    {LOCALE_koKR, "지도 레벨: {}{}|r"},
+    {LOCALE_frFR, "Niveau de la carte : {}{}|r"},
+    {LOCALE_deDE, "Kartenlevel: {}{}|r"},
+    {LOCALE_zhCN, "地图等级：{}{}|r"},
+    {LOCALE_zhTW, "地圖等級：{}{}|r"},
+    {LOCALE_esES, "Nivel del mapa: {}{}|r"},
+    {LOCALE_esMX, "Nivel del mapa: {}{}|r"},
+    {LOCALE_ruRU, "Уровень карты: {}{}|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_LEVEL_SCALING_ENABLED = {
@@ -257,27 +257,27 @@ const std::unordered_map<LocaleConstant, std::string> AB_WORLD_HOSTILE_DAMAGE_HE
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ORIGINAL_CREATURE_LEVEL_RANGE = {
-    {LOCALE_enUS, "Original Creature Level Range: %u - %u (Avg: %.2f)|r"},
-    {LOCALE_koKR, "원래 크리쳐 레벨 범위: %u - %u (평균: %.2f)|r"},
-    {LOCALE_frFR, "Plage de niveaux de créatures d'origine : %u - %u (Moyenne : %.2f)|r"},
-    {LOCALE_deDE, "Originaler Kreaturenlevelbereich: %u - %u (Durchschnitt: %.2f)|r"},
-    {LOCALE_zhCN, "原始生物等级范围：%u - %u（平均：%2.f）|r"},
-    {LOCALE_zhTW, "原始生物等級範圍：%u - %u（平均：%2.f）|r"},
-    {LOCALE_esES, "Rango de niveles de criaturas originales: %u - %u (Promedio: %.2f)|r"},
-    {LOCALE_esMX, "Rango de niveles de criaturas originales: %u - %u (Promedio: %.2f)|r"},
-    {LOCALE_ruRU, "Исходный диапазон уровней существ: %u - %u (Среднее: %.2f)|r"},
+    {LOCALE_enUS, "Original Creature Level Range: {} - {} (Avg: %.2f)|r"},
+    {LOCALE_koKR, "원래 크리쳐 레벨 범위: {} - {} (평균: %.2f)|r"},
+    {LOCALE_frFR, "Plage de niveaux de créatures d'origine : {} - {} (Moyenne : %.2f)|r"},
+    {LOCALE_deDE, "Originaler Kreaturenlevelbereich: {} - {} (Durchschnitt: %.2f)|r"},
+    {LOCALE_zhCN, "原始生物等级范围：{} - {}（平均：%2.f）|r"},
+    {LOCALE_zhTW, "原始生物等級範圍：{} - {}（平均：%2.f）|r"},
+    {LOCALE_esES, "Rango de niveles de criaturas originales: {} - {} (Promedio: %.2f)|r"},
+    {LOCALE_esMX, "Rango de niveles de criaturas originales: {} - {} (Promedio: %.2f)|r"},
+    {LOCALE_ruRU, "Исходный диапазон уровней существ: {} - {} (Среднее: %.2f)|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ACTIVE_TOTAL_CREATURES_IN_MAP = {
-    {LOCALE_enUS, "Active | Total Creatures in map: %u | %u|r"},
-    {LOCALE_koKR, "활성 | 지도 내 총 크리쳐: %u | %u|r"},
-    {LOCALE_frFR, "Actif | Créatures totales dans la carte : %u | %u|r"},
-    {LOCALE_deDE, "Aktiv | Gesamte Kreaturen in der Karte: %u | %u|r"},
-    {LOCALE_zhCN, "Active | 地图中的总生物： %u | %u|r"},
-    {LOCALE_zhTW, "Active | 地圖中的總生物： %u | %u|r"},
-    {LOCALE_esES, "Activo | Criaturas totales en el mapa: %u | %u|r"},
-    {LOCALE_esMX, "Activo | Criaturas totales en el mapa: %u | %u|r"},
-    {LOCALE_ruRU, "Активные | Всего существ на карте: %u | %u|r"},
+    {LOCALE_enUS, "Active | Total Creatures in map: {} | {}|r"},
+    {LOCALE_koKR, "활성 | 지도 내 총 크리쳐: {} | {}|r"},
+    {LOCALE_frFR, "Actif | Créatures totales dans la carte : {} | {}|r"},
+    {LOCALE_deDE, "Aktiv | Gesamte Kreaturen in der Karte: {} | {}|r"},
+    {LOCALE_zhCN, "Active | 地图中的总生物： {} | {}|r"},
+    {LOCALE_zhTW, "Active | 地圖中的總生物： {} | {}|r"},
+    {LOCALE_esES, "Activo | Criaturas totales en el mapa: {} | {}|r"},
+    {LOCALE_esMX, "Activo | Criaturas totales en el mapa: {} | {}|r"},
+    {LOCALE_ruRU, "Активные | Всего существ на карте: {} | {}|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_COMMAND_ONLY_IN_INSTANCE = {
@@ -329,39 +329,39 @@ const std::unordered_map<LocaleConstant, std::string> AB_IGNORED_FOR_MAP_STATS =
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_CREATURE_DIFFICULTY_LEVEL = {
-    {LOCALE_enUS, "Creature difficulty level: %u player(s)|r"},
-    {LOCALE_koKR, "생물 난이도 레벨: %u 플레이어|r"},
-    {LOCALE_frFR, "Niveau de difficulté de la créature : %u joueur(s)|r"},
-    {LOCALE_deDE, "Kreaturschwierigkeitsstufe: %u Spieler|r"},
-    {LOCALE_zhCN, "生物难度等级：%u 玩家|r"},
-    {LOCALE_zhTW, "生物難度等級：%u 玩家|r"},
-    {LOCALE_esES, "Nivel de dificultad de la criatura: %u jugador(es)|r"},
-    {LOCALE_esMX, "Nivel de dificultad de la criatura: %u jugador(es)|r"},
-    {LOCALE_ruRU, "Уровень сложности существа: %u игрок(ов)|r"},
+    {LOCALE_enUS, "Creature difficulty level: {} player(s)|r"},
+    {LOCALE_koKR, "생물 난이도 레벨: {} 플레이어|r"},
+    {LOCALE_frFR, "Niveau de difficulté de la créature : {} joueur(s)|r"},
+    {LOCALE_deDE, "Kreaturschwierigkeitsstufe: {} Spieler|r"},
+    {LOCALE_zhCN, "生物难度等级：{} 玩家|r"},
+    {LOCALE_zhTW, "生物難度等級：{} 玩家|r"},
+    {LOCALE_esES, "Nivel de dificultad de la criatura: {} jugador(es)|r"},
+    {LOCALE_esMX, "Nivel de dificultad de la criatura: {} jugador(es)|r"},
+    {LOCALE_ruRU, "Уровень сложности существа: {} игрок(ов)|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_CLONE_OF_SUMMON = {
-    {LOCALE_enUS, "Clone of %s (%u)|r"},
-    {LOCALE_koKR, "%s의 복제 (%u)|r"},
-    {LOCALE_frFR, "Clone de %s (%u)|r"},
-    {LOCALE_deDE, "Klon von %s (%u)|r"},
-    {LOCALE_zhCN, "%s的克隆（%u）|r"},
-    {LOCALE_zhTW, "%s的克隆（%u）|r"},
-    {LOCALE_esES, "Clon de %s (%u)|r"},
-    {LOCALE_esMX, "Clon de %s (%u)|r"},
-    {LOCALE_ruRU, "Клон %s (%u)|r"},
+    {LOCALE_enUS, "Clone of {} ({})|r"},
+    {LOCALE_koKR, "{}의 복제 ({})|r"},
+    {LOCALE_frFR, "Clone de {} ({})|r"},
+    {LOCALE_deDE, "Klon von {} ({})|r"},
+    {LOCALE_zhCN, "{}的克隆（{}）|r"},
+    {LOCALE_zhTW, "{}的克隆（{}）|r"},
+    {LOCALE_esES, "Clon de {} ({})|r"},
+    {LOCALE_esMX, "Clon de {} ({})|r"},
+    {LOCALE_ruRU, "Клон {} ({})|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_SUMMON_OF_SUMMON = {
-    {LOCALE_enUS, "Summon of %s (%u)|r"},
-    {LOCALE_koKR, "%s의 소환 (%u)|r"},
-    {LOCALE_frFR, "Invocation de %s (%u)|r"},
-    {LOCALE_deDE, "Beschwörung von %s (%u)|r"},
-    {LOCALE_zhCN, "%s的召唤（%u）|r"},
-    {LOCALE_zhTW, "%s的召喚（%u）|r"},
-    {LOCALE_esES, "Invocación de %s (%u)|r"},
-    {LOCALE_esMX, "Invocación de %s (%u)|r"},
-    {LOCALE_ruRU, "Призыв %s (%u)|r"},
+    {LOCALE_enUS, "Summon of {} ({})|r"},
+    {LOCALE_koKR, "{}의 소환 ({})|r"},
+    {LOCALE_frFR, "Invocation de {} ({})|r"},
+    {LOCALE_deDE, "Beschwörung von {} ({})|r"},
+    {LOCALE_zhCN, "{}的召唤（{}）|r"},
+    {LOCALE_zhTW, "{}的召喚（{}）|r"},
+    {LOCALE_esES, "Invocación de {} ({})|r"},
+    {LOCALE_esMX, "Invocación de {} ({})|r"},
+    {LOCALE_ruRU, "Призыв {} ({})|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_SUMMON_WITHOUT_SUMMONER = {
