@@ -1,43 +1,35 @@
 #ifndef MOD_AUTOBALANCE_H
 #define MOD_AUTOBALANCE_H
 
-#include "ScriptMgr.h"
-#include "Creature.h"
-
-// Manages registration, loading, and execution of scripts.
-class ABScriptMgr
+enum ScalingMethod
 {
-    public: /* Initialization */
-
-        static ABScriptMgr* instance();
-        // called at the start of ModifyCreatureAttributes method
-        // it can be used to add some condition to skip autobalancing system for example
-        bool OnBeforeModifyAttributes(Creature* creature, uint32 & instancePlayerCount);
-        // called right after default multiplier has been set, you can use it to change
-        // current scaling formula based on number of players or just skip modifications
-        bool OnAfterDefaultMultiplier(Creature* creature, float &defaultMultiplier);
-        // called before change creature values, to tune some values or skip modifications
-        bool OnBeforeUpdateStats(Creature* creature, uint32 &scaledHealth, uint32 &scaledMana, float &damageMultiplier, uint32 &newBaseArmor);
+    AUTOBALANCE_SCALING_FIXED,
+    AUTOBALANCE_SCALING_DYNAMIC
 };
 
-#define sABScriptMgr ABScriptMgr::instance()
-
-/*
-* Dedicated hooks for Autobalance Module
-* Can be used to extend/customize this system
-*/
-class ABModuleScript : public ModuleScript
+enum BaseValueType
 {
-    protected:
-
-        ABModuleScript(const char* name);
-
-    public:
-        virtual bool OnBeforeModifyAttributes(Creature* /*creature*/, uint32 & /*instancePlayerCount*/) { return true; }
-        virtual bool OnAfterDefaultMultiplier(Creature* /*creature*/, float & /*defaultMultiplier*/) { return true; }
-        virtual bool OnBeforeUpdateStats(Creature* /*creature*/, uint32 &/*scaledHealth*/, uint32 &/*scaledMana*/, float &/*damageMultiplier*/, uint32 &/*newBaseArmor*/) { return true; }
+    AUTOBALANCE_HEALTH,
+    AUTOBALANCE_DAMAGE_HEALING
 };
 
-template class ScriptRegistry<ABModuleScript>;
+enum Relevance
+{
+    AUTOBALANCE_RELEVANCE_FALSE,
+    AUTOBALANCE_RELEVANCE_TRUE,
+    AUTOBALANCE_RELEVANCE_UNCHECKED
+};
+
+enum Damage_Healing_Debug_Phase
+{
+    AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE,
+    AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER
+};
+
+struct World_Multipliers
+{
+    float scaled   = 1.0f;
+    float unscaled = 1.0f;
+};
 
 #endif
