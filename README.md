@@ -3,7 +3,7 @@
 ## Beta testing warning
 
 The current version of the master branch is currently in beta, under testing to ensure all the functionalities are working properly.
-If you encur in problems please open an Issue and consider to use the last [stable version](https://github.com/azerothcore/mod-autobalance/commit/5d2778e301ae7684051cdc446efbe81c7ff2a79b) of this repository.
+If you encur in problems please open an Issue and consider to use the last [stable version](https://github.com/azerothcore/mod-autobalance/releases/tag/stable) of this repository.
 
 ## AutoBalance
 
