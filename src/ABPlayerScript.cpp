@@ -9,14 +9,14 @@
 #include "ABUtils.h"
 #include "Message.h"
 
-void AutoBalance_PlayerScript::OnLogin(Player* Player)
+void AutoBalance_PlayerScript::OnPlayerLogin(Player* Player)
 {
     if (EnableGlobal && Announcement) {
         ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
     }
 }
 
-void AutoBalance_PlayerScript::OnLevelChanged(Player* player, uint8 oldlevel)
+void AutoBalance_PlayerScript::OnPlayerLevelChanged(Player* player, uint8 oldlevel)
 {
     LOG_DEBUG("module.AutoBalance", "AutoBalance:: ------------------------------------------------");
 
@@ -41,7 +41,7 @@ void AutoBalance_PlayerScript::OnLevelChanged(Player* player, uint8 oldlevel)
     mapABInfo->mapConfigTime = GetCurrentConfigTime();
 }
 
-void AutoBalance_PlayerScript::OnGiveXP(Player* player, uint32& amount, Unit* victim, uint8 /*xpSource*/)
+void AutoBalance_PlayerScript::OnPlayerGiveXP(Player* player, uint32& amount, Unit* victim, uint8 /*xpSource*/)
 {
     Map* map = player->GetMap();
 
@@ -80,7 +80,7 @@ void AutoBalance_PlayerScript::OnGiveXP(Player* player, uint32& amount, Unit* vi
     }
 }
 
-void AutoBalance_PlayerScript::OnBeforeLootMoney(Player* player, Loot* loot)
+void AutoBalance_PlayerScript::OnPlayerBeforeLootMoney(Player* player, Loot* loot)
 {
     Map* map = player->GetMap();
 
