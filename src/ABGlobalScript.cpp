@@ -1,5 +1,6 @@
-#include "ABConfig.h"
 #include "ABGlobalScript.h"
+
+#include "ABConfig.h"
 #include "ABMapInfo.h"
 
 void AutoBalance_GlobalScript::OnAfterUpdateEncounterState(Map* map, EncounterCreditType type, uint32 /*creditEntry*/, Unit* /*source*/, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated)

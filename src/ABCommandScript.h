@@ -9,22 +9,24 @@
 #include "Config.h"
 #include "ScriptMgr.h"
 
+using namespace Acore::ChatCommands;
+
 class AutoBalance_CommandScript : public CommandScript
 {
 public:
     AutoBalance_CommandScript() : CommandScript("AutoBalance_CommandScript") { }
 
-    std::vector<Acore::ChatCommands::ChatCommandBuilder> GetCommands() const
+    ChatCommandTable GetCommands() const override
     {
-        static std::vector<Acore::ChatCommands::ChatCommandBuilder> ABCommandTable =
+        static ChatCommandTable ABCommandTable =
         {
-            { "setoffset",     HandleABSetOffsetCommand,      SEC_GAMEMASTER,  Acore::ChatCommands::Console::Yes },
-            { "getoffset",     HandleABGetOffsetCommand,      SEC_PLAYER,      Acore::ChatCommands::Console::Yes },
-            { "mapstat",       HandleABMapStatsCommand,       SEC_PLAYER,      Acore::ChatCommands::Console::Yes },
-            { "creaturestat",  HandleABCreatureStatsCommand,  SEC_PLAYER,      Acore::ChatCommands::Console::Yes }
+            { "setoffset",     HandleABSetOffsetCommand,      SEC_GAMEMASTER,  Console::Yes },
+            { "getoffset",     HandleABGetOffsetCommand,      SEC_PLAYER,      Console::Yes },
+            { "mapstat",       HandleABMapStatsCommand,       SEC_PLAYER,      Console::Yes },
+            { "creaturestat",  HandleABCreatureStatsCommand,  SEC_PLAYER,      Console::Yes }
         };
 
-        static std::vector<Acore::ChatCommands::ChatCommandBuilder> commandTable =
+        static ChatCommandTable commandTable =
         {
             { "autobalance",  ABCommandTable },
             { "ab",           ABCommandTable },

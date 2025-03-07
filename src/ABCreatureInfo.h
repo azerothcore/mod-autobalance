@@ -5,10 +5,10 @@
 #ifndef __AB_CREATURE_INFO_H
 #define __AB_CREATURE_INFO_H
 
+#include "AutoBalance.h"
+
 #include "Creature.h"
 #include "DataMap.h"
-
-#include "AutoBalance.h"
 
 class AutoBalanceCreatureInfo : public DataMap::Base
 {

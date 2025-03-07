@@ -1,4 +1,5 @@
 #include "ABCommandScript.h"
+
 #include "ABConfig.h"
 #include "ABCreatureInfo.h"
 #include "ABMapInfo.h"
@@ -67,25 +68,15 @@ bool AutoBalance_CommandScript::HandleABMapStatsCommand(ChatHandler* handler, co
 
         // Adjusted player count (multiple scenarios)
         if (mapABInfo->combatLockTripped)
-        {
             handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_combat_locked").c_str(), mapABInfo->adjustedPlayerCount);
-        }
         else if (mapABInfo->playerCount < mapABInfo->minPlayers && !PlayerCountDifficultyOffset)
-        {
             handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_map_minimum").c_str(), mapABInfo->adjustedPlayerCount);
-        }
         else if (mapABInfo->playerCount < mapABInfo->minPlayers && PlayerCountDifficultyOffset)
-        {
             handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_map_minimum_difficulty_offset").c_str(), mapABInfo->adjustedPlayerCount, PlayerCountDifficultyOffset);
-        }
         else if (PlayerCountDifficultyOffset)
-        {
             handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count_difficulty_offset").c_str(), mapABInfo->adjustedPlayerCount, PlayerCountDifficultyOffset);
-        }
         else
-        {
             handler->PSendSysMessage(ABGetLocaleText(locale, "adjusted_player_count").c_str(), mapABInfo->adjustedPlayerCount);
-        }
 
         // LFG levels
         handler->PSendSysMessage(ABGetLocaleText(locale, "lfg_range").c_str(), mapABInfo->lfgMinLevel, mapABInfo->lfgMaxLevel, mapABInfo->lfgTargetLevel);
@@ -166,17 +157,11 @@ bool AutoBalance_CommandScript::HandleABCreatureStatsCommand(ChatHandler* handle
 
     // summon
     if (target->IsSummon() && targetABInfo->summoner && targetABInfo->isCloneOfSummoner)
-    {
         handler->PSendSysMessage(ABGetLocaleText(locale, "clone_of_summon").c_str(), targetABInfo->summonerName, targetABInfo->summonerLevel);
-    }
     else if (target->IsSummon() && targetABInfo->summoner)
-    {
         handler->PSendSysMessage(ABGetLocaleText(locale, "summon_of_summon").c_str(), targetABInfo->summonerName, targetABInfo->summonerLevel);
-    }
     else if (target->IsSummon())
-    {
         handler->PSendSysMessage(ABGetLocaleText(locale, "summon_without_summoner").c_str());
-    }
 
     // level scaled
     if (targetABInfo->UnmodifiedLevel != target->GetLevel())
@@ -198,5 +183,4 @@ bool AutoBalance_CommandScript::HandleABCreatureStatsCommand(ChatHandler* handle
     handler->PSendSysMessage(ABGetLocaleText(locale, "xp_money_multiplier").c_str(), targetABInfo->XPModifier, targetABInfo->MoneyModifier);
 
     return true;
-
 }

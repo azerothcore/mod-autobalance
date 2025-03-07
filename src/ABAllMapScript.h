@@ -11,15 +11,19 @@ class AutoBalance_AllMapScript : public AllMapScript
 {
 public:
     AutoBalance_AllMapScript()
-        : AllMapScript("AutoBalance_AllMapScript")
+        : AllMapScript("AutoBalance_AllMapScript", {
+            ALLMAPHOOK_ON_CREATE_MAP,
+            ALLMAPHOOK_ON_PLAYER_ENTER_ALL,
+            ALLMAPHOOK_ON_PLAYER_LEAVE_ALL
+        })
     {
     }
 
-    void OnCreateMap(Map* map);
+    void OnCreateMap(Map* map) override;
     // hook triggers after the player has already entered the world
-    void OnPlayerEnterAll(Map* map, Player* player);
+    void OnPlayerEnterAll(Map* map, Player* player) override;
     // hook triggers just before the player left the world
-    void OnPlayerLeaveAll(Map* map, Player* player);
+    void OnPlayerLeaveAll(Map* map, Player* player) override;
 };
 
 #endif

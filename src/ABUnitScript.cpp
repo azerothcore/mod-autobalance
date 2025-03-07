@@ -1,7 +1,8 @@
+#include "ABUnitScript.h"
+
 #include "ABConfig.h"
 #include "ABCreatureInfo.h"
 #include "ABMapInfo.h"
-#include "ABUnitScript.h"
 
 void AutoBalance_UnitScript::ModifyPeriodicDamageAurasTick(Unit* target, Unit* source, uint32& amount, SpellInfo const* spellInfo)
 {
@@ -13,14 +14,16 @@ void AutoBalance_UnitScript::ModifyPeriodicDamageAurasTick(Unit* target, Unit* s
     bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
     _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
 
     // set amount to the absolute value of the function call
     // the provided amount doesn't indicate whether it's a positive or negative value
     adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount, spellInfo);
     amount = abs(adjustedAmount);
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifyPeriodicDamageAurasTick", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
 }
 
 void AutoBalance_UnitScript::ModifySpellDamageTaken(Unit* target, Unit* source, int32& amount, SpellInfo const* spellInfo)
@@ -33,14 +36,16 @@ void AutoBalance_UnitScript::ModifySpellDamageTaken(Unit* target, Unit* source, 
     bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
     _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
 
     // set amount to the absolute value of the function call
     // the provided amount doesn't indicate whether it's a positive or negative value
     adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount, spellInfo);
     amount = abs(adjustedAmount);
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifySpellDamageTaken", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
 }
 
 void AutoBalance_UnitScript::ModifyMeleeDamage(Unit* target, Unit* source, uint32& amount)
@@ -52,13 +57,15 @@ void AutoBalance_UnitScript::ModifyMeleeDamage(Unit* target, Unit* source, uint3
     bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
     _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, "Melee");
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, "Melee");
 
     // set amount to the absolute value of the function call
     adjustedAmount = _Modify_Damage_Healing(target, source, adjustedAmount);
     amount = abs(adjustedAmount);
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, "Melee");
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifyMeleeDamage", target, source, adjustedAmount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, "Melee");
 }
 
 void AutoBalance_UnitScript::ModifyHealReceived(Unit* target, Unit* source, uint32& amount, SpellInfo const* spellInfo)
@@ -69,11 +76,13 @@ void AutoBalance_UnitScript::ModifyHealReceived(Unit* target, Unit* source, uint
     bool _debug_damage_and_healing = ((source && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer())) || (target && target->GetTypeId() == TYPEID_PLAYER));
     _debug_damage_and_healing = (source && source->GetMap()->GetInstanceId());
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifyHealReceived", target, source, amount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifyHealReceived", target, source, amount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE, spellInfo->SpellName[0], spellInfo->Id);
 
     amount = _Modify_Damage_Healing(target, source, amount, spellInfo);
 
-    if (_debug_damage_and_healing) _Debug_Output("ModifyHealReceived", target, source, amount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("ModifyHealReceived", target, source, amount, AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER, spellInfo->SpellName[0], spellInfo->Id);
 }
 
 void AutoBalance_UnitScript::OnAuraApply(Unit* unit, Aura* aura)
@@ -90,7 +99,8 @@ void AutoBalance_UnitScript::OnAuraApply(Unit* unit, Aura* aura)
         // only update if we decided to change it
         if (auraDuration != (float)aura->GetDuration())
         {
-            if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::OnAuraApply(): Spell '{}' had it's duration adjusted ({}->{}).",
+            if (_debug_damage_and_healing)
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::OnAuraApply(): Spell '{}' had it's duration adjusted ({}->{}).",
                 aura->GetSpellInfo()->SpellName[0],
                 aura->GetMaxDuration() / 1000,
                 auraDuration / 1000
@@ -499,9 +509,7 @@ uint32 AutoBalance_UnitScript::_Modifier_CCDuration(Unit* target, Unit* caster, 
         return originalDuration * ccDurationMultiplier;
     }
     else
-    {
         return originalDuration;
-    }
 }
 
 bool AutoBalance_UnitScript::_isAuraWithEffectType(SpellInfo const* spellInfo, AuraType auraType, bool log)
@@ -509,14 +517,16 @@ bool AutoBalance_UnitScript::_isAuraWithEffectType(SpellInfo const* spellInfo, A
     // if the spell is not defined, return false
     if (!spellInfo)
     {
-        if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo is null, returning false."); }
+        if (log)
+            LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo is null, returning false.");
         return false;
     }
 
     // if the spell doesn't have any effects, return false
     if (!spellInfo->GetEffects().size())
     {
-        if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has no effects, returning false."); }
+        if (log)
+            LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has no effects, returning false.");
         return false;
     }
 
@@ -526,7 +536,8 @@ bool AutoBalance_UnitScript::_isAuraWithEffectType(SpellInfo const* spellInfo, A
         // if the effect is not an aura, continue to next effect
         if (!effect.IsAura())
         {
-            if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has an effect that is not an aura, continuing to next effect."); }
+            if (log)
+                LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has an effect that is not an aura, continuing to next effect.");
             continue;
         }
 
@@ -539,6 +550,7 @@ bool AutoBalance_UnitScript::_isAuraWithEffectType(SpellInfo const* spellInfo, A
     }
 
     // if no aura effect of type auraType was found, return false
-    if (log) { LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has no aura of the target type, returning false."); }
+    if (log)
+        LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_UnitScript::_isAuraWithEffectType: SpellInfo has no aura of the target type, returning false.");
     return false;
 }

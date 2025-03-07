@@ -5,11 +5,11 @@
 #ifndef __AB_MAP_INFO_H
 #define __AB_MAP_INFO_H
 
-#include <vector>
-
 #include "Creature.h"
 #include "DataMap.h"
 #include "Player.h"
+
+#include <vector>
 
 class AutoBalanceMapInfo : public DataMap::Base
 {

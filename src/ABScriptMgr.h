@@ -5,8 +5,8 @@
 #ifndef __AB_SCRIPT_MGR_H
 #define __AB_SCRIPT_MGR_H
 
-#include "ScriptMgr.h"
 #include "Creature.h"
+#include "ScriptMgr.h"
 
 // Manages registration, loading, and execution of scripts.
 class ABScriptMgr

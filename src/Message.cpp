@@ -1,11 +1,13 @@
 #include "Message.h"
-#include "ItemTemplate.h"
+
 #include "DatabaseEnv.h"
+#include "ItemTemplate.h"
+
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <unordered_map>
-#include <iostream>
 #include <vector>
-#include <sstream>
 
 const std::unordered_map<LocaleConstant, std::string> AB_WELCOME_TO_PLAYER = {
     {LOCALE_enUS, "|cffc3dbff [AutoBalance]|r|cffFF8000 Welcome to {} ({}-player {}). There are {} player(s) in this instance. Difficulty set to {} player(s).|r"},
@@ -101,15 +103,15 @@ const std::unordered_map<LocaleConstant, std::string> AB_SET_OFFSET_COMMAND_ERRO
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_GET_OFFSET_COMMAND_SUCCESS = {
-{LOCALE_enUS, "Current Player Difficulty Offset = {}.|r"},
-{LOCALE_koKR, "현재 플레이어 난이도 오프셋 = {}.|r"},
-{LOCALE_frFR, "Décalage de difficulté actuel du joueur = {}.|r"},
-{LOCALE_deDE, "Aktueller Spieler-Schwierigkeits-Offset = {}.|r"},
-{LOCALE_zhCN, "当前玩家难度偏移 = {}。|r"},
-{LOCALE_zhTW, "當前玩家難度偏移 = {}。|r"},
-{LOCALE_esES, "Desplazamiento de dificultad actual del jugador = {}.|r"},
-{LOCALE_esMX, "Desplazamiento de dificultad actual del jugador = {}.|r"},
-{LOCALE_ruRU, "Текущее смещение сложности игрока = {}.|r"},
+    {LOCALE_enUS, "Current Player Difficulty Offset = {}.|r"},
+    {LOCALE_koKR, "현재 플레이어 난이도 오프셋 = {}.|r"},
+    {LOCALE_frFR, "Décalage de difficulté actuel du joueur = {}.|r"},
+    {LOCALE_deDE, "Aktueller Spieler-Schwierigkeits-Offset = {}.|r"},
+    {LOCALE_zhCN, "当前玩家难度偏移 = {}。|r"},
+    {LOCALE_zhTW, "當前玩家難度偏移 = {}。|r"},
+    {LOCALE_esES, "Desplazamiento de dificultad actual del jugador = {}.|r"},
+    {LOCALE_esMX, "Desplazamiento de dificultad actual del jugador = {}.|r"},
+    {LOCALE_ruRU, "Текущее смещение сложности игрока = {}.|r"},
 };
 
 const std::unordered_map<LocaleConstant, std::string> AB_ADJUSTED_PLAYER_COUNT_COMBAT_LOCKED = {
@@ -555,12 +557,12 @@ std::unordered_map<std::string, const std::unordered_map<LocaleConstant, std::st
 
 std::string ABGetLocaleText(LocaleConstant locale, const std::string& titleType) {
     auto textMapIt = abTextMaps.find(titleType);
-    if (textMapIt != abTextMaps.end()) {
+    if (textMapIt != abTextMaps.end())
+    {
         const std::unordered_map<LocaleConstant, std::string>* textMap = textMapIt->second;
         auto it = textMap->find(locale);
-        if (it != textMap->end()) {
+        if (it != textMap->end())
             return it->second;
-        }
     }
 
     return "";
