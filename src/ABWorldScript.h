@@ -11,7 +11,9 @@ class AutoBalance_WorldScript : public WorldScript
 {
 public:
     AutoBalance_WorldScript()
-        : WorldScript("AutoBalance_WorldScript")
+        : WorldScript("AutoBalance_WorldScript", {
+            WORLDHOOK_ON_BEFORE_CONFIG_LOAD
+        })
     {
     }
 

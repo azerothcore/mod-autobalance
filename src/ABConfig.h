@@ -5,15 +5,15 @@
 #ifndef __AB_CONFIG_H
 #define __AB_CONFIG_H
 
-#include <list>
-#include <map>
-
-#include "SharedDefines.h"
-
 #include "ABInflectionPointSettings.h"
 #include "ABLevelScalingDynamicLevelSettings.h"
 #include "ABStatModifiers.h"
 #include "AutoBalance.h"
+
+#include "SharedDefines.h"
+
+#include <list>
+#include <map>
 
 extern std::map<uint32, AutoBalanceInflectionPointSettings>          dungeonOverrides;
 extern std::map<uint32, AutoBalanceInflectionPointSettings>          bossOverrides;

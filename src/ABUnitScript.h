@@ -5,17 +5,23 @@
 #ifndef __AB_UNIT_SCRIPT_H
 #define __AB_UNIT_SCRIPT_H
 
+#include "AutoBalance.h"
+
 #include "ScriptMgr.h"
 #include "SpellAuras.h"
 #include "SpellInfo.h"
-
-#include "AutoBalance.h"
 
 class AutoBalance_UnitScript : public UnitScript
 {
 public:
     AutoBalance_UnitScript()
-        : UnitScript("AutoBalance_UnitScript", true)
+        : UnitScript("AutoBalance_UnitScript", true, {
+            UNITHOOK_MODIFY_PERIODIC_DAMAGE_AURAS_TICK,
+            UNITHOOK_MODIFY_SPELL_DAMAGE_TAKEN,
+            UNITHOOK_MODIFY_MELEE_DAMAGE,
+            UNITHOOK_MODIFY_HEAL_RECEIVED,
+            UNITHOOK_ON_AURA_APPLY
+        })
     {
     }
 

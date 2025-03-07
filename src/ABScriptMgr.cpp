@@ -2,11 +2,11 @@
  * Copyright (C) 2016+ AzerothCore <www.azerothcore.org>, license: https://github.com/azerothcore/azerothcore-wotlk/blob/master/LICENSE
  */
 
-#include "ScriptMgr.h"
-#include "ScriptMgrMacros.h"
-
 #include "ABModuleScript.h"
 #include "ABScriptMgr.h"
+
+#include "ScriptMgr.h"
+#include "ScriptMgrMacros.h"
 
 ABScriptMgr* ABScriptMgr::instance()
 {
@@ -22,9 +22,7 @@ bool ABScriptMgr::OnBeforeModifyAttributes(Creature* creature, uint32& instanceP
         });
 
     if (ret && *ret)
-    {
         return false;
-    }
 
     return true;
 }
@@ -37,9 +35,7 @@ bool ABScriptMgr::OnAfterDefaultMultiplier(Creature* creature, float& defaultMul
         });
 
     if (ret && *ret)
-    {
         return false;
-    }
 
     return true;
 }
@@ -52,9 +48,7 @@ bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, 
         });
 
     if (ret && *ret)
-    {
         return false;
-    }
 
     return true;
 }

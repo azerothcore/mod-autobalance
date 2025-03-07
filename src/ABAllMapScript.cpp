@@ -1,9 +1,10 @@
-#include "Chat.h"
-
 #include "ABAllMapScript.h"
+
 #include "ABConfig.h"
 #include "ABMapInfo.h"
 #include "ABUtils.h"
+
+#include "Chat.h"
 #include "Message.h"
 
 void AutoBalance_AllMapScript::OnCreateMap(Map* map)
@@ -33,17 +34,11 @@ void AutoBalance_AllMapScript::OnCreateMap(Map* map)
         {
             LFGDungeonEntry const* nonHeroicDungeon = nullptr;
             if (map->GetDifficulty() == DUNGEON_DIFFICULTY_HEROIC)
-            {
                 nonHeroicDungeon = GetLFGDungeon(map->GetId(), DUNGEON_DIFFICULTY_NORMAL);
-            }
             else if (map->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC)
-            {
                 nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_10MAN_NORMAL);
-            }
             else if (map->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
-            {
                 nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_25MAN_NORMAL);
-            }
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | is a Heroic dungeon that is not in LFG. Using non-heroic LFG levels.",
                 map->GetMapName(),
@@ -189,17 +184,13 @@ void AutoBalance_AllMapScript::OnPlayerEnterAll(Map* map, Player* player)
 
                             // notify GMs that they won't be accounted for
                             if (player->IsGameMaster())
-                            {
                                 chatHandle.PSendSysMessage(ABGetLocaleText(locale, "welcome_to_gm").c_str());
-                            }
                         }
                         else
                         {
                             // announce non-GMs entering the instance only
                             if (!player->IsGameMaster())
-                            {
                                 chatHandle.PSendSysMessage(ABGetLocaleText(locale, "announce_non_gm_entering_instance").c_str(), player->GetName().c_str(), mapABInfo->playerCount, mapABInfo->adjustedPlayerCount);
-                            }
                         }
                     }
                 }
@@ -240,9 +231,7 @@ void AutoBalance_AllMapScript::OnPlayerLeaveAll(Map* map, Player* player)
 
     // if a player was NOT removed, return now - stats don't need to be updated
     if (!playerWasRemoved)
-    {
         return;
-    }
 
     // recalculate the zone's level stats
     mapABInfo->highestCreatureLevel = 0;
@@ -252,9 +241,7 @@ void AutoBalance_AllMapScript::OnPlayerLeaveAll(Map* map, Player* player)
 
     // see which existing creatures are active
     for (std::vector<Creature*>::iterator creatureIterator = mapABInfo->allMapCreatures.begin(); creatureIterator != mapABInfo->allMapCreatures.end(); ++creatureIterator)
-    {
         AddCreatureToMapCreatureList(*creatureIterator, false, true);
-    }
 
     // if the previous player count is the same as the new player count, update without force
     if (prevAdjustedPlayerCount == mapABInfo->adjustedPlayerCount)

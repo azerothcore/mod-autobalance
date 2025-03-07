@@ -9,7 +9,9 @@
 
 class AutoBalance_GlobalScript : public GlobalScript {
 public:
-    AutoBalance_GlobalScript() : GlobalScript("AutoBalance_GlobalScript") { }
+    AutoBalance_GlobalScript() : GlobalScript("AutoBalance_GlobalScript", {
+        GLOBALHOOK_ON_AFTER_UPDATE_ENCOUNTER_STATE
+    }) { }
 
     void OnAfterUpdateEncounterState(Map* map, EncounterCreditType type, uint32 creditEntry, Unit* source, Difficulty difficulty_fixed, DungeonEncounterList const* encounters, uint32 dungeonCompleted, bool updated) override;
 };

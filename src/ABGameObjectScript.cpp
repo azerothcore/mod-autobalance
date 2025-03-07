@@ -1,5 +1,6 @@
-#include "ABConfig.h"
 #include "ABGameObjectScript.h"
+
+#include "ABConfig.h"
 #include "ABMapInfo.h"
 
 void AutoBalance_GameObjectScript::OnGameObjectModifyHealth(GameObject* target, Unit* source, int32& amount, SpellInfo const* spellInfo)
@@ -7,12 +8,14 @@ void AutoBalance_GameObjectScript::OnGameObjectModifyHealth(GameObject* target, 
     // uncomment to debug this hook
     bool _debug_damage_and_healing = (source && target && (source->GetTypeId() == TYPEID_PLAYER || source->IsControlledByPlayer()));
 
-    if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "BEFORE:", spellInfo->SpellName[0], spellInfo->Id);
 
     // modify the amount
     amount = _Modify_GameObject_Damage_Healing(target, source, amount, spellInfo);
 
-    if (_debug_damage_and_healing) _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
+    if (_debug_damage_and_healing)
+        _Debug_Output("OnGameObjectModifyHealth", target, source, amount, "AFTER:", spellInfo->SpellName[0], spellInfo->Id);
 }
 
 void AutoBalance_GameObjectScript::_Debug_Output(std::string function_name, GameObject* target, Unit* source, int32 amount, std::string prefix, std::string spell_name, uint32 spell_id)
@@ -84,7 +87,8 @@ int32 AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing(GameObject
     // check that we're enabled globally, else return the original value
     if (!EnableGlobal)
     {
-        if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: EnableGlobal is false, returning original value of ({}).", amount);
+        if (_debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: EnableGlobal is false, returning original value of ({}).", amount);
 
         return amount;
     }
@@ -92,7 +96,8 @@ int32 AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing(GameObject
     // make sure the target is in an instance, else return the original damage
     if (!(target->GetMap()->IsDungeon()))
     {
-        if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target is not in an instance, returning original value of ({}).", amount);
+        if (_debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target is not in an instance, returning original value of ({}).", amount);
 
         return amount;
     }
@@ -100,7 +105,8 @@ int32 AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing(GameObject
     // make sure the target is in the world, else return the original value
     if (!target->IsInWorld())
     {
-        if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target does not exist in the world, returning original value of ({}).", amount);
+        if (_debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target does not exist in the world, returning original value of ({}).", amount);
 
         return amount;
     }
@@ -134,7 +140,8 @@ int32 AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing(GameObject
     // if the target's map is not enabled, return the original damage
     if (!targetMapABInfo->enabled)
     {
-        if (_debug_damage_and_healing) LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target's map is not enabled, returning original value of ({}).", amount);
+        if (_debug_damage_and_healing)
+            LOG_DEBUG("module.AutoBalance_DamageHealingCC", "AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing: Target's map is not enabled, returning original value of ({}).", amount);
 
         return amount;
     }

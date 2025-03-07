@@ -1,9 +1,10 @@
-#include "Configuration/Config.h"
-#include "Log.h"
+#include "ABWorldScript.h"
 
 #include "ABConfig.h"
 #include "ABUtils.h"
-#include "ABWorldScript.h"
+
+#include "Configuration/Config.h"
+#include "Log.h"
 
 void AutoBalance_WorldScript::OnBeforeConfigLoad(bool /*reload*/)
 {
@@ -430,13 +431,9 @@ void AutoBalance_WorldScript::SetInitialWorldSettings()
     std::string LevelScalingMethodString = sConfigMgr->GetOption<std::string>("AutoBalance.LevelScaling.Method", "dynamic", false);
 
     if (LevelScalingMethodString == "fixed")
-    {
         LevelScalingMethod = AUTOBALANCE_SCALING_FIXED;
-    }
     else if (LevelScalingMethodString == "dynamic")
-    {
         LevelScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
-    }
     else
     {
         LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.LevelScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", LevelScalingMethodString);
@@ -487,13 +484,9 @@ void AutoBalance_WorldScript::SetInitialWorldSettings()
     std::string RewardScalingMethodString = sConfigMgr->GetOption<std::string>("AutoBalance.RewardScaling.Method", "dynamic", false);
 
     if (RewardScalingMethodString == "fixed")
-    {
         RewardScalingMethod = AUTOBALANCE_SCALING_FIXED;
-    }
     else if (RewardScalingMethodString == "dynamic")
-    {
         RewardScalingMethod = AUTOBALANCE_SCALING_DYNAMIC;
-    }
     else
     {
         LOG_ERROR("server.loading", "mod-autobalance: invalid value `{}` for `AutoBalance.RewardScaling.Method` defined in `AutoBalance.conf`. Defaulting to a value of `dynamic`.", RewardScalingMethodString);

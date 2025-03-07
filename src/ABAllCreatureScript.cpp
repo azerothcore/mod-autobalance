@@ -1,12 +1,13 @@
-#include "MapMgr.h"
-
-#include "AutoBalance.h"
 #include "ABAllCreatureScript.h"
+
 #include "ABConfig.h"
 #include "ABCreatureInfo.h"
 #include "ABMapInfo.h"
 #include "ABScriptMgr.h"
 #include "ABUtils.h"
+#include "AutoBalance.h"
+
+#include "MapMgr.h"
 
 void AutoBalance_AllCreatureScript::OnBeforeCreatureSelectLevel(const CreatureTemplate* /*creatureTemplate*/, Creature* creature, uint8& level)
 {
@@ -294,9 +295,7 @@ bool AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(Creature* creature)
 {
     // make sure we have a creature
     if (!creature || !isCreatureRelevant(creature))
-    {
         return false;
-    }
 
     // get (or create) map and creature info
     AutoBalanceMapInfo* mapABInfo = creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
@@ -304,9 +303,7 @@ bool AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(Creature* creature)
 
     // if creature is dead and mapConfigTime is 0, skip for now
     if (creature->isDead() && creatureABInfo->mapConfigTime == 1)
-    {
         return false;
-    }
     // if the creature is dead but mapConfigTime is NOT 0, we set it to 0 so that it will be recalculated if revived
     // also remember that this creature was once alive but is now dead
     else if (creature->isDead())
@@ -584,15 +581,11 @@ void AutoBalance_AllCreatureScript::ModifyCreatureAttributes(Creature* creature)
 
             // check to be sure that the creature's new level is at least the dynamic scaling floor
             if (selectedLevel < (mapABInfo->highestPlayerLevel - mapABInfo->levelScalingDynamicFloor))
-            {
                 selectedLevel = mapABInfo->highestPlayerLevel - mapABInfo->levelScalingDynamicFloor;
-            }
 
             // check to be sure that the creature's new level is no higher than the dynamic scaling ceiling
             if (selectedLevel > (mapABInfo->highestPlayerLevel + mapABInfo->levelScalingDynamicCeiling))
-            {
                 selectedLevel = mapABInfo->highestPlayerLevel + mapABInfo->levelScalingDynamicCeiling;
-            }
 
             LOG_DEBUG("module.AutoBalance", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | scaled to level ({}) via dynamic scaling.",
                 creature->GetName(),
@@ -1159,13 +1152,9 @@ void AutoBalance_AllCreatureScript::ModifyCreatureAttributes(Creature* creature)
 
         // Min/Max checking
         if (ccDurationMultiplier < MinCCDurationModifier)
-        {
             ccDurationMultiplier = MinCCDurationModifier;
-        }
         else if (ccDurationMultiplier > MaxCCDurationModifier)
-        {
             ccDurationMultiplier = MaxCCDurationModifier;
-        }
 
         LOG_DEBUG("module.AutoBalance_StatGeneration", "AutoBalance_AllCreatureScript::ModifyCreatureAttributes: Creature {} ({}) | ccDurationMultiplier: ({})",
             creature->GetName(),
@@ -1492,9 +1481,7 @@ bool AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner(Creature* summon)
 {
     // if the summon doesn't exist or isn't a summon
     if (!summon || !summon->IsSummon())
-    {
         return false;
-    }
 
     // get the summon's info
     AutoBalanceCreatureInfo* summonABInfo = summon->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
@@ -1504,9 +1491,7 @@ bool AutoBalance_AllCreatureScript::_isSummonCloneOfSummoner(Creature* summon)
 
     // if the summoner doesn't exist
     if (!summoner)
-    {
         return false;
-    }
 
     // if this creature's ID is in the list of creatures that are not clones of their summoner (creatureIDsThatAreNotClones), return false
     if (
