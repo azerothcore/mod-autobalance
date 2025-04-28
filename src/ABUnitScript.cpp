@@ -3,6 +3,7 @@
 #include "ABConfig.h"
 #include "ABCreatureInfo.h"
 #include "ABMapInfo.h"
+#include "ABUtils.h"
 
 void AutoBalance_UnitScript::ModifyPeriodicDamageAurasTick(Unit* target, Unit* source, uint32& amount, SpellInfo const* spellInfo)
 {
@@ -253,8 +254,8 @@ int32 AutoBalance_UnitScript::_Modify_Damage_Healing(Unit* target, Unit* source,
     }
 
     // get the maps' info
-    AutoBalanceMapInfo* sourceMapABInfo = source->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-    AutoBalanceMapInfo* targetMapABInfo = target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* sourceMapABInfo = GetMapInfo(source->GetMap());
+    AutoBalanceMapInfo* targetMapABInfo = GetMapInfo(target->GetMap());
 
     // if either the target or the source's maps are not enabled, return the original damage
     if (!sourceMapABInfo->enabled || !targetMapABInfo->enabled)

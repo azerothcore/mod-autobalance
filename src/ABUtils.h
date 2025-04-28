@@ -9,6 +9,7 @@
 #include "ABLevelScalingDynamicLevelSettings.h"
 #include "ABStatModifiers.h"
 #include "AutoBalance.h"
+#include "ABMapInfo.h"
 
 #include "Creature.h"
 #include "Map.h"
@@ -58,5 +59,6 @@ void UpdateMapPlayerStats (Map* map);
 void AddPlayerToMap(Map* map, Player* player);
 bool RemovePlayerFromMap(Map* map, Player* player);
 bool UpdateMapDataIfNeeded(Map* map, bool force = false);
+AutoBalanceMapInfo* GetMapInfo(Map* map);
 
 #endif

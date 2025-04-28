@@ -32,7 +32,7 @@ void AutoBalance_PlayerScript::OnPlayerLevelChanged(Player* player, uint8 oldlev
     UpdateMapPlayerStats(map);
 
     // schedule all creatures for an update
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
     mapABInfo->mapConfigTime = GetCurrentConfigTime();
 }
 
@@ -44,7 +44,7 @@ void AutoBalance_PlayerScript::OnPlayerGiveXP(Player* player, uint32& amount, Un
     if (!map->IsDungeon() || !map->GetInstanceId() || !victim)
         return;
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     if (victim && RewardScalingXP && mapABInfo->enabled)
     {
@@ -81,7 +81,7 @@ void AutoBalance_PlayerScript::OnPlayerBeforeLootMoney(Player* player, Loot* loo
     if (!map->IsDungeon())
         return;
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
     ObjectGuid sourceGuid = loot->sourceWorldObjectGUID;
 
     if (mapABInfo->enabled && RewardScalingMoney)
@@ -136,7 +136,7 @@ void AutoBalance_PlayerScript::OnPlayerEnterCombat(Player* player, Unit* /*enemy
 
     LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerEnterCombat: {} enters combat.", player->GetName());
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     // if this map isn't enabled, no work to do
     if (!mapABInfo->enabled)
@@ -175,7 +175,7 @@ void AutoBalance_PlayerScript::OnPlayerLeaveCombat(Player* player)
     // unfortunately, `player->IsInCombat()` doesn't work here
     LOG_DEBUG("module.AutoBalance_CombatLocking", "AutoBalance_PlayerScript::OnPlayerLeaveCombat: {} leaves (or wasn't in) combat.", player->GetName());
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     // if this map isn't enabled, no work to do
     if (!mapABInfo->enabled)

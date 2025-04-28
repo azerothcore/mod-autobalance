@@ -2,6 +2,7 @@
 
 #include "ABConfig.h"
 #include "ABMapInfo.h"
+#include "ABUtils.h"
 
 void AutoBalance_GameObjectScript::OnGameObjectModifyHealth(GameObject* target, Unit* source, int32& amount, SpellInfo const* spellInfo)
 {
@@ -135,7 +136,7 @@ int32 AutoBalance_GameObjectScript::_Modify_GameObject_Damage_Healing(GameObject
     }
 
     // get the map's info
-    AutoBalanceMapInfo* targetMapABInfo = target->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* targetMapABInfo = GetMapInfo(target->GetMap());
 
     // if the target's map is not enabled, return the original damage
     if (!targetMapABInfo->enabled)

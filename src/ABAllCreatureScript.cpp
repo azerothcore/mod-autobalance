@@ -298,7 +298,7 @@ bool AutoBalance_AllCreatureScript::ResetCreatureIfNeeded(Creature* creature)
         return false;
 
     // get (or create) map and creature info
-    AutoBalanceMapInfo* mapABInfo = creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(creature->GetMap());
     AutoBalanceCreatureInfo* creatureABInfo = creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
     // if creature is dead and mapConfigTime is 0, skip for now
@@ -421,7 +421,7 @@ void AutoBalance_AllCreatureScript::ModifyCreatureAttributes(Creature* creature)
     AutoBalanceCreatureInfo* creatureABInfo = creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
     Map* map = creature->GetMap();
     InstanceMap* instanceMap = map->ToInstanceMap();
-    AutoBalanceMapInfo* mapABInfo = instanceMap->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(instanceMap);
 
     // mark the creature as updated using the current settings if needed
     // if this creature is brand new, do not update this so that it will be re-processed next OnCreatureUpdate

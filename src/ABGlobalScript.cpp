@@ -2,6 +2,7 @@
 
 #include "ABConfig.h"
 #include "ABMapInfo.h"
+#include "ABUtils.h"
 
 void AutoBalance_GlobalScript::OnAfterUpdateEncounterState(Map* map, EncounterCreditType type, uint32 /*creditEntry*/, Unit* /*source*/, Difficulty /*difficulty_fixed*/, DungeonEncounterList const* /*encounters*/, uint32 /*dungeonCompleted*/, bool updated)
 {
@@ -11,7 +12,7 @@ void AutoBalance_GlobalScript::OnAfterUpdateEncounterState(Map* map, EncounterCr
     if (!rewardEnabled || !updated)
         return;
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     if (mapABInfo->adjustedPlayerCount < MinPlayerReward)
         return;

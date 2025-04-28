@@ -42,7 +42,7 @@ bool AutoBalance_CommandScript::HandleABMapStatsCommand(ChatHandler* handler, co
     Player* player = handler->GetPlayer();
     auto locale = handler->GetSession()->GetSessionDbLocaleIndex();
 
-    AutoBalanceMapInfo* mapABInfo = player->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(player->GetMap());
 
     if (player->GetMap()->IsDungeon())
     {

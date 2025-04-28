@@ -37,7 +37,7 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList, bo
 
     Map*                     map            = creature->GetMap();
     InstanceMap*             instanceMap    = map->ToInstanceMap();
-    AutoBalanceMapInfo*      mapABInfo      = instanceMap->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo*      mapABInfo      = GetMapInfo(instanceMap);
     AutoBalanceCreatureInfo* creatureABInfo = creature->CustomData.GetDefault<AutoBalanceCreatureInfo>("AutoBalanceCreatureInfo");
 
     //
@@ -494,7 +494,7 @@ void RemoveCreatureFromMapData(Creature* creature)
     // Get map data
     //
 
-    AutoBalanceMapInfo *mapABInfo = creature->GetMap()->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo *mapABInfo = GetMapInfo(creature->GetMap());
 
     //
     // If the creature is in the all creature list, remove it
@@ -626,7 +626,7 @@ float getDefaultMultiplier(Map* map, AutoBalanceInflectionPointSettings inflecti
     //
     // Get the adjustedPlayerCount for this instance
     //
-    AutoBalanceMapInfo *mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo *mapABInfo = GetMapInfo(map);
     float adjustedPlayerCount     = mapABInfo->adjustedPlayerCount;
 
     //
@@ -684,7 +684,7 @@ World_Multipliers getWorldMultiplier(Map* map, BaseValueType baseValueType)
     //
     // Grab map data
     //
-    AutoBalanceMapInfo *mapABInfo=map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo *mapABInfo = GetMapInfo(map);
 
     //
     // If the map isn't enabled, return defaults
@@ -1723,7 +1723,7 @@ bool isCreatureRelevant(Creature* creature)
 
     // get the creature's map's info
     Map*               creatureMap = creature->GetMap();
-    AutoBalanceMapInfo *mapABInfo  = creatureMap->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo *mapABInfo  = GetMapInfo(creatureMap);
     InstanceMap*       instanceMap = creatureMap->ToInstanceMap();
 
     // if this creature is in the dungeon's base map, make no changes
@@ -2037,7 +2037,7 @@ void LoadMapSettings(Map* map)
     // Load (or create) the map's info
     //
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     //
     // Create an InstanceMap object
@@ -2391,7 +2391,7 @@ void UpdateMapPlayerStats(Map* map)
     // Get the map's info
     //
 
-    AutoBalanceMapInfo* mapABInfo   = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo   = GetMapInfo(map);
     InstanceMap*        instanceMap = map->ToInstanceMap();
 
     //
@@ -2584,7 +2584,7 @@ void AddPlayerToMap(Map* map, Player* player)
     // Get map data
     //
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
 
     if (!player)
@@ -2638,7 +2638,7 @@ bool RemovePlayerFromMap(Map* map, Player* player)
     // Get map data
     //
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     //
     // If this player isn't in the map's player list, skip
@@ -2679,7 +2679,7 @@ bool UpdateMapDataIfNeeded(Map* map, bool force)
     // Get map data
     //
 
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     //
     // If map needs update
@@ -2995,4 +2995,72 @@ bool UpdateMapDataIfNeeded(Map* map, bool force)
 
         return false;
     }
+}
+
+AutoBalanceMapInfo* GetMapInfo(Map* map)
+{
+    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    if (mapABInfo->initialized)
+        return mapABInfo;
+
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::InitializeMap: Map {} ({}{}) | Initializing map.",
+        map->GetMapName(),
+        map->GetId(),
+        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "");
+    mapABInfo->initialized = true;
+
+    if (!map->IsDungeon())
+        return mapABInfo;
+
+    // get the map's LFG stats even if not enabled
+    LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
+    if (dungeon) {
+        mapABInfo->lfgMinLevel = dungeon->MinLevel;
+        mapABInfo->lfgMaxLevel = dungeon->MaxLevel;
+        mapABInfo->lfgTargetLevel = dungeon->TargetLevel;
+    }
+    // if this is a heroic dungeon that isn't in LFG, get the stats from the non-heroic version
+    else if (map->IsHeroic())
+    {
+        LFGDungeonEntry const* nonHeroicDungeon = nullptr;
+        if (map->GetDifficulty() == DUNGEON_DIFFICULTY_HEROIC)
+            nonHeroicDungeon = GetLFGDungeon(map->GetId(), DUNGEON_DIFFICULTY_NORMAL);
+        else if (map->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC)
+            nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_10MAN_NORMAL);
+        else if (map->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
+            nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_25MAN_NORMAL);
+
+        LOG_DEBUG("module.AutoBalance", "AutoBalance::InitializeMap: Map {} ({}{}) | is a Heroic dungeon that is not in LFG. Using non-heroic LFG levels.",
+            map->GetMapName(),
+            map->GetId(),
+            map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+        );
+
+        if (nonHeroicDungeon)
+        {
+            mapABInfo->lfgMinLevel = nonHeroicDungeon->MinLevel;
+            mapABInfo->lfgMaxLevel = nonHeroicDungeon->MaxLevel;
+            mapABInfo->lfgTargetLevel = nonHeroicDungeon->TargetLevel;
+        }
+        else
+        {
+            LOG_ERROR("module.AutoBalance", "AutoBalance::InitializeMap: Map {} ({}{}) | Could not determine LFG level ranges for this map. Level will bet set to 0.",
+                map->GetMapName(),
+                map->GetId(),
+                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
+            );
+        }
+    }
+
+    LOG_DEBUG("module.AutoBalance", "AutoBalance::InitializeMap: Map {} ({}{}) | LFG levels ({}-{}) (target {}). {} for AutoBalancing.",
+        map->GetMapName(),
+        map->GetId(),
+        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
+        mapABInfo->lfgMinLevel ? std::to_string(mapABInfo->lfgMinLevel) : "?",
+        mapABInfo->lfgMaxLevel ? std::to_string(mapABInfo->lfgMaxLevel) : "?",
+        mapABInfo->lfgTargetLevel ? std::to_string(mapABInfo->lfgTargetLevel) : "?",
+        mapABInfo->enabled ? "Enabled" : "Disabled"
+    );
+
+    return mapABInfo;
 }

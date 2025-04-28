@@ -7,91 +7,6 @@
 #include "Chat.h"
 #include "Message.h"
 
-void AutoBalance_AllMapScript::OnCreateMap(Map* map)
-{
-    LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{})",
-        map->GetMapName(),
-        map->GetId(),
-        map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
-    );
-
-    // clear out any previously-recorded data
-    map->CustomData.Erase("AutoBalanceMapInfo");
-
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
-
-    if (map->IsDungeon())
-    {
-        // get the map's LFG stats even if not enabled
-        LFGDungeonEntry const* dungeon = GetLFGDungeon(map->GetId(), map->GetDifficulty());
-        if (dungeon) {
-            mapABInfo->lfgMinLevel = dungeon->MinLevel;
-            mapABInfo->lfgMaxLevel = dungeon->MaxLevel;
-            mapABInfo->lfgTargetLevel = dungeon->TargetLevel;
-        }
-        // if this is a heroic dungeon that isn't in LFG, get the stats from the non-heroic version
-        else if (map->IsHeroic())
-        {
-            LFGDungeonEntry const* nonHeroicDungeon = nullptr;
-            if (map->GetDifficulty() == DUNGEON_DIFFICULTY_HEROIC)
-                nonHeroicDungeon = GetLFGDungeon(map->GetId(), DUNGEON_DIFFICULTY_NORMAL);
-            else if (map->GetDifficulty() == RAID_DIFFICULTY_10MAN_HEROIC)
-                nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_10MAN_NORMAL);
-            else if (map->GetDifficulty() == RAID_DIFFICULTY_25MAN_HEROIC)
-                nonHeroicDungeon = GetLFGDungeon(map->GetId(), RAID_DIFFICULTY_25MAN_NORMAL);
-
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | is a Heroic dungeon that is not in LFG. Using non-heroic LFG levels.",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
-            );
-
-            if (nonHeroicDungeon)
-            {
-                mapABInfo->lfgMinLevel = nonHeroicDungeon->MinLevel;
-                mapABInfo->lfgMaxLevel = nonHeroicDungeon->MaxLevel;
-                mapABInfo->lfgTargetLevel = nonHeroicDungeon->TargetLevel;
-            }
-            else
-            {
-                LOG_ERROR("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | Could not determine LFG level ranges for this map. Level will bet set to 0.",
-                    map->GetMapName(),
-                    map->GetId(),
-                    map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
-                );
-            }
-        }
-
-        if (map->GetInstanceId())
-        {
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | is an instance of a map. Loading initial map data.",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : ""
-            );
-            UpdateMapDataIfNeeded(map);
-
-            // provide a concise summary of the map data we collected
-            LOG_DEBUG("module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}{}) | LFG levels ({}-{}) (target {}). {} for AutoBalancing.",
-                map->GetMapName(),
-                map->GetId(),
-                map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "",
-                mapABInfo->lfgMinLevel ? std::to_string(mapABInfo->lfgMinLevel) : "?",
-                mapABInfo->lfgMaxLevel ? std::to_string(mapABInfo->lfgMaxLevel) : "?",
-                mapABInfo->lfgTargetLevel ? std::to_string(mapABInfo->lfgTargetLevel) : "?",
-                mapABInfo->enabled ? "Enabled" : "Disabled"
-            );
-        }
-        else
-        {
-            LOG_DEBUG(
-                "module.AutoBalance", "AutoBalance_AllMapScript::OnCreateMap(): Map {} ({}) | is an instance base map.",
-                map->GetMapName(),
-                map->GetId()
-            );
-        }
-    }
-}
 
 void AutoBalance_AllMapScript::OnPlayerEnterAll(Map* map, Player* player)
 {
@@ -112,7 +27,7 @@ void AutoBalance_AllMapScript::OnPlayerEnterAll(Map* map, Player* player)
     );
 
     // get the map's info
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     // store the previous difficulty for comparison later
     int prevAdjustedPlayerCount = mapABInfo->adjustedPlayerCount;
@@ -218,7 +133,7 @@ void AutoBalance_AllMapScript::OnPlayerLeaveAll(Map* map, Player* player)
     );
 
     // get the map's info
-    AutoBalanceMapInfo* mapABInfo = map->CustomData.GetDefault<AutoBalanceMapInfo>("AutoBalanceMapInfo");
+    AutoBalanceMapInfo* mapABInfo = GetMapInfo(map);
 
     // store the previous difficulty for comparison later
     int prevAdjustedPlayerCount = mapABInfo->adjustedPlayerCount;
