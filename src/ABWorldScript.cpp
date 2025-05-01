@@ -45,6 +45,8 @@ void AutoBalance_WorldScript::SetInitialWorldSettings()
 
     minPlayersNormal = sConfigMgr->GetOption<int>("AutoBalance.MinPlayers", 1);
     minPlayersHeroic = sConfigMgr->GetOption<int>("AutoBalance.MinPlayers.Heroic", 1);
+    minPlayersRaidNormal = sConfigMgr->GetOption<int>("AutoBalance.MinPlayers.Raid", minPlayersNormal);
+    minPlayersRaidHeroic = sConfigMgr->GetOption<int>("AutoBalance.MinPlayers.RaidHeroic", minPlayersHeroic);
 
     if (sConfigMgr->GetOption<float>("AutoBalance.PerDungeonPlayerCounts", false, false))
         LOG_WARN("server.loading", "mod-autobalance: deprecated value `AutoBalance.PerDungeonPlayerCounts` defined in `AutoBalance.conf`. This variable will be removed in a future release. Please see `AutoBalance.conf.dist` for more details.");

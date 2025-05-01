@@ -10,6 +10,8 @@ std::list<uint32> disabledDungeonIds;
 
 uint32 minPlayersNormal;
 uint32 minPlayersHeroic;
+uint32 minPlayersRaid;
+uint32 minPlayersRaidHeroic;
 std::map<uint32, uint8> minPlayersPerDungeonIdMap;
 std::map<uint32, uint8> minPlayersPerHeroicDungeonIdMap;
 

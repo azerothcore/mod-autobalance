@@ -2059,10 +2059,14 @@ void LoadMapSettings(Map* map)
 
     if (isDungeonInMinPlayerMap(map->GetId(), instanceMap->IsHeroic()))
         mapABInfo->minPlayers = instanceMap->IsHeroic() ? minPlayersPerHeroicDungeonIdMap[map->GetId()] : minPlayersPerDungeonIdMap[map->GetId()];
-    else if (instanceMap->IsHeroic())
-        mapABInfo->minPlayers = minPlayersHeroic;
-    else
+    if (instanceMap->GetMaxPlayers() <= 5 && !instanceMap->IsHeroic())
         mapABInfo->minPlayers = minPlayersNormal;
+    else if (instanceMap->GetMaxPlayers() <= 5 && instanceMap->IsHeroic())
+        mapABInfo->minPlayers = minPlayersHeroic;
+    else if (instanceMap->GetMaxPlayers() > 5 && !instanceMap->IsHeroic())
+        mapABInfo->minPlayers = minPlayersRaid;
+    else
+        mapABInfo->minPlayers = minPlayersRaidHeroic;
 
     //
     // If the minPlayers value we determined is less than the max number of players in this map, adjust down
