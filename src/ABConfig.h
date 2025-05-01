@@ -28,7 +28,7 @@ extern std::list<uint32>                                             disabledDun
 
 extern uint32                                                        minPlayersNormal;
 extern uint32                                                        minPlayersHeroic;
-extern uint32                                                        minPlayersRaidNormal;
+extern uint32                                                        minPlayersRaid;
 extern uint32                                                        minPlayersRaidHeroic;
 extern std::map<uint32, uint8>                                       minPlayersPerDungeonIdMap;
 extern std::map<uint32, uint8>                                       minPlayersPerHeroicDungeonIdMap;
