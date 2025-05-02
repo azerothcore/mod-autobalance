@@ -3007,6 +3007,7 @@ AutoBalanceMapInfo* GetMapInfo(Map* map)
         map->GetMapName(),
         map->GetId(),
         map->GetInstanceId() ? "-" + std::to_string(map->GetInstanceId()) : "");
+
     mapABInfo->initialized = true;
 
     if (!map->IsDungeon())
