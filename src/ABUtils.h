@@ -7,9 +7,9 @@
 
 #include "ABInflectionPointSettings.h"
 #include "ABLevelScalingDynamicLevelSettings.h"
+#include "ABMapInfo.h"
 #include "ABStatModifiers.h"
 #include "AutoBalance.h"
-#include "ABMapInfo.h"
 
 #include "Creature.h"
 #include "Map.h"
