@@ -16,7 +16,7 @@ public:
     }
 
     void OnBeforeCreatureSelectLevel(const CreatureTemplate* /*creatureTemplate*/, Creature* creature, uint8& level) override;
-    void Creature_SelectLevel(const CreatureTemplate* /* cinfo */, Creature* creature) override;
+    void OnCreatureSelectLevel(const CreatureTemplate* /* cinfo */, Creature* creature) override;
     void OnCreatureAddWorld(Creature* creature) override;
     void OnCreatureRemoveWorld(Creature* creature) override;
     void OnAllCreatureUpdate(Creature* creature, uint32 /*diff*/) override;
