@@ -42,6 +42,7 @@ bool hasStatModifierOverride(uint32 dungeonId);
 
 bool isBossOrBossSummon(Creature* creature, bool log = false);
 bool isCreatureRelevant(Creature* creature);
+bool isSeasonalEventCreature(Creature* creature);
 bool isDungeonInDisabledDungeonIds(uint32 dungeonId);
 bool isDungeonInMinPlayerMap(uint32 dungeonId, bool isHeroic);
 
