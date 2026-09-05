@@ -472,6 +472,7 @@ void AutoBalance_AllCreatureScript::ModifyCreatureAttributes(Creature* creature)
     // if this creature is above 115% of the maximum LFG level for the map, make no changes
     // if this is a critter that is substantial enough to be considered a real enemy, still modify it
     // if this is a trigger, still modify it
+    // if this belongs to an active seasonal event still modify it: these are legitimate encounter enemies that must keep their original level but have their stats/damage scaled to the player count
     if (
         (
             (creatureABInfo->UnmodifiedLevel < (uint8)(((float)mapABInfo->lfgMinLevel * .85f) + 0.5f)) ||
@@ -479,7 +480,8 @@ void AutoBalance_AllCreatureScript::ModifyCreatureAttributes(Creature* creature)
             ) &&
         (
             !(creature->IsCritter() && creatureABInfo->UnmodifiedLevel >= 5 && creature->GetMaxHealth() > 100) &&
-            !creature->IsTrigger()
+            !creature->IsTrigger() &&
+            !isSeasonalEventCreature(creature)
             )
         )
     {
