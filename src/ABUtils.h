@@ -41,6 +41,7 @@ bool hasStatModifierCreatureOverride(uint32 creatureId);
 bool hasStatModifierOverride(uint32 dungeonId);
 
 bool isBossOrBossSummon(Creature* creature, bool log = false);
+bool isCreatureFriendlyToAnyPlayer(Creature* creature, AutoBalanceMapInfo* mapABInfo);
 bool isCreatureRelevant(Creature* creature);
 bool isDungeonInDisabledDungeonIds(uint32 dungeonId);
 bool isDungeonInMinPlayerMap(uint32 dungeonId, bool isHeroic);

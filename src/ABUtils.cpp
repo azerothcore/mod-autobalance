@@ -112,6 +112,20 @@ void AddCreatureToMapCreatureList(Creature* creature, bool addToCreatureList, bo
                     }
                 }
                 //
+                // If the summoner is friendly to a player (e.g. an allied event NPC opening portals),
+                // keep the creature's own template level instead of inheriting the summoner's
+                //
+                else if (isCreatureFriendlyToAnyPlayer(summoner, mapABInfo))
+                {
+                    LOG_DEBUG("module.AutoBalance", "AutoBalance::AddCreatureToMapCreatureList: Creature {} ({}) (summon) | summoner {} ({}) is friendly to players. Keeping original level of {}.",
+                        creature->GetName(),
+                        creatureABInfo->UnmodifiedLevel,
+                        summoner->GetName(),
+                        summonerABInfo->UnmodifiedLevel,
+                        creatureABInfo->UnmodifiedLevel
+                    );
+                }
+                //
                 // If the creature is not a trigger, match the summoner's level
                 //
                 else
@@ -1605,6 +1619,26 @@ bool hasStatModifierOverride(uint32 dungeonId)
 bool isDungeonInDisabledDungeonIds(uint32 dungeonId)
 {
     return (std::find(disabledDungeonIds.begin(), disabledDungeonIds.end(), dungeonId) != disabledDungeonIds.end());
+}
+
+bool isCreatureFriendlyToAnyPlayer(Creature* creature, AutoBalanceMapInfo* mapABInfo)
+{
+    if (!creature || !mapABInfo)
+        return false;
+
+    for (std::vector<Player*>::const_iterator playerIterator = mapABInfo->allMapPlayers.begin(); playerIterator != mapABInfo->allMapPlayers.end(); ++playerIterator)
+    {
+        Player* thisPlayer = *playerIterator;
+
+        // Game Masters don't count
+        if (thisPlayer->IsGameMaster())
+            continue;
+
+        if (creature->IsFriendlyTo(thisPlayer))
+            return true;
+    }
+
+    return false;
 }
 
 bool isBossOrBossSummon(Creature* creature, bool log)
